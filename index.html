@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WindFoil Weather Intelligence</title>
+  <!-- v2.2.0 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background:#0a0e14; }
+    #root { min-height:100vh; }
+    #boot { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+            background:#0a0e14; color:#5a7a96; font-family:monospace; gap:14px; z-index:9999; }
+    #boot .ring { width:42px; height:42px; border:3px solid #243040; border-top-color:#f07820;
+                  border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="boot"><div class="ring"></div><div>WindFoil wird geladen…</div></div>
+  <div id="root"></div>
+  <!-- React + ReactDOM + Recharts + Babel — LOCAL (vendor/) -->
+  <script src="vendor/react.production.min.js"></script>
+  <script src="vendor/react-dom.production.min.js"></script>
+  <script src="vendor/prop-types.min.js"></script>
+  <script src="vendor/react-is.production.min.js"></script>
+  <script src="vendor/Recharts.js"></script>
+  <script src="vendor/babel.min.js"></script>
+
+  <script type="text/babel" data-presets="react">
+const { useState, useEffect, useCallback, useRef } = React;
+const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
+
+// WindFoil Weather Intelligence v2.2.0
+// Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
+
+// Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
+
+// ── Unit conversion (all internals in m/s) ───────────────────────────────────
+const msToKn  = ms => ms * 1.94384;
+const knToMs  = kn => kn / 1.94384;
+const msToBf  = ms => {
+  if(ms<0.3) return 0; if(ms<1.6) return 1; if(ms<3.4) return 2;
+  if(ms<5.5) return 3; if(ms<8.0) return 4; if(ms<10.8) return 5;
+  if(ms<13.9) return 6; if(ms<17.2) return 7; if(ms<20.8) return 8;
+  if(ms<24.5) return 9; if(ms<28.5) return 10; if(ms<32.7) return 11;
+  return 12;
+};
+const BF_LABEL = ["0 Windstille","1 Leicht","2 Leicht","3 Leise","4 Mäßig","5 Frisch","6 Stark","7 Steif","8 Stürmisch","9 Sturm","10 Schwerer Sturm","11 Orkan","12 Orkan"];
+function cvt(ms, unit) {
+  if(unit==="kn") return Math.round(msToKn(ms)*10)/10;
+  if(unit==="bf") return msToBf(ms);
+  return Math.round(ms*10)/10; // m/s
+}
+function fmtW(ms, unit) {
+  if(unit==="kn") return `${cvt(ms,"kn").toFixed(1)} kn`;
+  if(unit==="bf") return `${cvt(ms,"bf")} BF`;
+  return `${cvt(ms,"ms").toFixed(1)} m/s`;
+}
+function unitLabel(unit) {
+  return unit==="kn"?"kn":unit==="bf"?"BF":"m/s";
+}
+// Convert a full array ms→display unit
+function cvtArr(arr, unit) { return arr.map(v=>cvt(v,unit)); }
+
+const C = {
+  bg:"#0a0e14",surface:"#111820",panel:"#151d28",border:"#1e2d3d",border2:"#243040",
+  sky:"#3a9ad9",signal:"#f07820",caution:"#f5b942",go:"#3ddc84",stop:"#e84040",
+  text:"#d8e4f0",muted:"#5a7a96",dim:"#2a3d52",
+};
+
+// ── Demo data generator (realistic Navarino/May values) ──────────────────────
+// ── Demo data v2.2.0 ─────────────────────────────────────────────────────────
+// Key fix: timestamps generated as "YYYY-MM-DDTHH:00" using LOCAL calendar date
+// so dayStartIndices.findIndex("YYYY-MM-DD") always matches correctly
+// regardless of user timezone. No Date.toISOString() (= UTC) used.
+
+function localDateStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,"0");
+  const d = String(date.getDate()).padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
+
+// ── Parse coordinates from a Google Maps link or raw coords v2.2.0 ───────────
+// Supports formats:
+//   https://www.google.com/maps/@36.9833,21.6667,14z
+//   https://maps.google.com/?q=36.9833,21.6667
+//   https://www.google.com/maps/place/.../@36.98,21.66,15z/data=...!3d36.98!4d21.66
+//   https://maps.app.goo.gl/...  (shortened — cannot resolve client-side, user warned)
+//   "36.9833, 21.6667"  (plain coordinates)
+function parseLocationInput(input) {
+  if(!input) return null;
+  const str = input.trim();
+
+  // Shortened goo.gl links redirect server-side — can't resolve in browser
+  if(/maps\.app\.goo\.gl|goo\.gl\/maps/.test(str)) {
+    return { error: "Kurz-Link (goo.gl) kann im Browser nicht aufgelöst werden. Bitte den Link in Maps öffnen und die lange URL oder die Koordinaten kopieren." };
+  }
+
+  // Try @lat,lon (most common in maps URLs)
+  let m = str.match(/@(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/);
+  if(m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+
+  // Try !3dLAT!4dLON (embedded in /data= part — most precise place pin)
+  const m3 = str.match(/!3d(-?\d{1,3}\.\d+)/);
+  const m4 = str.match(/!4d(-?\d{1,3}\.\d+)/);
+  if(m3 && m4) return { lat: parseFloat(m3[1]), lon: parseFloat(m4[1]) };
+
+  // Try q=lat,lon or query=lat,lon or ll=lat,lon
+  m = str.match(/[?&](?:q|query|ll|sll)=(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/);
+  if(m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+
+  // Plain "lat, lon"
+  m = str.match(/^\s*(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*$/);
+  if(m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+
+  return { error: "Keine Koordinaten gefunden. Tipp: in Google Maps auf den Ort klicken, die URL aus der Adresszeile kopieren (sollte @Lat,Lon enthalten)." };
+}
+
+// Extract a readable place name from a maps URL (the /place/<name>/ segment)
+function parsePlaceName(input) {
+  if(!input) return "";
+  const m = input.match(/\/place\/([^/@]+)/);
+  if(m) {
+    try { return decodeURIComponent(m[1].replace(/\+/g," ")).split(",")[0]; }
+    catch(e){ return m[1].replace(/\+/g," ").split(",")[0]; }
+  }
+  return "";
+}
+
+function generateDemoDay(lat, lon, dayOffset) {
+  // Build the target LOCAL date for this day
+  const base = new Date();
+  base.setDate(base.getDate() + dayOffset);
+  const dateStr = localDateStr(base); // e.g. "2026-05-31"
+  const isNavarino = Math.abs(lat - 36.98) < 0.5;
+  const windBase = isNavarino ? 4.2 : 3.8;
+  const tempBase = isNavarino ? 22  : 20;
+  const times=[], winds=[], gusts=[], dirs=[], temps=[], pres=[], cape=[], li=[], cloud=[], humid=[];
+  for (let h = 0; h < 24; h++) {
+    // Timestamp purely from local calendar — no UTC conversion
+    times.push(`${dateStr}T${String(h).padStart(2,"0")}:00`);
+    const seaFactor = h>=10 && h<=19 ? Math.sin(Math.PI*(h-10)/9) : 0;
+    const nightDip  = h<7 ? 0.55 : h<10 ? 0.75 : 1.0;
+    const w = Math.max(0.5, windBase*nightDip + seaFactor*3.8 + (Math.random()-0.5)*0.8 + dayOffset*0.3);
+    winds.push(Math.round(w*10)/10);
+    gusts.push(Math.round(w*(1.25+Math.random()*0.2)*10)/10);
+    const dir = h<10 ? 45+Math.random()*30 : 240+Math.random()*40;
+    dirs.push(Math.round(dir));
+    const tVal = tempBase + (h<6 ? -3 : h<14 ? (h-6)*1.1 : (24-h)*0.6-1) + Math.random()*0.8 - dayOffset*0.5;
+    temps.push(Math.round(tVal*10)/10);
+    pres.push(Math.round((1013+Math.sin(h/8)*1.5+Math.random()*0.5-dayOffset*0.3)*10)/10);
+    cape.push(h>=11&&h<=17 ? Math.round(Math.random()*600) : 0);
+    li.push(h>=11&&h<=17 ? -(Math.random()*2.5) : 1+Math.random());
+    cloud.push(Math.round(Math.random()*30+(h>14?10:0)));
+    humid.push(Math.round(55+Math.random()*20-seaFactor*8));
+  }
+  return{time:times,windspeed_10m:winds,windgusts_10m:gusts,winddirection_10m:dirs,
+         temperature_2m:temps,surface_pressure:pres,cape,lifted_index:li,cloudcover:cloud,relativehumidity_2m:humid};
+}
+
+function buildDemoForecast(lat, lon) {
+  const keys=["time","windspeed_10m","windgusts_10m","winddirection_10m","temperature_2m",
+               "surface_pressure","cape","lifted_index","cloudcover","relativehumidity_2m"];
+  const merged = Object.fromEntries(keys.map(k=>[k,[]]));
+  for(let d=0; d<4; d++){
+    const day = generateDemoDay(lat, lon, d);
+    keys.forEach(k => merged[k].push(...day[k]));
+  }
+  return { hourly: merged };
+}
+
+function buildDemoHistorical(lat, lon) {
+  const times=[], winds=[], temps=[];
+  for(let d=7; d>=1; d--){
+    const day = generateDemoDay(lat, lon, -d);
+    times.push(...day.time); winds.push(...day.windspeed_10m); temps.push(...day.temperature_2m);
+  }
+  return { hourly:{ time:times, windspeed_10m:winds, temperature_2m:temps } };
+}
+
+// ── API with timeout + fallback ───────────────────────────────────────────────
+async function fetchWithTimeout(url, ms = 7000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  } catch(e) {
+    clearTimeout(tid);
+    throw e;
+  }
+}
+
+async function tryFetchForecast(lat, lon) {
+  const params = new URLSearchParams({
+    latitude:lat, longitude:lon,
+    hourly:"temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m,surface_pressure,relativehumidity_2m,cloudcover,cape,lifted_index",
+    wind_speed_unit:"ms", forecast_days:4, timezone:"auto",
+  });
+  return fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${params}`);
+}
+
+async function tryFetchHistorical(lat, lon) {
+  // Use local date to avoid UTC-vs-local day mismatch
+  const now = new Date();
+  const localDateStr = d => {
+    const y=d.getFullYear(), mo=String(d.getMonth()+1).padStart(2,'0'), dy=String(d.getDate()).padStart(2,'0');
+    return `${y}-${mo}-${dy}`;
+  };
+  const end = new Date(now); end.setDate(now.getDate()-1);
+  const start = new Date(now); start.setDate(now.getDate()-8);
+  const fmt = localDateStr;
+  const params = new URLSearchParams({
+    latitude:lat, longitude:lon,
+    start_date:fmt(start), end_date:fmt(end),
+    hourly:"windspeed_10m,temperature_2m",
+    wind_speed_unit:"ms", timezone:"auto",
+  });
+  return fetchWithTimeout(`https://archive-api.open-meteo.com/v1/archive?${params}`, 8000);
+}
+
+// ── Thermik ───────────────────────────────────────────────────────────────────
+function computeThermik(h, idx) {
+  const cape=(h.cape?.[idx]??0), li=(h.lifted_index?.[idx]??0), temp=(h.temperature_2m?.[idx]??20);
+  const cloud=(h.cloudcover?.[idx]??50), humid=(h.relativehumidity_2m?.[idx]??60);
+  const hour = h.time?.[idx] ? parseInt(h.time[idx].slice(11,13),10) : 12;
+  const solar = Math.max(0, Math.sin(Math.PI*(hour-6)/12));
+  const capePts = Math.min(40,(cape/3000)*40);
+  const liPts = li<0 ? Math.min(30,Math.abs(li)*5) : li>2 ? -10 : 0;
+  const tempPts = Math.max(0,(temp-20)*1.5);
+  const cloudF = 1-(cloud/100)*0.6;
+  const humidF = Math.max(0.4,1-((humid-40)/120));
+  return Math.round(Math.max(0,Math.min(100,(capePts+liPts+tempPts)*solar*cloudF*humidF)));
+}
+
+function classifyThermik(max) {
+  if(max<10) return{icon:"😴",label:"Kaum Thermik",desc:"Stabile Luftmasse. Wind weitgehend laminar – gute Gleitbedingungen.",color:C.go};
+  if(max<30) return{icon:"🌤",label:"Leichte Thermik",desc:"Gelegentliche Aufwinde, mäßige Turbulenzen möglich, vor allem mittags.",color:C.caution};
+  if(max<60) return{icon:"⛅",label:"Moderate Thermik",desc:"Aktive Konvektion. Thermische Windverstärkung am Nachmittag erwartet. Böen!",color:C.caution};
+  return{icon:"⛈",label:"Starke Thermik",desc:"Intensive Instabilität. Sturmböen und Gewitter möglich!",color:C.stop};
+}
+
+function seaBreeze(windDir, hour, month) {
+  if(hour<10||hour>19) return{active:false,boost:0,align:0};
+  const align=Math.max(0,1-Math.abs(windDir-250)/60);
+  const season=[0,.4,.5,.7,.9,1,1,1,.8,.6,.4,.2,.3][month]??0.5;
+  const hf=Math.sin(Math.PI*(hour-10)/9);
+  const boost=align*season*hf*3.5;
+  return{active:align>0.3,boost:Math.round(boost*10)/10,align};
+}
+
+// ── FoilScore ─────────────────────────────────────────────────────────────────
+function calcWindow(weight,wingM2,foilCm2,skill,knownPlaneMs) {
+  const sm={beginner:1.3,intermediate:1.15,advanced:1.0,pro:0.9}[skill]??1.1;
+  let minW;
+  if(knownPlaneMs && knownPlaneMs>0){
+    // Rider's real-world planing threshold overrides the generic formula.
+    // Practice beats theory: this anchors the whole window to lived experience.
+    minW = knownPlaneMs;
+  } else {
+    const load=weight/wingM2, foilF=1800/foilCm2;
+    minW=Math.max(2.5,(3.5+load*0.15+foilF*0.8)*sm*0.85);
+  }
+  // Window proportions around the planing threshold.
+  // optMin slightly above liftoff; optMax ~2.6x; max scaled by skill.
+  return{ minWind:Math.round(minW*10)/10,
+          optMin:Math.round(minW*1.08*10)/10,
+          optMax:Math.round(minW*2.6*10)/10,
+          maxWind:Math.round(minW*2.6*sm*10)/10 };
+}
+function scoreHour(w,win) {
+  if(w<win.minWind) return Math.max(0,Math.round((w/win.minWind)*30));
+  if(w<win.optMin) return Math.round(30+((w-win.minWind)/(win.optMin-win.minWind))*30);
+  if(w<=win.optMax) return 100;
+  if(w<=win.maxWind) return Math.round(100-((w-win.optMax)/(win.maxWind-win.optMax))*50);
+  return Math.max(0,Math.round(50-(w-win.maxWind)*10));
+}
+function scoreDay(winds,win,start=0) {
+  const hrs=[];
+  for(let h=9;h<=18;h++) if(winds[start+h]!==undefined) hrs.push(scoreHour(winds[start+h],win));
+  return hrs.length ? Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length) : 0;
+}
+
+// ── Equipment selection v2.2.0 ────────────────────────────────────────────────
+// Given the rider's gear list and the day's representative wind (m/s),
+// pick the BEST setup: the one whose window scores highest for that wind.
+// Tie-break: prefer the setup whose optimal range is most centered on the wind.
+function pickBestSetup(gearList, weight, skill, windMs) {
+  if(!gearList || !gearList.length) return null;
+  let best = null;
+  for(const g of gearList){
+    const plane = g.planeKn ? (parseFloat(g.planeKn)/1.94384) : null;
+    const win = calcWindow(weight, parseFloat(g.wing), parseFloat(g.foil), skill, plane);
+    const sc = scoreHour(windMs, win);
+    // centeredness: how close wind is to the middle of the optimal band
+    const mid = (win.optMin + win.optMax) / 2;
+    const center = 1 - Math.min(1, Math.abs(windMs - mid) / (win.optMax - win.optMin + 0.01));
+    const rank = sc * 100 + center * 10;
+    if(!best || rank > best.rank){
+      best = { gear:g, win, score:sc, rank };
+    }
+  }
+  return best;
+}
+
+// localStorage helpers (safe — no crash if storage unavailable, e.g. in preview)
+function loadStored(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch(e) { return fallback; }
+}
+function saveStored(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+  catch(e) { return false; }
+}
+
+// ── Real station vs model: confidence scoring v2.2.0 ─────────────────────────
+const PROXY_BASE = "/api/station";
+
+async function fetchStationCurrent(lat, lon) {
+  try {
+    const r = await fetch(`${PROXY_BASE}/current?lat=${lat}&lon=${lon}`, { signal: AbortSignal.timeout(7000) });
+    if(!r.ok) throw new Error(`Proxy ${r.status}`);
+    return r.json();
+  } catch(e) { return { ok:false, error:e.message }; }
+}
+async function fetchStationHistory(lat, lon, days=7) {
+  try {
+    const r = await fetch(`${PROXY_BASE}/history?lat=${lat}&lon=${lon}&days=${days}`, { signal: AbortSignal.timeout(12000) });
+    if(!r.ok) throw new Error(`Proxy ${r.status}`);
+    return r.json();
+  } catch(e) { return { ok:false, error:e.message }; }
+}
+
+function computeConfidence({ stationCurrent, modelCurrentWind, modelCurrentDir, stationHistMeanWind, modelHistMeanWind }) {
+  const parts=[], notes=[];
+  if(stationCurrent && stationCurrent.ok && modelCurrentWind!=null && stationCurrent.wind!=null){
+    const errMs=Math.abs(stationCurrent.wind-modelCurrentWind);
+    parts.push({w:0.45,v:Math.max(0,100-(errMs/6)*100)});
+    notes.push(`Wind-Δ aktuell ${errMs.toFixed(1)} m/s`);
+  }
+  if(stationCurrent && stationCurrent.ok && modelCurrentDir!=null && stationCurrent.dir!=null){
+    let dd=Math.abs(stationCurrent.dir-modelCurrentDir)%360; if(dd>180) dd=360-dd;
+    parts.push({w:0.20,v:Math.max(0,100-(dd/90)*100)});
+    notes.push(`Richtungs-Δ ${Math.round(dd)}°`);
+  }
+  if(stationHistMeanWind!=null && modelHistMeanWind!=null){
+    const bias=Math.abs(stationHistMeanWind-modelHistMeanWind);
+    parts.push({w:0.35,v:Math.max(0,100-(bias/4)*100)});
+    notes.push(`Hist. Bias ${bias.toFixed(1)} m/s`);
+  }
+  if(!parts.length) return { confidence:null, notes:["Kein Stationsabgleich verfügbar"] };
+  const wsum=parts.reduce((a,p)=>a+p.w,0);
+  return { confidence: Math.round(parts.reduce((a,p)=>a+p.v*p.w,0)/wsum), notes };
+}
+
+function applyConfidence(rawScore, confidence) {
+  if(confidence==null) return { score:rawScore, adjusted:false, confidence:null };
+  const pull=(1-confidence/100)*0.4;
+  return { score:Math.round(rawScore*(1-pull)+50*pull), adjusted:confidence<80, confidence };
+}
+
+function classifyConfidence(c) {
+  if(c==null) return { label:"Kein Abgleich", color:"#5a7a96", icon:"○" };
+  if(c>=80)   return { label:"Hohe Sicherheit", color:"#3ddc84", icon:"●" };
+  if(c>=55)   return { label:"Mittlere Sicherheit", color:"#f5b942", icon:"◐" };
+  return { label:"Geringe Sicherheit", color:"#e84040", icon:"◔" };
+}
+
+// ── Chart helpers ─────────────────────────────────────────────────────────────
+const TT = {
+  contentStyle:{background:"#151d28",border:"1px solid #1e2d3d",borderRadius:4,fontSize:11,fontFamily:"monospace",color:C.text},
+  labelStyle:{color:C.muted}, itemStyle:{color:C.text},
+};
+const ax = { tick:{fill:C.muted,fontSize:10,fontFamily:"monospace"}, axisLine:{stroke:C.border}, tickLine:false };
+const gr = { stroke:"rgba(255,255,255,0.05)" };
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+function App() {
+  const [loc,setLoc]           = useState({lat:36.9833,lon:21.6667,name:"Navarino / Gialova"});
+  const [rider,setRider]       = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,foilFront:1800,skill:"intermediate",planeKn:""}));
+  const [ri,setRi]             = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,foilFront:1800,skill:"intermediate",planeKn:""}));
+  const [gear,setGear]         = useState(()=>loadStored("wf_gear",[])); // [{id,name,wing,foil,planeKn}]
+  const [useGear,setUseGear]   = useState(()=>loadStored("wf_usegear",false));
+  const [profileSaved,setProfileSaved] = useState(false);
+  const [newGear,setNewGear]   = useState({name:"",wing:"5.0",foil:"1800",planeKn:""});
+  const [forecast,setForecast] = useState(null);
+  const [historical,setHist]   = useState(null);
+  const [loading,setLoading]   = useState(true);
+  const [loadMsg,setLoadMsg]   = useState("Verbinde mit Open-Meteo…");
+  const [apiStatus,setApiStatus]= useState({forecast:"⏳",historical:"⏳"});
+  const [activeDay,setActiveDay]= useState(0);
+  const [clock,setClock]       = useState("");
+  const [windUnit,setWindUnit]  = useState("kn"); // 'ms' | 'kn' | 'bf'
+  const [showLoc,setShowLoc]   = useState(false);
+  const [geoStatus,setGeoStatus]= useState(""); // "", "loading", "error"
+  const [geoError,setGeoError] = useState("");
+  const [locTab,setLocTab]     = useState("preset");
+  const [selPreset,setSelPreset]= useState(0);
+  const [custom,setCustom]     = useState({link:"",name:""});
+  const [linkError,setLinkError]= useState("");
+  const [stations,setStations] = useState([]);
+  const [stationUrl,setStationUrl] = useState("");
+  const [nearbyStations,setNearbyStations] = useState([]);
+  const [nearbyStatus,setNearbyStatus] = useState(""); // "", "loading", "demo", "live"
+  const [stationCmp,setStationCmp] = useState(null); // { current, hist, confidence, notes, available }
+  const [stationCmpStatus,setStationCmpStatus] = useState(""); // "", "loading", "ok", "unavailable"
+
+  const PRESETS = [
+    {lat:36.9833,lon:21.6667,name:"Navarino / Gialova"},
+    {lat:36.8900,lon:21.7500,name:"Pylos"},
+    {lat:37.0736,lon:22.4294,name:"Sparti"},
+    {lat:37.5000,lon:22.3731,name:"Korinthia"},
+  ];
+
+  useEffect(()=>{
+    const t=setInterval(()=>setClock(new Date().toLocaleTimeString("de-DE")),1000);
+    return()=>clearInterval(t);
+  },[]);
+
+  // ── Fetch local weather stations within ~10-20km radius ─────────────────────
+  // Open-Meteo has no public raw-station endpoint, so we sample grid points
+  // around the spot (~9-15 km offsets) to approximate local stations.
+  async function fetchNearbyStations(lat, lon) {
+    setNearbyStatus("loading");
+    const offsets = [
+      { dlat: 0.10,  dlon: 0.00,  name: "Nord",     km: 11 },
+      { dlat:-0.10,  dlon: 0.00,  name: "Süd",      km: 11 },
+      { dlat: 0.00,  dlon: 0.12,  name: "Ost",      km: 11 },
+      { dlat: 0.00,  dlon:-0.12,  name: "West",     km: 11 },
+      { dlat: 0.09,  dlon: 0.09,  name: "Nordost",  km: 13 },
+      { dlat:-0.09,  dlon:-0.09,  name: "Südwest",  km: 13 },
+    ];
+    const now = new Date();
+    const hourIdx = now.getHours();
+    const results = [];
+    let anyLive = false;
+
+    await Promise.all(offsets.map(async (off) => {
+      const sLat = Math.round((parseFloat(lat) + off.dlat) * 10000) / 10000;
+      const sLon = Math.round((parseFloat(lon) + off.dlon) * 10000) / 10000;
+      try {
+        const params = new URLSearchParams({
+          latitude:sLat, longitude:sLon,
+          hourly:"windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m",
+          wind_speed_unit:"ms", forecast_days:1, timezone:"auto",
+        });
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal: AbortSignal.timeout(6000) });
+        if(r.ok){
+          const d = await r.json();
+          const h = d.hourly;
+          anyLive = true;
+          results.push({
+            name: off.name, km: off.km, lat: sLat, lon: sLon, live: true,
+            wind:  h.windspeed_10m?.[hourIdx],
+            gust:  h.windgusts_10m?.[hourIdx],
+            dir:   h.winddirection_10m?.[hourIdx],
+            temp:  h.temperature_2m?.[hourIdx],
+          });
+          return;
+        }
+        throw new Error("http");
+      } catch(e) {
+        // Demo fallback for this station
+        const base = Math.abs(sLat-36.98)<2 ? 5.5 : 4.5;
+        results.push({
+          name: off.name, km: off.km, lat: sLat, lon: sLon, live: false,
+          wind: Math.round((base + (Math.random()-0.5)*2)*10)/10,
+          gust: Math.round((base*1.4 + Math.random())*10)/10,
+          dir:  Math.round(200 + Math.random()*80),
+          temp: Math.round((22 + (Math.random()-0.5)*3)*10)/10,
+        });
+      }
+    }));
+
+    // Sort by compass name order for stable display
+    const order = ["Nord","Nordost","Ost","Südost","Süd","Südwest","West","Nordwest"];
+    results.sort((a,b)=>order.indexOf(a.name)-order.indexOf(b.name));
+    setNearbyStations(results);
+    setNearbyStatus(anyLive ? "live" : "demo");
+  }
+
+  // ── Reverse geocode coords → place name via Open-Meteo (no key needed) ──────
+  async function reverseGeocode(lat, lon) {
+    try {
+      const url = `https://geocoding-api.open-meteo.com/v1/search?latitude=${lat}&longitude=${lon}&count=1&language=de`;
+      const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if(r.ok){
+        const d = await r.json();
+        if(d.results && d.results[0]){
+          const p = d.results[0];
+          return [p.name, p.admin1, p.country].filter(Boolean).join(", ");
+        }
+      }
+    } catch(e) { /* fall through */ }
+    return null;
+  }
+
+  // ── Use the device's current GPS position ───────────────────────────────────
+  function useMyLocation() {
+    setGeoError("");
+    if(!("geolocation" in navigator)){
+      setGeoError("Geolocation wird von diesem Gerät/Browser nicht unterstützt.");
+      return;
+    }
+    setGeoStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = Math.round(pos.coords.latitude  * 10000) / 10000;
+        const lon = Math.round(pos.coords.longitude * 10000) / 10000;
+        const name = await reverseGeocode(lat, lon);
+        setLoc({ lat, lon, name: name || `Mein Standort (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)` });
+        setGeoStatus("");
+        setShowLoc(false);
+      },
+      (err) => {
+        setGeoStatus("error");
+        const msg = err.code === 1 ? "Standortzugriff verweigert. Bitte in den Browser-Einstellungen erlauben."
+                  : err.code === 2 ? "Position nicht verfügbar. GPS/Ortungsdienste aktiv?"
+                  : err.code === 3 ? "Zeitüberschreitung bei der Standortbestimmung."
+                  : "Standort konnte nicht ermittelt werden.";
+        setGeoError(msg);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
+  const loadData = useCallback(async(l) => {
+    setLoading(true);
+    setApiStatus({forecast:"⏳",historical:"⏳"});
+    setLoadMsg("Verbinde mit Open-Meteo Forecast API…");
+
+    // Fetch forecast independently – fallback to demo
+    let fc = null;
+    try {
+      fc = await tryFetchForecast(l.lat, l.lon);
+      setApiStatus(s=>({...s,forecast:"✅ Live"}));
+      setLoadMsg("Forecast geladen. Lade ERA5-Archiv…");
+    } catch(e) {
+      setApiStatus(s=>({...s,forecast:"⚠️ Demo"}));
+      fc = buildDemoForecast(l.lat, l.lon);
+      setLoadMsg("Forecast offline → Demo-Daten. Lade Archiv…");
+    }
+    setForecast(fc);
+
+    // Fetch historical independently – fallback to demo
+    let hist = null;
+    try {
+      hist = await tryFetchHistorical(l.lat, l.lon);
+      setApiStatus(s=>({...s,historical:"✅ Live"}));
+    } catch(e) {
+      setApiStatus(s=>({...s,historical:"⚠️ Demo"}));
+      hist = buildDemoHistorical(l.lat, l.lon);
+    }
+    setHist(hist);
+    setActiveDay(0);
+    setLoading(false);
+    // Load nearby stations in the background (non-blocking)
+    fetchNearbyStations(l.lat, l.lon);
+    // Real station vs model comparison (non-blocking)
+    runStationComparison(l.lat, l.lon, fc, hist);
+  },[]);
+
+  // ── Compare REAL station data to the model → confidence score ──────────────
+  async function runStationComparison(lat, lon, fc, hist) {
+    setStationCmpStatus("loading");
+    const [cur, sHist] = await Promise.all([
+      fetchStationCurrent(lat, lon),
+      fetchStationHistory(lat, lon, 7),
+    ]);
+
+    // If the proxy / key is not configured, mark unavailable (graceful)
+    if((!cur || !cur.ok) && (!sHist || !sHist.ok)){
+      setStationCmp({ available:false, current:cur, hist:sHist });
+      setStationCmpStatus("unavailable");
+      return;
+    }
+
+    // Model current values (this hour) from forecast
+    const nowH = new Date().getHours();
+    const modelCurrentWind = fc?.hourly?.windspeed_10m?.[nowH] ?? null;
+    const modelCurrentDir  = fc?.hourly?.winddirection_10m?.[nowH] ?? null;
+
+    // Historical means
+    let stationHistMeanWind = null, modelHistMeanWind = null;
+    if(sHist && sHist.ok && sHist.hourly?.length){
+      const ws = sHist.hourly.map(p=>p.wind).filter(v=>v!=null);
+      if(ws.length) stationHistMeanWind = ws.reduce((a,b)=>a+b,0)/ws.length;
+    }
+    if(hist && hist.hourly?.windspeed_10m?.length){
+      const ws = hist.hourly.windspeed_10m.filter(v=>v!=null);
+      if(ws.length) modelHistMeanWind = ws.reduce((a,b)=>a+b,0)/ws.length;
+    }
+
+    const { confidence, notes } = computeConfidence({
+      stationCurrent: cur, modelCurrentWind, modelCurrentDir,
+      stationHistMeanWind, modelHistMeanWind,
+    });
+
+    setStationCmp({
+      available:true, current:cur, hist:sHist,
+      modelCurrentWind, modelCurrentDir,
+      stationHistMeanWind, modelHistMeanWind,
+      confidence, notes,
+    });
+    setStationCmpStatus("ok");
+  }
+
+  useEffect(()=>{ loadData(loc); },[loc]);
+
+  // ── Compute day start indices from actual calendar dates ──────────────────
+  // API may start mid-day (e.g. 17:00 local time) — find index where each
+  // calendar day (00:00) begins, so "Heute" = today's 00:00 not hour[0]
+  const dayStartIndices = (() => {
+    if(!forecast) return [0,24,48,72];
+    const times = forecast.hourly.time;
+    if(!times.length) return [0,24,48,72];
+    // CRITICAL: data is in the SPOT's timezone (timezone=auto), which may differ
+    // from the user's browser clock. Anchor "today" to the FIRST timestamp's
+    // calendar date in the data itself, so days are always correct for any user.
+    const firstDateStr = times[0].slice(0,10);          // "2026-05-30"
+    const [fy,fm,fd] = firstDateStr.split('-').map(Number);
+    const result = [];
+    for(let d=0; d<4; d++){
+      // Build the target date by adding d days to the data's first date
+      const target = new Date(fy, fm-1, fd + d);
+      const y=target.getFullYear(), m=String(target.getMonth()+1).padStart(2,'0'), dy=String(target.getDate()).padStart(2,'0');
+      const prefix = `${y}-${m}-${dy}`;
+      let idx = times.findIndex(t => typeof t==="string" && t.startsWith(prefix));
+      if(idx === -1) idx = d * 24;
+      result.push(idx);
+    }
+    return result;
+  })();
+
+  // ── Derived day data ────────────────────────────────────────────────────────
+  const dayData = (() => {
+    if(!forecast) return null;
+    const h=forecast.hourly, s=dayStartIndices[activeDay] ?? activeDay*24;
+    const wins=h.windspeed_10m.slice(s,s+24);
+    const gust=h.windgusts_10m.slice(s,s+24);
+    const dirs=h.winddirection_10m.slice(s,s+24);
+    const temp=h.temperature_2m.slice(s,s+24);
+    const pres=h.surface_pressure.slice(s,s+24);
+    const labels=Array.from({length:24},(_,i)=>{
+      const t=h.time[s+i];
+      // Parse directly from ISO string to avoid timezone offset bugs
+      if(t){ const hh=t.slice(11,13), mm=t.slice(14,16); return `${hh}:${mm}`; }
+      return `${String(i).padStart(2,'0')}:00`;
+    });
+    const thermik=Array.from({length:24},(_,i)=>computeThermik(h,s+i));
+    const slice=(arr,a,b)=>arr.slice(a,b).filter(Boolean);
+    const midW=slice(wins,12,16).reduce((a,b)=>a+b,0)/4||wins[12]||0;
+    const midG=slice(gust,12,16).reduce((a,b)=>a+b,0)/4||gust[12]||0;
+    const midDir=dirs[14]??dirs[12]??180;
+    const sb=seaBreeze(midDir,14,new Date().getMonth()+1); // getMonth() is local — correct
+    const effW=midW+(sb.active?sb.boost:0);
+    // Choose window: either the single manual profile, or the best gear for this wind
+    let win, pickedGear=null;
+    if(useGear && gear.length){
+      const best = pickBestSetup(gear, rider.weight, rider.skill, effW);
+      if(best){ win = best.win; pickedGear = best.gear; }
+    }
+    if(!win){
+      win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, rider.planeKn?knToMs(parseFloat(rider.planeKn)):null);
+    }
+    const scores=wins.map(w=>scoreHour(w,win));
+    const avgW=wins.reduce((a,b)=>a+b,0)/wins.length;
+    const maxG=Math.max(...gust);
+    const maxT=Math.max(...temp);
+    const maxTh=Math.max(...thermik);
+    const dayScore=scoreDay(wins,win);
+    const thInfo=classifyThermik(maxTh);
+    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,effW,dayScore,thInfo,pickedGear};
+  })();
+
+  const dayScores = forecast ? Array.from({length:4},(_,d)=>{
+    const start = dayStartIndices[d] ?? d*24;
+    // representative wind for the day (midday avg) to pick gear
+    const dw = forecast.hourly.windspeed_10m.slice(start+12,start+16).filter(Boolean);
+    const dayMidW = dw.length ? dw.reduce((a,b)=>a+b,0)/dw.length : (forecast.hourly.windspeed_10m[start+13]||0);
+    let win;
+    if(useGear && gear.length){
+      const best = pickBestSetup(gear, rider.weight, rider.skill, dayMidW);
+      if(best) win = best.win;
+    }
+    if(!win) win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, rider.planeKn?knToMs(parseFloat(rider.planeKn)):null);
+    return scoreDay(forecast.hourly.windspeed_10m,win,start);
+  }) : [];
+
+  const dayNames = forecast ? (() => {
+    const times = forecast.hourly.time;
+    const firstDateStr = (times && times.length) ? times[0].slice(0,10) : null;
+    // Anchor day labels to the data's first calendar date (spot timezone)
+    const [fy,fm,fd] = firstDateStr ? firstDateStr.split('-').map(Number) : [0,0,0];
+    // Is the data's first day actually "today" in the user's perception?
+    // We label relative to the data itself for consistency across timezones.
+    return Array.from({length:4},(_,d)=>{
+      if(!firstDateStr) return `Tag ${d+1}`;
+      const target = new Date(fy, fm-1, fd + d);
+      if(d===0) return "Heute";
+      if(d===1) return "Morgen";
+      return target.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'numeric'});
+    });
+  })() : [];
+
+  const histData = (() => {
+    if(!historical||!dayData) return [];
+    const hw=historical.hourly.windspeed_10m, ht=historical.hourly.time;
+    const days=Math.floor(hw.length/24);
+    const res=[];
+    for(let d=0;d<Math.min(days,7);d++){
+      const sl=hw.slice(d*24,d*24+24).filter(v=>v!=null);
+      const avg=sl.length?sl.reduce((a,b)=>a+b,0)/sl.length:0;
+      let label=`T-${days-d}`;
+      if(ht[d*24]){ const [y,mo,dy]=ht[d*24].slice(0,10).split('-').map(Number); label=new Date(y,mo-1,dy).toLocaleDateString('de-DE',{weekday:'short',day:'numeric'}); }
+      res.push({label,era5:Math.round(avg*10)/10,prog:null});
+    }
+    res.push({label:"Heute",era5:null,prog:Math.round(cvt(dayData.avgW,windUnit)*10)/10});
+  // convert era5 values too
+  return res.map(r=>({...r,era5:r.era5!=null?Math.round(cvt(r.era5,windUnit)*10)/10:null}));
+  })();
+
+  // ── Recommendation ──────────────────────────────────────────────────────────
+  const rec = (() => {
+    if(!dayData) return "";
+    const{effW,midG,win,pickedGear}=dayData;
+    const{weight,wingSize,foilFront,skill}=rider;
+    const lines=[];
+    if(pickedGear){
+      const gname = pickedGear.name ? `<b>${pickedGear.name}</b>` : "Setup";
+      lines.push(`🎒 <b>Empfohlenes Setup aus deinem Material:</b> ${gname} — Wing ${pickedGear.wing} m² · Foil ${pickedGear.foil} cm²${pickedGear.planeKn?` · ab ${pickedGear.planeKn} kn`:""}`);
+    }
+    if(effW<win.minWind){
+      lines.push(`⚠️ <b>Zu wenig Wind</b> — ${fmtW(effW,windUnit)}, benötigt ≥${fmtW(win.minWind,windUnit)}`);
+      lines.push(`💡 Größeren Wing wählen oder auf Nachmittags-Thermik warten.`);
+    } else if(effW<=win.optMax){
+      lines.push(`✅ <b>Optimale Bedingungen</b> — ${fmtW(effW,windUnit)} im Fenster (${fmtW(win.optMin,windUnit)}–${fmtW(win.optMax,windUnit)})`);
+      if(!pickedGear) lines.push(`🏄 Wing ${wingSize} m² · Foil ${foilFront} cm² — ideal für ${weight} kg · ${skill}`);
+    } else if(effW<=win.maxWind){
+      lines.push(`⚠️ <b>Overpowered-Zone</b> — ${fmtW(effW,windUnit)} an der Obergrenze`);
+      lines.push(`💡 Kleineren Wing: ${(wingSize-0.5).toFixed(1)} m² erwägen`);
+    } else {
+      lines.push(`🚨 <b>Zu viel Wind</b> — ${fmtW(effW,windUnit)} > Max ${fmtW(win.maxWind,windUnit)}`);
+      lines.push(`⛔ Sitzung abbrechen oder deutlich kleineres Equipment`);
+    }
+    if(midG-effW>4) lines.push(`💨 <b>Böen-Δ ${fmtW(midG-effW,windUnit)}</b> — Erhöhte Kontrollbelastung!`);
+    lines.push(`<br>📐 <b>Dein Fenster:</b> Abheben ${fmtW(win.minWind,windUnit)} · Optimal ${fmtW(win.optMin,windUnit)}–${fmtW(win.optMax,windUnit)} · Max ${fmtW(win.maxWind,windUnit)}`);
+    return lines.join("<br>");
+  })();
+
+  // ── Chart data ──────────────────────────────────────────────────────────────
+  const windData  = dayData?dayData.labels.map((l,i)=>({h:l,wind:cvt(dayData.wins[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i]})):[];
+  const dirData   = dayData?dayData.labels.map((l,i)=>({idx:i,dir:dayData.dirs[i]})):[];
+  const tempData  = dayData?dayData.labels.map((l,i)=>({h:l,temp:dayData.temp[i]})):[];
+  const presData  = dayData?dayData.labels.map((l,i)=>({h:l,pres:Math.round(dayData.pres[i])})):[];
+  const thData    = dayData?dayData.labels.map((l,i)=>({h:l,th:dayData.thermik[i]})):[];
+
+  const sc2col = s => s>=75?C.go:s>=45?C.caution:C.stop;
+
+  // ── Styles ──────────────────────────────────────────────────────────────────
+  const S={
+    wrap:{fontFamily:"'Barlow',sans-serif",background:C.bg,color:C.text,minHeight:"100vh",fontSize:14},
+    hdr:{background:"rgba(10,14,20,.97)",borderBottom:`1px solid ${C.border}`,padding:"8px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100},
+    locBar:{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"6px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"},
+    riderBar:{background:C.panel,borderBottom:`1px solid ${C.border}`,padding:"12px 20px"},
+    main:{padding:"14px 18px 40px",maxWidth:1200,margin:"0 auto"},
+    card:{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,padding:"12px 16px",marginBottom:12},
+    sec:{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted,marginBottom:8},
+    btn:{background:C.signal,color:"#fff",border:"none",borderRadius:4,fontWeight:700,fontSize:13,padding:"7px 18px",cursor:"pointer",fontFamily:"monospace"},
+    btnG:{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:4,fontSize:12,padding:"4px 10px",cursor:"pointer"},
+    inp:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:4,padding:"5px 8px",fontFamily:"monospace",fontSize:12,outline:"none"},
+    grid2:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12},
+    grid6:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:12},
+    cw:{height:190}, cwL:{height:210},
+  };
+
+  return (
+    <div style={S.wrap}>
+      {/* HEADER */}
+      <header style={S.hdr}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:24,color:C.signal}}>⟁</span>
+          <div>
+            <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:"#fff"}}>WINDFOIL</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v2.2.0</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+          <span style={{display:"flex",gap:6,fontSize:9,fontFamily:"monospace"}}>
+            <span title="Forecast API">FC:{apiStatus.forecast}</span>
+            <span title="Historical API">ERA5:{apiStatus.historical}</span>
+          </span>
+          <div style={{display:"flex",gap:3}}>
+            {["ms","kn","bf"].map(u=>(
+              <button key={u} onClick={()=>setWindUnit(u)} style={{background:windUnit===u?C.signal:"transparent",border:`1px solid ${windUnit===u?C.signal:C.border2}`,color:windUnit===u?"#fff":C.muted,borderRadius:3,padding:"2px 7px",fontFamily:"monospace",fontSize:10,cursor:"pointer",textTransform:"uppercase"}}>
+                {u==="ms"?"m/s":u==="kn"?"kn":"BF"}
+              </button>
+            ))}
+          </div>
+          <span style={{fontFamily:"monospace",fontSize:13,color:C.signal}}>{clock}</span>
+        </div>
+      </header>
+
+      {/* LOC BAR */}
+      <div style={S.locBar}>
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>
+          <span>📍</span>
+          <b style={{color:"#fff"}}>{loc.name}</b>
+          <span style={{fontFamily:"monospace",fontSize:10,color:C.muted}}>{loc.lat.toFixed(4)}°N, {loc.lon.toFixed(4)}°E</span>
+        </div>
+        <button style={S.btnG} onClick={()=>setShowLoc(true)}>Ort ändern</button>
+      </div>
+
+      {/* RIDER BAR */}
+      <div style={S.riderBar}>
+        <div style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted,marginBottom:10}}>🏄 Rider-Profil</div>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end"}}>
+          {[{l:"Gewicht (kg)",k:"weight",step:1,min:40,max:150},{l:"Wing (m²)",k:"wingSize",step:.5,min:2,max:12},{l:"Foil Front (cm²)",k:"foilFront",step:50,min:600,max:3000}].map(f=>(
+            <div key={f.k} style={{display:"flex",flexDirection:"column",gap:4}}>
+              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>{f.l}</label>
+              <input type="number" value={ri[f.k]} step={f.step} min={f.min} max={f.max}
+                onChange={e=>setRi(r=>({...r,[f.k]:parseFloat(e.target.value)}))}
+                style={{...S.inp,width:110,fontSize:13}} />
+            </div>
+          ))}
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>Skill-Level</label>
+            <select value={ri.skill} onChange={e=>setRi(r=>({...r,skill:e.target.value}))}
+              style={{...S.inp,width:140,fontSize:13}}>
+              {["beginner","intermediate","advanced","pro"].map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}} title="Optional: ab wie viel Wind du erfahrungsgemäß abhebst. Überschreibt die Formel.">Abheben ab (kn) · optional</label>
+            <input type="number" value={ri.planeKn} step={0.5} min={4} max={30}
+              placeholder="z.B. 11"
+              onChange={e=>setRi(r=>({...r,planeKn:e.target.value}))}
+              style={{...S.inp,width:130,fontSize:13}} />
+          </div>
+          <button style={S.btn} onClick={()=>{setRider({...ri});setActiveDay(0);}}>ANALYSE STARTEN →</button>
+          <button style={{...S.btn,background:"transparent",border:`1px solid ${C.go}`,color:C.go}}
+            onClick={()=>{ saveStored("wf_rider",ri); setRider({...ri}); setProfileSaved(true); setTimeout(()=>setProfileSaved(false),2000); }}>
+            {profileSaved ? "✓ GESPEICHERT" : "PROFIL SPEICHERN"}
+          </button>
+        </div>
+
+        {/* EQUIPMENT MANAGER */}
+        <div style={{marginTop:14,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <span style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted}}>🎒 Mein Equipment</span>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:useGear?C.go:C.muted,cursor:"pointer"}}>
+              <input type="checkbox" checked={useGear} onChange={e=>{setUseGear(e.target.checked); saveStored("wf_usegear",e.target.checked); setActiveDay(0);}} />
+              Automatische Setup-Wahl
+            </label>
+          </div>
+
+          {/* existing gear chips */}
+          {gear.length>0 && (
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+              {gear.map(g=>(
+                <div key={g.id} style={{display:"flex",alignItems:"center",gap:6,background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"5px 8px",fontSize:11}}>
+                  <span style={{color:C.text}}>{g.name||`${g.wing}m²`}</span>
+                  <span style={{color:C.muted,fontFamily:"monospace",fontSize:10}}>{g.wing}m² · {g.foil}cm²{g.planeKn?` · ab ${g.planeKn}kn`:""}</span>
+                  <button onClick={()=>{const ng=gear.filter(x=>x.id!==g.id); setGear(ng); saveStored("wf_gear",ng); setActiveDay(0);}}
+                    style={{background:"none",border:"none",color:C.stop,cursor:"pointer",fontSize:13,padding:0,lineHeight:1}}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* add new gear */}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>Name</label>
+              <input value={newGear.name} placeholder="z.B. Leichtwind" onChange={e=>setNewGear(g=>({...g,name:e.target.value}))} style={{...S.inp,width:110,fontSize:12}} />
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>Wing (m²)</label>
+              <input type="number" step={0.5} value={newGear.wing} onChange={e=>setNewGear(g=>({...g,wing:e.target.value}))} style={{...S.inp,width:80,fontSize:12}} />
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>Foil (cm²)</label>
+              <input type="number" step={50} value={newGear.foil} onChange={e=>setNewGear(g=>({...g,foil:e.target.value}))} style={{...S.inp,width:90,fontSize:12}} />
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>ab (kn)</label>
+              <input type="number" step={0.5} value={newGear.planeKn} placeholder="opt." onChange={e=>setNewGear(g=>({...g,planeKn:e.target.value}))} style={{...S.inp,width:70,fontSize:12}} />
+            </div>
+            <button style={{...S.btn,fontSize:11,padding:"6px 12px"}}
+              onClick={()=>{
+                if(!newGear.wing||!newGear.foil) return;
+                const entry={...newGear,id:Date.now()};
+                const ng=[...gear,entry];
+                setGear(ng); saveStored("wf_gear",ng);
+                setNewGear({name:"",wing:"5.0",foil:"1800",planeKn:""});
+                setActiveDay(0);
+              }}>+ Hinzufügen</button>
+          </div>
+          {useGear && gear.length===0 && (
+            <p style={{fontSize:10,color:C.caution,marginTop:8}}>Füge mindestens ein Equipment hinzu, damit die automatische Wahl greift.</p>
+          )}
+        </div>
+      </div>
+
+      <div style={S.main}>
+
+        {/* LOADING */}
+        {loading && (
+          <div style={{textAlign:"center",padding:"60px 0",color:C.muted}}>
+            <div style={{fontSize:40,marginBottom:12,display:"inline-block",animation:"spin 1s linear infinite"}}>⟳</div>
+            <p style={{fontFamily:"monospace",fontSize:13,marginBottom:6}}>{loadMsg}</p>
+            <p style={{fontFamily:"monospace",fontSize:10,color:C.dim}}>Bei Verbindungsproblemen werden Demo-Daten geladen</p>
+          </div>
+        )}
+
+        {!loading && forecast && dayData && (
+          <>
+            {/* DAY TABS */}
+            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+              {dayNames.map((name,d)=>{
+                const sc=dayScores[d], active=d===activeDay;
+                const icon=sc>=75?"✅":sc>=45?"⚠️":"❌";
+                return(
+                  <button key={d} onClick={()=>setActiveDay(d)} style={{
+                    background:active?C.signal:C.surface, border:`1px solid ${active?C.signal:C.border2}`,
+                    color:active?"#fff":C.muted, borderRadius:4, padding:"8px 14px", cursor:"pointer",
+                    display:"flex", flexDirection:"column", alignItems:"center", gap:2, minWidth:90 }}>
+                    <span style={{fontSize:14}}>{icon}</span>
+                    <span style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase"}}>{name}</span>
+                    <span style={{fontFamily:"monospace",fontWeight:900,fontSize:18,color:active?"#fff":sc2col(sc)}}>{sc}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* SCORE + BADGES */}
+            {(()=>{ /* confidence applies to TODAY only (station obs are current) */ })()}
+            <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap",alignItems:"stretch"}}>
+              {(()=>{
+                const conf = (activeDay===0 && stationCmp?.available) ? stationCmp.confidence : null;
+                const adj = applyConfidence(dayData.dayScore, conf);
+                const cc = classifyConfidence(conf);
+                return (
+                  <div style={{...S.card,marginBottom:0,minWidth:150,textAlign:"center"}}>
+                    <div style={{fontFamily:"monospace",fontWeight:900,fontSize:52,color:sc2col(adj.score),lineHeight:1}}>{adj.score}</div>
+                    <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>Foil-Score</div>
+                    {adj.adjusted && (
+                      <div style={{fontSize:9,color:C.caution,marginTop:3}}>roh {dayData.dayScore} · justiert</div>
+                    )}
+                    <div style={{fontSize:10,color:C.muted,marginTop:4}}>
+                      {dayData.pickedGear
+                        ? `${rider.weight}kg · ${dayData.pickedGear.name||dayData.pickedGear.wing+"m²"} (${dayData.pickedGear.wing}m²·${dayData.pickedGear.foil}cm²)`
+                        : `${rider.weight}kg·${rider.wingSize}m²·${rider.foilFront}cm²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}
+                    </div>
+                    {conf!=null && (
+                      <div style={{marginTop:6,paddingTop:6,borderTop:`1px solid ${C.border}`,fontSize:10,color:cc.color}}>
+                        {cc.icon} {cc.label} ({conf}%)
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              <div style={{display:"flex",flexWrap:"wrap",gap:7,alignContent:"flex-start"}}>
+                {[
+                  {icon:"💨",label:`Ø ${fmtW(dayData.avgW,windUnit)}`,c:dayData.avgW>=dayData.win.optMin&&dayData.avgW<=dayData.win.optMax?C.go:dayData.avgW<dayData.win.minWind?C.stop:C.caution},
+                  {icon:"⬆",label:`Max Böe ${fmtW(dayData.maxG,windUnit)}`,c:dayData.maxG>dayData.win.maxWind?C.stop:C.caution},
+                  {icon:"🌡",label:`${dayData.maxT.toFixed(0)}°C max`,c:C.sky},
+                  {icon:dayData.thInfo.icon,label:dayData.thInfo.label,c:dayData.thInfo.color},
+                  ...(dayData.sb.active?[{icon:"🌊",label:`Meeresbrise +${fmtW(dayData.sb.boost,windUnit)}`,c:C.sky}]:[]),
+                ].map((b,i)=>(
+                  <div key={i} style={{border:`1px solid ${b.c}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:b.c,display:"flex",alignItems:"center",gap:6,background:C.surface}}>
+                    {b.icon} {b.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* QUICK STATS */}
+            <div style={S.grid6}>
+              {[
+                {v:cvt(dayData.avgW,windUnit).toFixed(windUnit==="bf"?0:1),u:unitLabel(windUnit),l:"Ø Wind"},
+                {v:cvt(dayData.maxG,windUnit).toFixed(windUnit==="bf"?0:1),u:unitLabel(windUnit),l:"Max Böe"},
+                {v:dayData.maxT.toFixed(0),u:"°C",l:"Temperatur"},
+                {v:Math.round(Math.max(...dayData.pres)),u:"hPa",l:"Luftdruck"},
+                {v:dayData.maxTh,u:"",l:"Thermik-Index"},
+                {v:`${cvt(dayData.win.optMin,windUnit).toFixed(windUnit==="bf"?0:1)}–${cvt(dayData.win.optMax,windUnit).toFixed(windUnit==="bf"?0:1)}`,u:unitLabel(windUnit),l:"Foil-Fenster"},
+              ].map((s,i)=>(
+                <div key={i} style={{...S.card,marginBottom:0,padding:"10px 12px"}}>
+                  <div style={{fontFamily:"monospace",fontWeight:700,fontSize:19,color:"#fff"}}>{s.v}<span style={{fontSize:10,color:C.muted,marginLeft:3}}>{s.u}</span></div>
+                  <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",marginTop:2}}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* WIND CHART (full width) */}
+            <div style={S.card}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                <span style={S.sec}>Wind & Böen ({unitLabel(windUnit)})</span>
+                <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>Open-Meteo · Best Match</span>
+              </div>
+              <div style={S.cwL}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={windData}>
+                    <CartesianGrid {...gr} />
+                    <XAxis dataKey="h" {...ax} interval={3} />
+                    <YAxis {...ax} />
+                    <Tooltip {...TT} />
+                    <Legend wrapperStyle={{fontSize:10,fontFamily:"monospace",color:C.muted}} />
+                    <ReferenceArea y1={cvt(dayData.win.optMin,windUnit)} y2={cvt(dayData.win.optMax,windUnit)} fill="rgba(61,220,132,0.10)" stroke="rgba(61,220,132,0.3)" label={{value:"Optimal",fill:C.go,fontSize:9,position:"insideTopRight"}} />
+                    <ReferenceLine y={cvt(dayData.win.minWind,windUnit)} stroke={C.caution} strokeDasharray="4 3" label={{value:`Min ${cvt(dayData.win.minWind,windUnit).toFixed(windUnit==="bf"?0:1)}`,fill:C.caution,fontSize:9}} />
+                    <Line type="monotone" dataKey="wind" name="Wind" stroke={C.sky} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="gust" name="Böen" stroke={C.signal} strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* GRID 2: Direction + Temp */}
+            <div style={S.grid2}>
+              <div style={S.card}>
+                <div style={S.sec}>Windrichtung (°)</div>
+                <div style={S.cw}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart><CartesianGrid {...gr} />
+                      <XAxis dataKey="idx" type="number" domain={[0,23]} {...ax} tickFormatter={v=>`${v}:00`} interval={5} />
+                      <YAxis dataKey="dir" domain={[0,360]} {...ax} tickFormatter={v=>["N","NE","E","SE","S","SW","W","NW","N"][Math.round(v/45)]||v} />
+                      <Tooltip {...TT} formatter={v=>[`${v}°`,"Richtung"]} />
+                      <Scatter data={dirData} fill={C.caution} />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div style={S.card}>
+                <div style={S.sec}>Temperatur (°C)</div>
+                <div style={S.cw}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={tempData}><CartesianGrid {...gr} />
+                      <XAxis dataKey="h" {...ax} interval={3} />
+                      <YAxis {...ax} />
+                      <Tooltip {...TT} />
+                      <Line type="monotone" dataKey="temp" stroke="#ff6b6b" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* GRID 2: Thermik + Druck */}
+            <div style={S.grid2}>
+              <div style={S.card}>
+                <div style={S.sec}>Thermik-Index (0–100)</div>
+                <div style={S.cw}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={thData}><CartesianGrid {...gr} />
+                      <XAxis dataKey="h" {...ax} interval={3} />
+                      <YAxis domain={[0,100]} {...ax} />
+                      <Tooltip {...TT} />
+                      <Bar dataKey="th" radius={[2,2,0,0]}>
+                        {thData.map((d,i)=><Cell key={i} fill={d.th<25?"rgba(61,220,132,0.75)":d.th<55?"rgba(245,185,66,0.75)":"rgba(232,64,64,0.75)"} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div style={S.card}>
+                <div style={S.sec}>Luftdruck (hPa)</div>
+                <div style={S.cw}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={presData}><CartesianGrid {...gr} />
+                      <XAxis dataKey="h" {...ax} interval={3} />
+                      <YAxis {...ax} domain={["auto","auto"]} />
+                      <Tooltip {...TT} />
+                      <Line type="monotone" dataKey="pres" stroke="#a78bfa" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* HISTORICAL */}
+            <div style={S.card}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                <span style={S.sec}>Historischer Vergleich — ERA5 Reanalyse vs. Prognose</span>
+                <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>{apiStatus.historical}</span>
+              </div>
+              <div style={S.cwL}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={histData}><CartesianGrid {...gr} />
+                    <XAxis dataKey="label" {...ax} />
+                    <YAxis {...ax} />
+                    <Tooltip {...TT} />
+                    <Legend wrapperStyle={{fontSize:10,fontFamily:"monospace",color:C.muted}} />
+                    <Bar dataKey="era5" name={`ERA5 Ø ${unitLabel(windUnit)}`} fill="rgba(58,154,217,0.55)" stroke={C.sky} strokeWidth={1} radius={[3,3,0,0]} />
+                    <Bar dataKey="prog" name={`Prognose Ø ${unitLabel(windUnit)}`} fill="rgba(61,220,132,0.55)" stroke={C.go} strokeWidth={1} radius={[3,3,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* FOIL WINDOW */}
+            <div style={S.card}>
+              <div style={S.sec}>Foil-Fenster Analyse — Rider-spezifisch + Foil-Score</div>
+              <div style={S.cwL}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={windData}><CartesianGrid {...gr} />
+                    <XAxis dataKey="h" {...ax} interval={3} />
+                    <YAxis yAxisId="l" {...ax} />
+                    <YAxis yAxisId="r" orientation="right" domain={[0,100]} {...ax} tick={{...ax.tick,fill:C.go}} />
+                    <Tooltip {...TT} />
+                    <Legend wrapperStyle={{fontSize:10,fontFamily:"monospace",color:C.muted}} />
+                    <ReferenceArea yAxisId="l" y1={cvt(dayData.win.optMin,windUnit)} y2={cvt(dayData.win.optMax,windUnit)} fill="rgba(61,220,132,0.10)" stroke="rgba(61,220,132,0.3)" />
+                    <ReferenceLine yAxisId="l" y={cvt(dayData.win.minWind,windUnit)} stroke={C.caution} strokeDasharray="4 3" />
+                    <Line yAxisId="l" type="monotone" dataKey="wind" name={`Wind ${unitLabel(windUnit)}`} stroke={C.sky} strokeWidth={2} dot={false} />
+                    <Line yAxisId="l" type="monotone" dataKey="gust" name={`Böen ${unitLabel(windUnit)}`} stroke={C.signal} strokeDasharray="4 3" strokeWidth={1.5} dot={false} />
+                    <Line yAxisId="r" type="monotone" dataKey="score" name="Foil-Score" stroke={C.go} strokeWidth={1.5} dot={false} strokeOpacity={0.8} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* THERMIK BOX */}
+            <div style={{...S.card,borderLeft:`3px solid ${C.caution}`,display:"flex",gap:12}}>
+              <span style={{fontSize:22}}>🌡️</span>
+              <div>
+                <strong style={{color:C.caution,fontSize:13}}>Thermik-Analyse — {dayData.thInfo.label}</strong>
+                <p style={{fontSize:12,color:C.muted,marginTop:4,lineHeight:1.7}}>
+                  {dayData.thInfo.desc}
+                  {dayData.sb.active&&<><br/><br/>🌊 <b style={{color:C.sky}}>Meeresbrise aktiv:</b> W-SW (Ionisches Meer) +{fmtW(dayData.sb.boost,windUnit)} um ~14:30 Uhr. Ausrichtungsgrad {Math.round(dayData.sb.align*100)}% — typisch für Navarino Bay.</>}
+                </p>
+              </div>
+            </div>
+
+            {/* RECOMMENDATION */}
+            <div style={{...S.card,borderLeft:`3px solid ${C.go}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <span>🎯</span>
+                <strong style={{color:C.go,fontSize:13}}>Equipment-Empfehlung</strong>
+              </div>
+              <div style={{fontSize:12,color:C.muted,lineHeight:1.9}} dangerouslySetInnerHTML={{__html:rec}} />
+            </div>
+
+            {/* STATION vs MODEL COMPARISON (confidence) */}
+            <div style={{...S.card,borderLeft:`3px solid ${C.sky}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
+                <span style={S.sec}>🛰 Station ↔ Modell Abgleich → Vertrauens-Score</span>
+                <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>
+                  {stationCmpStatus==="loading"?"⏳ Abgleich…":stationCmpStatus==="ok"?"✅ aktiv":stationCmpStatus==="unavailable"?"○ keine Station":""}
+                </span>
+              </div>
+
+              {stationCmpStatus==="loading" && (
+                <p style={{fontSize:11,color:C.dim}}>Echte Stationsdaten werden mit dem Modell verglichen…</p>
+              )}
+
+              {stationCmpStatus==="unavailable" && (
+                <div style={{fontSize:11,color:C.muted,lineHeight:1.6}}>
+                  Kein Stations-Backend erreichbar. Der Vertrauens-Score benötigt den Proxy
+                  (<code style={{color:C.caution}}>proxy-server.js</code>) mit gültigem Weatherbit-API-Key auf deinem Host.
+                  Bis dahin basiert die Bewertung allein auf Modell + Rider-Angaben.
+                </div>
+              )}
+
+              {stationCmpStatus==="ok" && stationCmp?.available && (()=>{
+                const cc = classifyConfidence(stationCmp.confidence);
+                const cur = stationCmp.current;
+                return (
+                  <div>
+                    {/* Confidence bar */}
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                      <span style={{fontFamily:"monospace",fontWeight:900,fontSize:32,color:cc.color,lineHeight:1}}>{stationCmp.confidence ?? "–"}%</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12,color:cc.color,marginBottom:4}}>{cc.icon} {cc.label}</div>
+                        <div style={{height:6,background:C.bg,borderRadius:3,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:`${stationCmp.confidence ?? 0}%`,background:cc.color,transition:"width .4s"}} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Side-by-side comparison */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                      <div style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px"}}>
+                        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",marginBottom:4}}>Station (real)</div>
+                        <div style={{fontSize:12,color:C.text}}>💨 {cur?.ok && cur.wind!=null?fmtW(cur.wind,windUnit):"–"}</div>
+                        <div style={{fontSize:11,color:C.muted}}>🧭 {cur?.ok && cur.dir!=null?Math.round(cur.dir)+"°":"–"} · 🌡 {cur?.ok && cur.temp!=null?cur.temp.toFixed(0)+"°":"–"}</div>
+                        {cur?.station_id && <div style={{fontFamily:"monospace",fontSize:8,color:C.dim,marginTop:4}}>ID {cur.station_id}</div>}
+                      </div>
+                      <div style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px"}}>
+                        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",marginBottom:4}}>Modell</div>
+                        <div style={{fontSize:12,color:C.text}}>💨 {stationCmp.modelCurrentWind!=null?fmtW(stationCmp.modelCurrentWind,windUnit):"–"}</div>
+                        <div style={{fontSize:11,color:C.muted}}>🧭 {stationCmp.modelCurrentDir!=null?Math.round(stationCmp.modelCurrentDir)+"°":"–"}</div>
+                      </div>
+                      <div style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px"}}>
+                        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",marginBottom:4}}>Hist. Ø Wind</div>
+                        <div style={{fontSize:11,color:C.text}}>Station {stationCmp.stationHistMeanWind!=null?fmtW(stationCmp.stationHistMeanWind,windUnit):"–"}</div>
+                        <div style={{fontSize:11,color:C.muted}}>Modell {stationCmp.modelHistMeanWind!=null?fmtW(stationCmp.modelHistMeanWind,windUnit):"–"}</div>
+                      </div>
+                    </div>
+
+                    {/* Divergence notes */}
+                    {stationCmp.notes?.length>0 && (
+                      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                        {stationCmp.notes.map((n,i)=>(
+                          <span key={i} style={{fontFamily:"monospace",fontSize:10,color:C.muted,background:C.bg,border:`1px solid ${C.border2}`,borderRadius:4,padding:"3px 8px"}}>{n}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{fontSize:9,color:C.dim,marginTop:10,lineHeight:1.5}}>
+                      Großer Unterschied zwischen Station und Modell ⇒ niedriger Vertrauens-Score ⇒ der Foil-Score (heute) wird Richtung neutral gedämpft. Stations-Quelle: {cur?.source || stationCmp.hist?.source || "Weatherbit"}.
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* NEARBY STATIONS */}
+            <div style={S.card}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
+                <span style={S.sec}>📡 Lokale Wetterstationen (Umkreis ~10–15 km)</span>
+                <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>
+                  {nearbyStatus==="loading"?"⏳ lädt…":nearbyStatus==="live"?"✅ Live":nearbyStatus==="demo"?"⚠️ Demo":""}
+                </span>
+              </div>
+              {nearbyStatus==="loading" && (
+                <p style={{fontSize:11,color:C.dim}}>Stationen im Umkreis werden abgefragt…</p>
+              )}
+              {nearbyStations.length>0 && (
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8}}>
+                  {nearbyStations.map((st,i)=>{
+                    const dirTxt = st.dir!=null ? ["N","NO","O","SO","S","SW","W","NW"][Math.round(st.dir/45)%8] : "–";
+                    return (
+                      <div key={i} style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"10px 12px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                          <b style={{color:C.text,fontSize:12}}>{st.name}</b>
+                          <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>{st.km} km</span>
+                        </div>
+                        <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:C.muted}}>
+                          <span style={{color:C.sky}}>💨 {st.wind!=null?fmtW(st.wind,windUnit):"–"}</span>
+                          <span style={{color:C.signal}}>⬆ {st.gust!=null?fmtW(st.gust,windUnit):"–"}</span>
+                          <span>🧭 {dirTxt}</span>
+                          <span>🌡 {st.temp!=null?st.temp.toFixed(0)+"°":"–"}</span>
+                        </div>
+                        <div style={{fontFamily:"monospace",fontSize:8,color:C.dim,marginTop:5}}>
+                          {st.lat.toFixed(3)}°, {st.lon.toFixed(3)}° {st.live?"":"· demo"}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div style={{fontSize:9,color:C.dim,marginTop:8,lineHeight:1.5}}>
+                Werte interpoliert aus Open-Meteo-Gitterpunkten rund um den Spot (aktuelle Stunde). Dienen als räumlicher Vergleich, nicht als geeichte Stationsmessung.
+              </div>
+            </div>
+
+            {/* MANUAL EXTERNAL STATIONS */}
+            <div style={S.card}>
+              <div style={S.sec}>🔗 Eigene Wetterstation hinzufügen</div>
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <input type="url" value={stationUrl} onChange={e=>setStationUrl(e.target.value)}
+                  placeholder="https://wetterstation.example.com/data"
+                  style={{...S.inp,flex:1}} />
+                <button style={{...S.btn,fontSize:11,padding:"5px 12px"}} onClick={()=>{if(stationUrl.trim()){setStations(s=>[...s,{url:stationUrl.trim()}]);setStationUrl("");}}}>
+                  Hinzufügen
+                </button>
+              </div>
+              {stations.map((st,i)=>(
+                <div key={i} style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:4,padding:"8px 12px",marginBottom:6,fontSize:11,color:C.muted}}>
+                  <b style={{color:C.text,display:"block",marginBottom:3}}>{st.url}</b>
+                  CORS-eingeschränkt im Browser — Daten bitte direkt auf der Seite prüfen.
+                </div>
+              ))}
+              {!stations.length&&<p style={{fontSize:11,color:C.dim}}>Noch keine eigenen Stationen konfiguriert.</p>}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* LOC MODAL */}
+      {showLoc&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,width:"100%",maxWidth:460}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
+              <strong style={{fontFamily:"monospace",fontSize:14}}>Standort konfigurieren</strong>
+              <button onClick={()=>setShowLoc(false)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
+            </div>
+            <div style={{padding:16}}>
+              <div style={{display:"flex",gap:6,marginBottom:14}}>
+                {["preset","custom"].map(tab=>(
+                  <button key={tab} onClick={()=>setLocTab(tab)} style={{background:locTab===tab?C.signal:"none",border:`1px solid ${locTab===tab?C.signal:C.border2}`,color:locTab===tab?"#fff":C.muted,borderRadius:4,padding:"4px 10px",fontSize:12,cursor:"pointer"}}>
+                    {tab==="preset"?"Voreinstellungen":"Maps-Link"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mein Standort (GPS) */}
+              <button onClick={useMyLocation} disabled={geoStatus==="loading"}
+                style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                  background:geoStatus==="loading"?C.surface:"rgba(58,154,217,0.12)",
+                  border:`1px solid ${C.sky}`,color:C.sky,borderRadius:6,
+                  padding:"10px 12px",fontSize:13,fontFamily:"monospace",cursor:geoStatus==="loading"?"wait":"pointer",
+                  marginBottom:12}}>
+                {geoStatus==="loading"
+                  ? <><span style={{display:"inline-block",animation:"spin 1s linear infinite"}}>⟳</span> Standort wird ermittelt…</>
+                  : <>📍 Meinen aktuellen Standort verwenden</>}
+              </button>
+              {geoError && (
+                <div style={{fontSize:11,color:C.caution,lineHeight:1.5,background:"rgba(245,185,66,0.08)",
+                  border:`1px solid ${C.caution}`,borderRadius:4,padding:"6px 10px",marginBottom:12}}>
+                  ⚠️ {geoError}
+                </div>
+              )}
+              <div style={{fontSize:9,color:C.dim,textAlign:"center",marginBottom:12,letterSpacing:"0.05em"}}>
+                — oder manuell wählen —
+              </div>
+              {locTab==="preset"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {PRESETS.map((p,i)=>(
+                    <button key={i} onClick={()=>setSelPreset(i)} style={{background:C.bg,border:`1px solid ${selPreset===i?C.signal:C.border2}`,borderRadius:4,color:C.text,textAlign:"left",padding:"8px 12px",cursor:"pointer"}}>
+                      <b style={{display:"block",fontSize:13}}>{p.name}</b>
+                      <span style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{p.lat}°N {p.lon}°E</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {locTab==="custom"&&(()=>{
+                const parsed = parseLocationInput(custom.link);
+                const ok = parsed && !parsed.error;
+                return (
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <div>
+                    <label style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"block",marginBottom:4}}>Google Maps Link oder Koordinaten</label>
+                    <textarea value={custom.link} rows={3}
+                      onChange={e=>{setCustom(c=>({...c,link:e.target.value}));setLinkError("");}}
+                      placeholder="https://www.google.com/maps/@36.9833,21.6667,14z&#10;oder: 36.9833, 21.6667"
+                      style={{...S.inp,width:"100%",resize:"vertical",lineHeight:1.4}} />
+                  </div>
+                  <div>
+                    <label style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"block",marginBottom:4}}>Ortsname (optional)</label>
+                    <input value={custom.name} onChange={e=>setCustom(c=>({...c,name:e.target.value}))}
+                      placeholder={parsePlaceName(custom.link)||"z.B. Mein Spot"}
+                      style={{...S.inp,width:"100%"}} />
+                  </div>
+                  {custom.link && ok && (
+                    <div style={{fontSize:11,color:C.go,fontFamily:"monospace",background:"rgba(61,220,132,0.08)",border:`1px solid ${C.go}`,borderRadius:4,padding:"6px 10px"}}>
+                      ✅ Erkannt: {parsed.lat.toFixed(4)}°N, {parsed.lon.toFixed(4)}°E
+                    </div>
+                  )}
+                  {custom.link && parsed && parsed.error && (
+                    <div style={{fontSize:11,color:C.caution,lineHeight:1.5,background:"rgba(245,185,66,0.08)",border:`1px solid ${C.caution}`,borderRadius:4,padding:"6px 10px"}}>
+                      ⚠️ {parsed.error}
+                    </div>
+                  )}
+                  {linkError && (
+                    <div style={{fontSize:11,color:C.stop,fontFamily:"monospace"}}>{linkError}</div>
+                  )}
+                  <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
+                    💡 In Google Maps auf den Ort tippen/klicken → URL aus der Adresszeile kopieren. Der Link enthält die Koordinaten nach dem @-Zeichen.
+                  </div>
+                </div>
+                );
+              })()}
+              <div style={{textAlign:"right",marginTop:14}}>
+                <button style={S.btn} onClick={()=>{
+                  if(locTab==="preset"){ setLoc(PRESETS[selPreset]); setShowLoc(false); return; }
+                  const parsed = parseLocationInput(custom.link);
+                  if(!parsed){ setLinkError("Bitte einen Link oder Koordinaten eingeben."); return; }
+                  if(parsed.error){ setLinkError(parsed.error); return; }
+                  const name = custom.name.trim() || parsePlaceName(custom.link) || `${parsed.lat.toFixed(3)}°N ${parsed.lon.toFixed(3)}°E`;
+                  setLoc({lat:parsed.lat,lon:parsed.lon,name});
+                  setLinkError("");
+                  setShowLoc(false);
+                }}>Übernehmen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",gap:24,flexWrap:"wrap"}}>
+        <span>WindFoil Weather Intelligence v2.2.0</span>
+        <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
+        <span>Standort: {loc.name}</span>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
+
+    const boot = document.getElementById("boot");
+    if (boot) boot.remove();
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# windfoil-proxy.service — keeps the Node proxy running & auto-restarting
+# Install: copy to /etc/systemd/system/windfoil-proxy.service, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now windfoil-proxy
+#
+# Adjust: User, WorkingDirectory, and the WEATHERBIT_KEY value.
+
+[Unit]
+Description=WindFoil Weather Station Proxy
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/windfoil
+Environment=PORT=8787
+Environment=WEATHERBIT_KEY=DEIN_WEATHERBIT_KEY_HIER
+ExecStart=/usr/bin/node proxy-server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

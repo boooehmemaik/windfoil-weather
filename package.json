@@ -1,0 +1,17 @@
+{
+  "name": "windfoil-station-proxy",
+  "version": "2.1.0",
+  "description": "Secure backend proxy for WindFoil Weather Intelligence — keeps the Weatherbit API key server-side.",
+  "main": "proxy-server.js",
+  "scripts": {
+    "start": "node proxy-server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
