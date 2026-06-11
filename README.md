@@ -170,4 +170,3 @@ npm install recharts
 | v2.0.0  | Echter Station-Modell-Abgleich + Vertrauens-Score + Proxy      |
 | v2.1.0  | Optionale Kalibrierung: eigene Abhebe-Schwelle (kn) ueberschreibt Formel |
 | v2.2.0  | Rider-Profil speicherbar + Equipment-Liste mit automatischer Setup-Wahl |
-# windfoil-weather

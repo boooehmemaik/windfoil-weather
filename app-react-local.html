@@ -4,24 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WindFoil Weather Intelligence</title>
-  <!-- v2.2.0 -->
+  <!-- v2.5.0 -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { background:#0a0e14; }
     #root { min-height:100vh; }
-    #boot { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-            background:#0a0e14; color:#5a7a96; font-family:monospace; gap:14px; z-index:9999; }
-    #boot .ring { width:42px; height:42px; border:3px solid #243040; border-top-color:#f07820;
-                  border-radius:50%; animation:spin 1s linear infinite; }
+    #boot { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0a0e14; color:#5a7a96; font-family:monospace; gap:14px; z-index:9999; }
+    #boot .ring { width:42px; height:42px; border:3px solid #243040; border-top-color:#f07820; border-radius:50%; animation:spin 1s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
   </style>
 </head>
 <body>
   <div id="boot"><div class="ring"></div><div>WindFoil wird geladen…</div></div>
   <div id="root"></div>
-  <!-- React + ReactDOM + Recharts + Babel — LOCAL (vendor/) -->
   <script src="vendor/react.production.min.js"></script>
   <script src="vendor/react-dom.production.min.js"></script>
   <script src="vendor/prop-types.min.js"></script>
@@ -33,7 +30,7 @@
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v2.2.0
+// WindFoil Weather Intelligence v2.5.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -382,12 +379,13 @@ const gr = { stroke:"rgba(255,255,255,0.05)" };
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
-  const [loc,setLoc]           = useState({lat:36.9833,lon:21.6667,name:"Navarino / Gialova"});
+  const [loc,setLoc]           = useState(()=>loadStored("wf_loc",{lat:48.0703,lon:11.1167,name:"Wörthsee / Pilsensee"}));
   const [rider,setRider]       = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,foilFront:1800,skill:"intermediate",planeKn:""}));
   const [ri,setRi]             = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,foilFront:1800,skill:"intermediate",planeKn:""}));
   const [gear,setGear]         = useState(()=>loadStored("wf_gear",[])); // [{id,name,wing,foil,planeKn}]
   const [useGear,setUseGear]   = useState(()=>loadStored("wf_usegear",false));
   const [profileSaved,setProfileSaved] = useState(false);
+  const [locSaved,setLocSaved] = useState(false);
   const [newGear,setNewGear]   = useState({name:"",wing:"5.0",foil:"1800",planeKn:""});
   const [forecast,setForecast] = useState(null);
   const [historical,setHist]   = useState(null);
@@ -410,8 +408,17 @@ function App() {
   const [nearbyStatus,setNearbyStatus] = useState(""); // "", "loading", "demo", "live"
   const [stationCmp,setStationCmp] = useState(null); // { current, hist, confidence, notes, available }
   const [stationCmpStatus,setStationCmpStatus] = useState(""); // "", "loading", "ok", "unavailable"
+  // Admin tab
+  const [adminOpen,setAdminOpen]     = useState(false);
+  const [adminPw,setAdminPw]         = useState("");
+  const [adminAuthed,setAdminAuthed] = useState(false);
+  const [adminToken,setAdminToken]   = useState("");
+  const [adminBusy,setAdminBusy]     = useState(false);
+  const [adminOut,setAdminOut]       = useState("");
+  const [adminErr,setAdminErr]       = useState("");
 
   const PRESETS = [
+    {lat:48.0703,lon:11.1167,name:"Wörthsee / Pilsensee"},
     {lat:36.9833,lon:21.6667,name:"Navarino / Gialova"},
     {lat:36.8900,lon:21.7500,name:"Pylos"},
     {lat:37.0736,lon:22.4294,name:"Sparti"},
@@ -764,6 +771,52 @@ function App() {
   const sc2col = s => s>=75?C.go:s>=45?C.caution:C.stop;
 
   // ── Styles ──────────────────────────────────────────────────────────────────
+  // ── Admin login: password → server validates against env file → returns token ─
+  // The password is NEVER stored in the frontend. It is sent to the proxy, which
+  // checks it against ADMIN_PASSWORD (from windfoil.env) and returns the token.
+  async function adminLogin() {
+    setAdminErr("");
+    if (!adminPw) { setAdminErr("Bitte Passwort eingeben."); return; }
+    setAdminBusy(true);
+    try {
+      const r = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPw }),
+      });
+      const d = await r.json();
+      if (d.ok && d.token) {
+        setAdminToken(d.token);   // held only in memory for this session
+        setAdminAuthed(true);
+        setAdminPw("");           // clear password from state
+        setAdminErr("");
+      } else {
+        setAdminErr(d.error || "Login fehlgeschlagen.");
+      }
+    } catch(e) { setAdminErr("Server nicht erreichbar (läuft der Proxy?)."); }
+    setAdminBusy(false);
+  }
+  async function adminRun(path, label) {
+    setAdminBusy(true); setAdminOut(`▶ ${label}…`); setAdminErr("");
+    try {
+      const r = await fetch(`/api/admin/${path}`, { headers: { "X-Admin-Token": adminToken } });
+      const d = await r.json();
+      setAdminOut((d.output || JSON.stringify(d)).trim());
+      if (!d.ok) setAdminErr("Aktion meldete einen Fehler (siehe Ausgabe).");
+    } catch(e) { setAdminErr("Server nicht erreichbar."); setAdminOut(""); }
+    setAdminBusy(false);
+  }
+
+  // Resolve the chosen location from the active modal tab (preset or link)
+  function resolveLoc() {
+    if(locTab==="preset") return PRESETS[selPreset];
+    const parsed = parseLocationInput(custom.link);
+    if(!parsed){ setLinkError("Bitte einen Link oder Koordinaten eingeben."); return null; }
+    if(parsed.error){ setLinkError(parsed.error); return null; }
+    const name = custom.name.trim() || parsePlaceName(custom.link) || `${parsed.lat.toFixed(3)}°N ${parsed.lon.toFixed(3)}°E`;
+    return { lat:parsed.lat, lon:parsed.lon, name };
+  }
+
   const S={
     wrap:{fontFamily:"'Barlow',sans-serif",background:C.bg,color:C.text,minHeight:"100vh",fontSize:14},
     hdr:{background:"rgba(10,14,20,.97)",borderBottom:`1px solid ${C.border}`,padding:"8px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100},
@@ -788,7 +841,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:"#fff"}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v2.2.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v2.5.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -814,7 +867,14 @@ function App() {
           <b style={{color:"#fff"}}>{loc.name}</b>
           <span style={{fontFamily:"monospace",fontSize:10,color:C.muted}}>{loc.lat.toFixed(4)}°N, {loc.lon.toFixed(4)}°E</span>
         </div>
-        <button style={S.btnG} onClick={()=>setShowLoc(true)}>Ort ändern</button>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button style={{...S.btnG,borderColor:locSaved?C.go:C.border2,color:locSaved?C.go:C.muted}}
+            title="Aktuellen Ort als Standard merken"
+            onClick={()=>{ saveStored("wf_loc",loc); setLocSaved(true); setTimeout(()=>setLocSaved(false),2000); }}>
+            {locSaved ? "✓ gemerkt" : "★ merken"}
+          </button>
+          <button style={S.btnG} onClick={()=>setShowLoc(true)}>Ort ändern</button>
+        </div>
       </div>
 
       {/* RIDER BAR */}
@@ -1366,28 +1426,77 @@ function App() {
                 </div>
                 );
               })()}
-              <div style={{textAlign:"right",marginTop:14}}>
+              <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:14}}>
+                <button style={{...S.btn,background:"transparent",border:`1px solid ${C.border2}`,color:C.muted}} onClick={()=>{
+                  const nl = resolveLoc(); if(!nl) return;
+                  setLoc(nl); setLinkError(""); setShowLoc(false);
+                }}>Nur übernehmen</button>
                 <button style={S.btn} onClick={()=>{
-                  if(locTab==="preset"){ setLoc(PRESETS[selPreset]); setShowLoc(false); return; }
-                  const parsed = parseLocationInput(custom.link);
-                  if(!parsed){ setLinkError("Bitte einen Link oder Koordinaten eingeben."); return; }
-                  if(parsed.error){ setLinkError(parsed.error); return; }
-                  const name = custom.name.trim() || parsePlaceName(custom.link) || `${parsed.lat.toFixed(3)}°N ${parsed.lon.toFixed(3)}°E`;
-                  setLoc({lat:parsed.lat,lon:parsed.lon,name});
-                  setLinkError("");
-                  setShowLoc(false);
-                }}>Übernehmen</button>
+                  const nl = resolveLoc(); if(!nl) return;
+                  setLoc(nl); saveStored("wf_loc", nl); setLinkError(""); setShowLoc(false);
+                }}>Übernehmen & merken ★</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v2.2.0</span>
+      <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
+        <span>WindFoil Weather Intelligence v2.5.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
+        <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");}}
+          title="Admin"
+          style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:12,padding:0}}>⚙</button>
       </div>
+
+      {/* ADMIN MODAL */}
+      {adminOpen && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,width:"100%",maxWidth:560}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
+              <strong style={{fontFamily:"monospace",fontSize:14}}>⚙ Admin</strong>
+              <button onClick={()=>{setAdminOpen(false);setAdminAuthed(false);setAdminToken("");setAdminPw("");setAdminOut("");setAdminErr("");}}
+                style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
+            </div>
+            <div style={{padding:16}}>
+
+              {!adminAuthed ? (
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <label style={{fontFamily:"monospace",fontSize:10,color:C.muted}}>Admin-Passwort</label>
+                  <input type="password" value={adminPw} autoFocus
+                    onChange={e=>setAdminPw(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter") adminLogin();}}
+                    style={{...S.inp,width:"100%",fontSize:14}} />
+                  <button style={{...S.btn,opacity:adminBusy?0.6:1}} disabled={adminBusy} onClick={adminLogin}>
+                    {adminBusy?"Prüfe…":"Anmelden"}
+                  </button>
+                  <p style={{fontSize:9,color:C.dim,lineHeight:1.5}}>
+                    Das Passwort wird serverseitig geprüft (windfoil.env). Es wird nicht im Browser gespeichert.
+                  </p>
+                </div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    <button style={{...S.btn,opacity:adminBusy?0.6:1}} disabled={adminBusy}
+                      onClick={()=>adminRun("deploy","Deployment")}>🚀 Deploy starten</button>
+                    <button style={{...S.btn,background:"transparent",border:`1px solid ${C.sky}`,color:C.sky,opacity:adminBusy?0.6:1}} disabled={adminBusy}
+                      onClick={()=>adminRun("restart-proxy","Proxy-Neustart")}>♻ Proxy neu starten</button>
+                    <button style={{...S.btn,background:"transparent",border:`1px solid ${C.muted}`,color:C.muted,opacity:adminBusy?0.6:1}} disabled={adminBusy}
+                      onClick={()=>adminRun("status","Status")}>📊 Status</button>
+                  </div>
+                  {adminBusy && <div style={{fontSize:11,color:C.caution}}>⏳ läuft… (kann bis zu 2 Min dauern)</div>}
+                  {adminOut && (
+                    <pre style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"10px 12px",fontSize:11,color:C.text,fontFamily:"monospace",whiteSpace:"pre-wrap",maxHeight:340,overflow:"auto",margin:0}}>{adminOut}</pre>
+                  )}
+                </div>
+              )}
+
+              {adminErr && <div style={{fontSize:11,color:C.stop,marginTop:10}}>⚠️ {adminErr}</div>}
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
