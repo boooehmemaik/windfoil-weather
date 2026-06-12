@@ -979,8 +979,23 @@ export default function App() {
 
         {!loading && forecast && dayData && (
           <>
+            {/* BADGES ROW */}
+            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:12}}>
+              {[
+                {icon:"💨",label:`Ø ${fmtW(dayData.avgW,windUnit)}`,c:dayData.avgW>=dayData.win.optMin&&dayData.avgW<=dayData.win.optMax?C.go:dayData.avgW<dayData.win.minWind?C.stop:C.caution},
+                {icon:"⬆",label:`Max Böe ${fmtW(dayData.maxG,windUnit)}`,c:dayData.maxG>dayData.win.maxWind?C.stop:C.caution},
+                {icon:"🌡",label:`${dayData.maxT.toFixed(0)}°C max`,c:C.sky},
+                {icon:dayData.thInfo.icon,label:dayData.thInfo.label,c:dayData.thInfo.color},
+                ...(dayData.sb.active?[{icon:"🌊",label:`Meeresbrise +${fmtW(dayData.sb.boost,windUnit)}`,c:C.sky}]:[]),
+              ].map((b,i)=>(
+                <div key={i} style={{border:`1px solid ${b.c}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:b.c,display:"flex",alignItems:"center",gap:6,background:C.surface}}>
+                  {b.icon} {b.label}
+                </div>
+              ))}
+            </div>
+
             {/* DAY TABS */}
-            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
               {dayNames.map((name,d)=>{
                 const sc=dayScores[d], active=d===activeDay;
                 const icon=sc>=75?"✅":sc>=45?"⚠️":"❌";
@@ -997,52 +1012,36 @@ export default function App() {
               })}
             </div>
 
-            {/* SCORE + BADGES */}
-            {(()=>{ /* confidence applies to TODAY only (station obs are current) */ })()}
-            <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap",alignItems:"stretch"}}>
-              {(()=>{
-                const conf = (activeDay===0 && stationCmp?.available) ? stationCmp.confidence : null;
-                const adj = applyConfidence(dayData.dayScore, conf);
-                const cc = classifyConfidence(conf);
-                return (
-                  <div style={{...S.card,marginBottom:0,minWidth:150,textAlign:"center"}}>
-                    <div style={{fontFamily:"monospace",fontWeight:900,fontSize:52,color:sc2col(adj.score),lineHeight:1}}>{adj.score}</div>
+            {/* FOIL-SCORE */}
+            {(()=>{
+              const conf = (activeDay===0 && stationCmp?.available) ? stationCmp.confidence : null;
+              const adj = applyConfidence(dayData.dayScore, conf);
+              const cc = classifyConfidence(conf);
+              return (
+                <div style={{...S.card,marginBottom:12,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+                  <div style={{textAlign:"center",minWidth:100}}>
+                    <div style={{fontFamily:"monospace",fontWeight:900,fontSize:56,color:sc2col(adj.score),lineHeight:1}}>{adj.score}</div>
                     <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>Foil-Score</div>
+                    {adj.adjusted && <div style={{fontSize:9,color:C.caution,marginTop:3}}>roh {dayData.dayScore} · justiert</div>}
+                  </div>
+                  <div style={{flex:1,minWidth:160}}>
                     {dayData.session && dayData.session.startHour!=null && dayData.dayScore>0 && (
-                      <div style={{fontSize:10,color:C.go,marginTop:3}}>
-                        beste Zeit {String(dayData.session.startHour).padStart(2,"0")}–{String(dayData.session.endHour).padStart(2,"0")} Uhr
+                      <div style={{fontSize:14,color:C.go,fontFamily:"monospace",fontWeight:700,marginBottom:4}}>
+                        ⏱ Beste Zeit: {String(dayData.session.startHour).padStart(2,"0")}–{String(dayData.session.endHour).padStart(2,"0")} Uhr
                       </div>
                     )}
-                    {adj.adjusted && (
-                      <div style={{fontSize:9,color:C.caution,marginTop:3}}>roh {dayData.dayScore} · justiert</div>
-                    )}
-                    <div style={{fontSize:10,color:C.muted,marginTop:4}}>
+                    <div style={{fontSize:11,color:C.muted}}>
                       {dayData.pickedGear
                         ? `${rider.weight}kg · ${dayData.pickedGear.name||dayData.pickedGear.wing+"m²"} (${dayData.pickedGear.wing}m²·${dayData.pickedGear.foil}cm²)`
-                        : `${rider.weight}kg·${rider.wingSize}m²·${rider.foilFront}cm²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}
+                        : `${rider.weight}kg · ${rider.wingSize}m² · ${rider.foilFront}cm²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}
                     </div>
                     {conf!=null && (
-                      <div style={{marginTop:6,paddingTop:6,borderTop:`1px solid ${C.border}`,fontSize:10,color:cc.color}}>
-                        {cc.icon} {cc.label} ({conf}%)
-                      </div>
+                      <div style={{marginTop:6,fontSize:11,color:cc.color}}>{cc.icon} {cc.label} ({conf}%)</div>
                     )}
                   </div>
-                );
-              })()}
-              <div style={{display:"flex",flexWrap:"wrap",gap:7,alignContent:"flex-start"}}>
-                {[
-                  {icon:"💨",label:`Ø ${fmtW(dayData.avgW,windUnit)}`,c:dayData.avgW>=dayData.win.optMin&&dayData.avgW<=dayData.win.optMax?C.go:dayData.avgW<dayData.win.minWind?C.stop:C.caution},
-                  {icon:"⬆",label:`Max Böe ${fmtW(dayData.maxG,windUnit)}`,c:dayData.maxG>dayData.win.maxWind?C.stop:C.caution},
-                  {icon:"🌡",label:`${dayData.maxT.toFixed(0)}°C max`,c:C.sky},
-                  {icon:dayData.thInfo.icon,label:dayData.thInfo.label,c:dayData.thInfo.color},
-                  ...(dayData.sb.active?[{icon:"🌊",label:`Meeresbrise +${fmtW(dayData.sb.boost,windUnit)}`,c:C.sky}]:[]),
-                ].map((b,i)=>(
-                  <div key={i} style={{border:`1px solid ${b.c}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:b.c,display:"flex",alignItems:"center",gap:6,background:C.surface}}>
-                    {b.icon} {b.label}
-                  </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              );
+            })()}
 
             {/* RECOMMENDATION */}
             <div style={{...S.card,borderLeft:`3px solid ${C.go}`}}>
