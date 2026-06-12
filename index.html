@@ -243,22 +243,20 @@ function seaBreeze(windDir, hour, month) {
 
 // ── FoilScore ─────────────────────────────────────────────────────────────────
 function calcWindow(weight,wingM2,foilCm2,skill,knownPlaneMs) {
-  const sm={beginner:1.3,intermediate:1.15,advanced:1.0,pro:0.9}[skill]??1.1;
+  const sMin = {beginner:1.50,intermediate:1.25,advanced:1.00,pro:0.85}[skill]??1.15;
+  const sOpt = {beginner:1.60,intermediate:2.00,advanced:2.60,pro:3.20}[skill]??2.00;
+  const sMax = {beginner:2.00,intermediate:2.60,advanced:3.50,pro:4.50}[skill]??2.60;
   let minW;
   if(knownPlaneMs && knownPlaneMs>0){
-    // Rider's real-world planing threshold overrides the generic formula.
-    // Practice beats theory: this anchors the whole window to lived experience.
     minW = knownPlaneMs;
   } else {
     const load=weight/wingM2, foilF=1800/foilCm2;
-    minW=Math.max(2.5,(3.5+load*0.15+foilF*0.8)*sm*0.85);
+    minW=Math.max(2.5,(3.5+load*0.15+foilF*0.8)*sMin*0.85);
   }
-  // Window proportions around the planing threshold.
-  // optMin slightly above liftoff; optMax ~2.6x; max scaled by skill.
   return{ minWind:Math.round(minW*10)/10,
-          optMin:Math.round(minW*1.25*10)/10,
-          optMax:Math.round(minW*2.6*10)/10,
-          maxWind:Math.round(minW*2.6*sm*10)/10 };
+          optMin: Math.round(minW*1.2*10)/10,
+          optMax: Math.round(minW*sOpt*10)/10,
+          maxWind:Math.round(minW*sMax*10)/10 };
 }
 function scoreHour(w,win) {
   if(w<win.minWind) return Math.max(0,Math.round((w/win.minWind)*45));
