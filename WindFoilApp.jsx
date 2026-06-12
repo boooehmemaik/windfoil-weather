@@ -812,6 +812,8 @@ export default function App() {
     btn:{background:C.signal,color:"#fff",border:"none",borderRadius:4,fontWeight:700,fontSize:13,padding:"7px 18px",cursor:"pointer",fontFamily:"monospace"},
     btnG:{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:4,fontSize:12,padding:"4px 10px",cursor:"pointer"},
     inp:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:4,padding:"5px 8px",fontFamily:"monospace",fontSize:12,outline:"none"},
+    fl:{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4},
+    fi:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:4,padding:"0 10px",fontFamily:"monospace",fontSize:14,outline:"none",height:40,width:"100%",boxSizing:"border-box"},
     grid2:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:12,marginBottom:12},
     grid6:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:12},
     cw:{height:190}, cwL:{height:210},
@@ -864,38 +866,47 @@ export default function App() {
       {/* RIDER BAR */}
       <div style={S.riderBar}>
         <div style={{fontFamily:"monospace",fontSize:11,textTransform:"uppercase",letterSpacing:"0.12em",color:C.signal,marginBottom:12,fontWeight:700}}>🏄 Rider-Profil &amp; Equipment</div>
-        <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end"}}>
-          {[{l:"Gewicht (kg)",k:"weight",step:1,min:40,max:150},{l:"Wing (m²)",k:"wingSize",step:.5,min:2,max:12},{l:"Foil Front (cm²)",k:"foilFront",step:50,min:600,max:3000}].map(f=>(
-            <div key={f.k} style={{display:"flex",flexDirection:"column",gap:4}}>
-              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>{f.l}</label>
+
+        {/* Rider fields — unified grid */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:10,marginBottom:10}}>
+          {[
+            {l:"Gewicht (kg)",k:"weight",step:1,min:40,max:150},
+            {l:"Wing (m²)",k:"wingSize",step:.5,min:2,max:12},
+            {l:"Foil Front (cm²)",k:"foilFront",step:50,min:600,max:3000},
+          ].map(f=>(
+            <div key={f.k}>
+              <label style={S.fl}>{f.l}</label>
               <input type="number" value={ri[f.k]} step={f.step} min={f.min} max={f.max}
                 onChange={e=>setRi(r=>({...r,[f.k]:parseFloat(e.target.value)}))}
-                style={{...S.inp,width:110,minWidth:90,flex:"1 1 90px",maxWidth:150,fontSize:13}} />
+                style={S.fi} />
             </div>
           ))}
-          <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>Skill-Level</label>
-            <select value={ri.skill} onChange={e=>setRi(r=>({...r,skill:e.target.value}))}
-              style={{...S.inp,width:140,fontSize:13}}>
+          <div>
+            <label style={S.fl}>Skill-Level</label>
+            <select value={ri.skill} onChange={e=>setRi(r=>({...r,skill:e.target.value}))} style={S.fi}>
               {["beginner","intermediate","advanced","pro"].map(s=><option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}} title="Optional: ab wie viel Wind du erfahrungsgemäß abhebst. Überschreibt die Formel.">Abheben ab (kn) · optional</label>
-            <input type="number" value={ri.planeKn} step={0.5} min={4} max={30}
-              placeholder="z.B. 11"
+          <div>
+            <label style={S.fl} title="Optional: ab wie viel Wind du erfahrungsgemäß abhebst. Überschreibt die Formel.">Abheben ab (kn) · opt.</label>
+            <input type="number" value={ri.planeKn} step={0.5} min={4} max={30} placeholder="z.B. 11"
               onChange={e=>setRi(r=>({...r,planeKn:e.target.value}))}
-              style={{...S.inp,width:130,fontSize:13}} />
+              style={S.fi} />
           </div>
-          <button style={S.btn} onClick={()=>{setRider({...ri});setActiveDay(0);}}>ANALYSE STARTEN →</button>
-          <button style={{...S.btn,background:"transparent",border:`1px solid ${C.go}`,color:C.go}}
+        </div>
+
+        {/* Action buttons */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
+          <button style={{...S.btn,flex:"1 1 180px",touchAction:"manipulation"}}
+            onClick={()=>{setRider({...ri});setActiveDay(0);}}>ANALYSE STARTEN →</button>
+          <button style={{...S.btn,flex:"1 1 180px",background:"transparent",border:`1px solid ${C.go}`,color:C.go,touchAction:"manipulation"}}
             onClick={()=>{ saveStored("wf_rider",ri); setRider({...ri}); setProfileSaved(true); setTimeout(()=>setProfileSaved(false),2000); }}>
             {profileSaved ? "✓ GESPEICHERT" : "PROFIL SPEICHERN"}
           </button>
         </div>
 
         {/* EQUIPMENT MANAGER */}
-        <div style={{marginTop:14,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
+        <div style={{paddingTop:12,borderTop:`1px solid ${C.border}`}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <span style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted}}>🎒 Mein Equipment</span>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:useGear?C.go:C.muted,cursor:"pointer"}}>
@@ -918,33 +929,36 @@ export default function App() {
             </div>
           )}
 
-          {/* add new gear */}
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
-            <div style={{display:"flex",flexDirection:"column",gap:3}}>
-              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>Name</label>
-              <input value={newGear.name} placeholder="z.B. Leichtwind" onChange={e=>setNewGear(g=>({...g,name:e.target.value}))} style={{...S.inp,width:110,fontSize:12}} />
+          {/* add new gear — unified grid */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8,alignItems:"end"}}>
+            <div>
+              <label style={S.fl}>Name</label>
+              <input value={newGear.name} placeholder="z.B. Leichtwind" onChange={e=>setNewGear(g=>({...g,name:e.target.value}))} style={{...S.fi,height:38}} />
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:3}}>
-              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>Wing (m²)</label>
-              <input type="number" step={0.5} value={newGear.wing} onChange={e=>setNewGear(g=>({...g,wing:e.target.value}))} style={{...S.inp,width:80,fontSize:12}} />
+            <div>
+              <label style={S.fl}>Wing (m²)</label>
+              <input type="number" step={0.5} value={newGear.wing} onChange={e=>setNewGear(g=>({...g,wing:e.target.value}))} style={{...S.fi,height:38}} />
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:3}}>
-              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>Foil (cm²)</label>
-              <input type="number" step={50} value={newGear.foil} onChange={e=>setNewGear(g=>({...g,foil:e.target.value}))} style={{...S.inp,width:90,fontSize:12}} />
+            <div>
+              <label style={S.fl}>Foil (cm²)</label>
+              <input type="number" step={50} value={newGear.foil} onChange={e=>setNewGear(g=>({...g,foil:e.target.value}))} style={{...S.fi,height:38}} />
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:3}}>
-              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>ab (kn)</label>
-              <input type="number" step={0.5} value={newGear.planeKn} placeholder="opt." onChange={e=>setNewGear(g=>({...g,planeKn:e.target.value}))} style={{...S.inp,width:70,fontSize:12}} />
+            <div>
+              <label style={S.fl}>ab (kn)</label>
+              <input type="number" step={0.5} value={newGear.planeKn} placeholder="opt." onChange={e=>setNewGear(g=>({...g,planeKn:e.target.value}))} style={{...S.fi,height:38}} />
             </div>
-            <button style={{...S.btn,fontSize:11,padding:"6px 12px"}}
-              onClick={()=>{
-                if(!newGear.wing||!newGear.foil) return;
-                const entry={...newGear,id:Date.now()};
-                const ng=[...gear,entry];
-                setGear(ng); saveStored("wf_gear",ng);
-                setNewGear({name:"",wing:"5.0",foil:"1800",planeKn:""});
-                setActiveDay(0);
-              }}>+ Hinzufügen</button>
+            <div>
+              <label style={S.fl}>&nbsp;</label>
+              <button style={{...S.btn,width:"100%",height:38,fontSize:11,padding:0,touchAction:"manipulation"}}
+                onClick={()=>{
+                  if(!newGear.wing||!newGear.foil) return;
+                  const entry={...newGear,id:Date.now()};
+                  const ng=[...gear,entry];
+                  setGear(ng); saveStored("wf_gear",ng);
+                  setNewGear({name:"",wing:"5.0",foil:"1800",planeKn:""});
+                  setActiveDay(0);
+                }}>+ Hinzufügen</button>
+            </div>
           </div>
           {useGear && gear.length===0 && (
             <p style={{fontSize:10,color:C.caution,marginTop:8}}>Füge mindestens ein Equipment hinzu, damit die automatische Wahl greift.</p>
