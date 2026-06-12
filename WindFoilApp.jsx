@@ -134,7 +134,7 @@ function buildDemoForecast(lat, lon) {
   const keys=["time","windspeed_10m","windgusts_10m","winddirection_10m","temperature_2m",
                "surface_pressure","cape","lifted_index","cloudcover","relativehumidity_2m"];
   const merged = Object.fromEntries(keys.map(k=>[k,[]]));
-  for(let d=0; d<4; d++){
+  for(let d=0; d<7; d++){
     const day = generateDemoDay(lat, lon, d);
     keys.forEach(k => merged[k].push(...day[k]));
   }
@@ -169,7 +169,7 @@ async function tryFetchForecast(lat, lon) {
   const params = new URLSearchParams({
     latitude:lat, longitude:lon,
     hourly:"temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m,surface_pressure,relativehumidity_2m,cloudcover,cape,lifted_index",
-    wind_speed_unit:"ms", forecast_days:4, timezone:"auto",
+    wind_speed_unit:"ms", forecast_days:7, timezone:"auto",
   });
   return fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${params}`);
 }
@@ -608,16 +608,16 @@ export default function App() {
   // API may start mid-day (e.g. 17:00 local time) — find index where each
   // calendar day (00:00) begins, so "Heute" = today's 00:00 not hour[0]
   const dayStartIndices = (() => {
-    if(!forecast) return [0,24,48,72];
+    if(!forecast) return [0,24,48,72,96,120,144];
     const times = forecast.hourly.time;
-    if(!times.length) return [0,24,48,72];
+    if(!times.length) return [0,24,48,72,96,120,144];
     // CRITICAL: data is in the SPOT's timezone (timezone=auto), which may differ
     // from the user's browser clock. Anchor "today" to the FIRST timestamp's
     // calendar date in the data itself, so days are always correct for any user.
     const firstDateStr = times[0].slice(0,10);          // "2026-05-30"
     const [fy,fm,fd] = firstDateStr.split('-').map(Number);
     const result = [];
-    for(let d=0; d<4; d++){
+    for(let d=0; d<7; d++){
       // Build the target date by adding d days to the data's first date
       const target = new Date(fy, fm-1, fd + d);
       const y=target.getFullYear(), m=String(target.getMonth()+1).padStart(2,'0'), dy=String(target.getDate()).padStart(2,'0');
@@ -671,7 +671,7 @@ export default function App() {
     return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,effW,dayScore,thInfo,pickedGear,session};
   })();
 
-  const dayScores = forecast ? Array.from({length:4},(_,d)=>{
+  const dayScores = forecast ? Array.from({length:7},(_,d)=>{
     const start = dayStartIndices[d] ?? d*24;
     // representative wind for the day (midday avg) to pick gear
     const dw = forecast.hourly.windspeed_10m.slice(start+12,start+16).filter(Boolean);
@@ -692,7 +692,7 @@ export default function App() {
     const [fy,fm,fd] = firstDateStr ? firstDateStr.split('-').map(Number) : [0,0,0];
     // Is the data's first day actually "today" in the user's perception?
     // We label relative to the data itself for consistency across timezones.
-    return Array.from({length:4},(_,d)=>{
+    return Array.from({length:7},(_,d)=>{
       if(!firstDateStr) return `Tag ${d+1}`;
       const target = new Date(fy, fm-1, fd + d);
       if(d===0) return "Heute";
