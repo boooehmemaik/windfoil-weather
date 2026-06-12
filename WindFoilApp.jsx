@@ -651,10 +651,11 @@ export default function App() {
     const midDir=dirs[14]??dirs[12]??180;
     const sb=seaBreeze(midDir,14,new Date().getMonth()+1); // getMonth() is local — correct
     const effW=midW+(sb.active?sb.boost:0);
-    // Choose window: either the single manual profile, or the best gear for this wind
+    // Choose window: use midW (not effW) for gear selection — consistent with dayScores tabs.
+    // SeaBreeze is shown as a badge only; it shouldn't shift gear selection and cause score divergence.
     let win, pickedGear=null;
     if(useGear && gear.length){
-      const best = pickBestSetup(gear, rider.weight, rider.skill, effW);
+      const best = pickBestSetup(gear, rider.weight, rider.skill, midW);
       if(best){ win = best.win; pickedGear = best.gear; }
     }
     if(!win){
