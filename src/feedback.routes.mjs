@@ -21,6 +21,41 @@ function getSpot(spotId, userId) {
   ).get(spotId, userId);
 }
 
+// --- POST /api/feedback/spot --------------------------------------------------
+// Bridge for the lat/lon-based frontend: find-or-create a spot for the given
+// coordinates so session feedback can be attached. Matches an existing global
+// or user-owned spot within ~1 km; otherwise creates a user-owned spot.
+// Body: { name?, lat, lon, timezone? }  ->  { spot }
+feedbackRouter.post('/spot', (req, res) => {
+  const b = req.body || {};
+  const lat = Number(b.lat), lon = Number(b.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon))
+    return res.status(400).json({ error: 'lat_lon_required' });
+
+  const rlat = Math.round(lat * 10000) / 10000;
+  const rlon = Math.round(lon * 10000) / 10000;
+
+  let spot = db.prepare(`
+    SELECT * FROM spots
+    WHERE (user_id IS NULL OR user_id = ?)
+      AND ABS(latitude - ?) < 0.01 AND ABS(longitude - ?) < 0.01
+    ORDER BY (user_id IS NULL) ASC
+    LIMIT 1`).get(req.user.id, rlat, rlon);
+
+  if (!spot) {
+    const id = randomUUID();
+    const tz = (typeof b.timezone === 'string' && b.timezone) ? b.timezone : 'UTC';
+    const name = (typeof b.name === 'string' && b.name.trim())
+      ? b.name.trim().slice(0, 120)
+      : `${rlat}°N ${rlon}°E`;
+    db.prepare(`INSERT INTO spots (id,user_id,name,latitude,longitude,timezone,created_at)
+                VALUES (?,?,?,?,?,?,?)`)
+      .run(id, req.user.id, name, rlat, rlon, tz, nowIso());
+    spot = db.prepare('SELECT * FROM spots WHERE id = ?').get(id);
+  }
+  res.json({ spot });
+});
+
 // --- GET /api/feedback/today?spot=<id> ---------------------------------------
 // Returns today's (spot-local) session/feedback for the user, if any. This is
 // the only record the UI is allowed to edit.

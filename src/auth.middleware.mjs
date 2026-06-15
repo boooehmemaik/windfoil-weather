@@ -7,6 +7,7 @@
 // ============================================================================
 import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from './auth.mjs';
+import { db } from './db.mjs';
 
 export async function requireAuth(req, res, next) {
   try {
@@ -14,6 +15,13 @@ export async function requireAuth(req, res, next) {
     if (!session?.user) {
       return res.status(401).json({ error: 'unauthenticated' });
     }
+    // Disabled accounts keep their cookie but lose all data access.
+    try {
+      const row = db.prepare('SELECT disabled FROM user WHERE id = ?').get(session.user.id);
+      if (row && row.disabled) {
+        return res.status(403).json({ error: 'account_disabled' });
+      }
+    } catch { /* disabled column not present yet — allow */ }
     req.user = session.user;     // { id, email, name, ... }
     req.session = session.session;
     next();

@@ -379,8 +379,10 @@ const gr = { stroke:"rgba(255,255,255,0.05)" };
 
 // ── Auth Gate ─────────────────────────────────────────────────────────────────
 // Calls Better Auth REST endpoints directly — no client bundle needed in page.
-const CA={deep:'#0C2A30',panel:'#123A41',p2:'#0F333A',foam:'#EAF2EE',
-  haze:'#7FA6AC',lift:'#34D399',coral:'#FF6B5C',line:'rgba(234,242,238,.10)'};
+// Auth palette derived from the main app theme (C) so login/registration
+// matches the dashboard look instead of the old standalone teal scheme.
+const CA={deep:C.panel,panel:C.surface,p2:C.bg,foam:C.text,
+  haze:C.muted,lift:C.signal,coral:C.stop,line:C.border2};
 
 function AuthGate({children}){
   const [sess,setSess]=useState(null); // null=loading, false=anon, obj=authed
@@ -426,7 +428,7 @@ function AuthGate({children}){
 
   if(!sess)return(
     <div style={{minHeight:'100vh',display:'grid',placeItems:'center',
-        background:'radial-gradient(120% 90% at 50% -10%,#10434C,#071e23)',padding:20}}>
+        background:`radial-gradient(120% 90% at 50% -10%,${C.surface},${C.bg})`,padding:20}}>
       <div style={{width:'100%',maxWidth:380,background:CA.deep,
           border:`1px solid ${CA.line}`,borderRadius:18,padding:26,
           boxShadow:'0 30px 70px -30px rgba(0,0,0,.75)'}}>
@@ -468,7 +470,7 @@ function AuthGate({children}){
         </div>
         <button onClick={submit} disabled={busy}
           style={{width:'100%',padding:13,border:'none',borderRadius:11,cursor:'pointer',
-            background:CA.lift,color:'#05221B',fontWeight:700,fontSize:14,opacity:busy?0.5:1}}>
+            background:CA.lift,color:'#fff',fontWeight:700,fontSize:14,opacity:busy?0.5:1}}>
           {busy?'Einen Moment…':mode==='signup'?'Account erstellen':'Anmelden'}
         </button>
       </div>
@@ -494,6 +496,160 @@ function AuthGate({children}){
   );
 }
 
+// ── Session feedback (post-session debrief) ────────────────────────────────────
+// Wires the frontend to the existing /api/feedback backend. Resolves the current
+// location to a spot first (/api/feedback/spot), then submits the debrief. The
+// backend only accepts feedback for the spot-local "today".
+function FeedbackModal({ loc, forecast, onClose }) {
+  const [planed,setPlaned] = useState(null);   // null | true | false
+  const [windKt,setWindKt] = useState(12);
+  const [rating,setRating] = useState(0);
+  const [match,setMatch]   = useState(0);
+  const [notes,setNotes]   = useState("");
+  const [busy,setBusy]     = useState(false);
+  const [err,setErr]       = useState("");
+  const [done,setDone]     = useState(null);   // calibration result
+
+  const tz = (()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }catch{ return "UTC"; } })();
+  const step = d => setWindKt(w => Math.min(35, Math.max(5, Math.round((w+d)*2)/2)));
+
+  async function submit() {
+    if(planed===null){ setErr("Bitte zuerst angeben, ob du aufs Foil gekommen bist."); return; }
+    setBusy(true); setErr("");
+    try{
+      const sr = await fetch("/api/feedback/spot",{method:"POST",credentials:"include",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({name:loc.name,lat:loc.lat,lon:loc.lon,timezone:tz})});
+      if(!sr.ok) throw new Error("spot");
+      const { spot } = await sr.json();
+      const r = await fetch("/api/feedback",{method:"POST",credentials:"include",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({spotId:spot.id,planed,planingWindKt:planed?windKt:null,
+          rating:rating||null,conditionsMatched:match||null,notes:notes.trim()||null,
+          forecast:forecast||undefined})});
+      const d = await r.json();
+      if(!r.ok){
+        setErr(d.error==="feedback_locked"
+          ? "Feedback ist nur am Tag der Session möglich."
+          : (d.error || "Speichern fehlgeschlagen."));
+      } else setDone(d.calibration || {});
+    }catch{ setErr("Server nicht erreichbar."); }
+    finally{ setBusy(false); }
+  }
+
+  const Meter = ({value,onChange,lo,hi}) => (
+    <div>
+      <div style={{display:"flex",gap:6}}>
+        {[1,2,3,4,5].map(n=>(
+          <button key={n} type="button" onClick={()=>onChange(n)}
+            style={{flex:1,height:34,borderRadius:6,cursor:"pointer",
+              border:`1px solid ${value>=n&&value?C.signal:C.border2}`,
+              background:value>=n&&value?C.signal:C.bg}} />
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:5,fontSize:10,color:C.muted}}>
+        <span>{lo}</span><span>{hi}</span>
+      </div>
+    </div>
+  );
+
+  const dateLabel = new Intl.DateTimeFormat("de-DE",{weekday:"short",day:"2-digit",month:"short"}).format(new Date());
+  const lbl = {display:"block",fontSize:13,fontWeight:600,color:C.text,marginBottom:8};
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,fontFamily:"'Barlow',sans-serif"}}>
+      <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,width:"100%",maxWidth:480,maxHeight:"90vh",overflow:"auto",color:C.text}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
+          <div>
+            <div style={{fontFamily:"monospace",fontSize:10,color:C.signal,textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700}}>Session-Feedback</div>
+            <strong style={{fontSize:14}}>{loc.name}</strong>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontFamily:"monospace",fontSize:11,color:C.muted}}>{dateLabel}</span>
+            <button onClick={onClose} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
+          </div>
+        </div>
+
+        <div style={{padding:16}}>
+          {done ? (
+            <div style={{textAlign:"center",padding:"12px 4px"}}>
+              <div style={{width:48,height:48,borderRadius:"50%",margin:"0 auto 12px",display:"grid",placeItems:"center",background:"rgba(61,220,132,0.16)",border:`1px solid ${C.go}`,color:C.go,fontSize:24}}>✓</div>
+              <p style={{fontSize:15,fontWeight:700,marginBottom:6}}>Gespeichert für {dateLabel}</p>
+              <p style={{color:C.muted,fontSize:13,margin:0}}>Danke — das schärft deine Foil-Scores für {loc.name}.</p>
+              {done.rolling!=null && (
+                <div style={{marginTop:14,padding:12,borderRadius:8,background:C.bg,border:`1px solid ${C.border2}`,textAlign:"left",fontSize:13,color:C.text}}>
+                  {done.applied
+                    ? <span>Kalibriert: dein Abhebe-Schwellenwert liegt jetzt bei <b style={{color:C.go,fontFamily:"monospace"}}>{done.rolling} kn</b> (aus {done.samples} Sessions).</span>
+                    : <span>Deine echten Abheb-Momente liegen im Schnitt bei <b style={{color:C.go,fontFamily:"monospace"}}>{done.rolling} kn</b> über {done.samples} Sessions. Dein Schwellenwert ist manuell gesetzt.</span>}
+                </div>
+              )}
+              <button onClick={onClose} style={{marginTop:16,width:"100%",padding:12,border:"none",borderRadius:6,cursor:"pointer",background:C.signal,color:"#fff",fontWeight:700,fontSize:14}}>Schließen</button>
+            </div>
+          ) : (
+          <>
+            {err && <p style={{color:C.stop,fontSize:13,margin:"0 0 12px"}}>{err}</p>}
+
+            <div style={{marginBottom:18}}>
+              <span style={lbl}>Bist du aufs Foil gekommen?</span>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <button type="button" onClick={()=>setPlaned(true)}
+                  style={{padding:"14px 10px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:14,
+                    border:`1px solid ${planed===true?C.go:C.border2}`,
+                    background:planed===true?"rgba(61,220,132,0.16)":C.bg,
+                    color:planed===true?C.go:C.text}}>Ja, geplant</button>
+                <button type="button" onClick={()=>setPlaned(false)}
+                  style={{padding:"14px 10px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:14,
+                    border:`1px solid ${planed===false?C.stop:C.border2}`,
+                    background:planed===false?"rgba(232,64,64,0.14)":C.bg,
+                    color:planed===false?C.stop:C.text}}>Kein Foilen heute</button>
+              </div>
+
+              {planed===true && (
+                <div style={{marginTop:12,padding:14,borderRadius:8,border:`1px solid ${C.signal}`,background:C.bg}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14}}>
+                    <div>
+                      <span style={{fontFamily:"monospace",fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em"}}>Wind beim Abheben</span>
+                      <div><span style={{fontFamily:"monospace",fontSize:40,fontWeight:700,color:C.signal,lineHeight:1}}>{windKt.toFixed(1)}</span><span style={{fontSize:14,color:C.muted,marginLeft:6,fontWeight:600}}>kn</span></div>
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button type="button" onClick={()=>step(-0.5)} style={{width:42,height:42,borderRadius:8,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:20}}>−</button>
+                      <button type="button" onClick={()=>step(0.5)} style={{width:42,height:42,borderRadius:8,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:20}}>+</button>
+                    </div>
+                  </div>
+                  <p style={{fontSize:11,color:C.muted,marginTop:10}}>Der Wind, als dein Board zuerst hochkam — das kalibriert deinen Abhebe-Schwellenwert.</p>
+                </div>
+              )}
+            </div>
+
+            <div style={{marginBottom:18}}>
+              <span style={lbl}>Wie war die Session?</span>
+              <Meter value={rating} onChange={setRating} lo="Mau" hi="Episch" />
+            </div>
+
+            <div style={{marginBottom:18}}>
+              <span style={lbl}>Wie genau war der Forecast?</span>
+              <Meter value={match} onChange={setMatch} lo="Daneben" hi="Punktgenau" />
+            </div>
+
+            <div style={{marginBottom:18}}>
+              <span style={lbl}>Notizen</span>
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3}
+                placeholder="Thermik-Timing, Böen, alles Merkenswerte"
+                style={{width:"100%",boxSizing:"border-box",background:C.bg,color:C.text,border:`1px solid ${C.border2}`,borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Barlow',sans-serif",resize:"vertical"}} />
+            </div>
+
+            <button type="button" disabled={busy} onClick={submit}
+              style={{width:"100%",padding:14,border:"none",borderRadius:8,cursor:busy?"not-allowed":"pointer",background:C.signal,color:"#fff",fontWeight:700,fontSize:15,opacity:busy?0.5:1}}>
+              {busy ? "Speichern…" : "Session loggen"}
+            </button>
+          </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
   const [loc,setLoc]           = useState(()=>loadStored("wf_loc",{lat:48.0703,lon:11.1167,name:"Wörthsee / Pilsensee"}));
@@ -513,10 +669,13 @@ function App() {
   const [clock,setClock]       = useState("");
   const [windUnit,setWindUnit]  = useState("kn"); // 'ms' | 'kn' | 'bf'
   const [showLoc,setShowLoc]   = useState(false);
+  const [showFeedback,setShowFeedback] = useState(false);
   const [geoStatus,setGeoStatus]= useState(""); // "", "loading", "error"
   const [geoError,setGeoError] = useState("");
   const [locTab,setLocTab]     = useState("preset");
   const [selPreset,setSelPreset]= useState(0);
+  // Last 5 manually entered / GPS locations, most-recent first (persisted).
+  const [recent,setRecent]     = useState(()=>loadStored("wf_loc_recent",[]));
   const [custom,setCustom]     = useState({link:"",name:""});
   const [linkError,setLinkError]= useState("");
   const [stations,setStations] = useState([]);
@@ -533,6 +692,10 @@ function App() {
   const [adminBusy,setAdminBusy]     = useState(false);
   const [adminOut,setAdminOut]       = useState("");
   const [adminErr,setAdminErr]       = useState("");
+  const [adminTab,setAdminTab]       = useState("actions"); // "actions" | "users"
+  const [users,setUsers]             = useState([]);
+  const [usersMsg,setUsersMsg]       = useState("");
+  const [pwInputs,setPwInputs]       = useState({}); // userId -> new password draft
 
   const PRESETS = [
     {lat:48.0703,lon:11.1167,name:"Wörthsee / Pilsensee"},
@@ -638,7 +801,9 @@ function App() {
         const lat = Math.round(pos.coords.latitude  * 10000) / 10000;
         const lon = Math.round(pos.coords.longitude * 10000) / 10000;
         const name = await reverseGeocode(lat, lon);
-        setLoc({ lat, lon, name: name || `Mein Standort (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)` });
+        const nl = { lat, lon, name: name || `Mein Standort (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)` };
+        setLoc(nl);
+        pushRecent(nl);
         setGeoStatus("");
         setShowLoc(false);
       },
@@ -924,6 +1089,52 @@ function App() {
     } catch(e) { setAdminErr("Server nicht erreichbar."); setAdminOut(""); }
     setAdminBusy(false);
   }
+  // ── Admin: user management ──────────────────────────────────────────────────
+  async function adminApi(path, opts={}) {
+    const headers = { "X-Admin-Token": adminToken, ...(opts.headers||{}) };
+    if (opts.body) headers["Content-Type"] = "application/json";
+    const r = await fetch(`/api/admin/${path}`, { ...opts, headers });
+    return r.json();
+  }
+  async function loadUsers() {
+    setUsersMsg(""); setAdminBusy(true);
+    try {
+      const d = await adminApi("users");
+      if (d.ok) setUsers(d.users); else setUsersMsg(d.error || "Laden fehlgeschlagen.");
+    } catch(e) { setUsersMsg("Server nicht erreichbar."); }
+    setAdminBusy(false);
+  }
+  async function toggleUser(u) {
+    setUsersMsg(""); setAdminBusy(true);
+    try {
+      const d = await adminApi("users/set-disabled",
+        { method:"POST", body: JSON.stringify({ id:u.id, disabled: !u.disabled }) });
+      if (d.ok) await loadUsers(); else { setUsersMsg(d.error || "Fehler."); setAdminBusy(false); }
+    } catch(e) { setUsersMsg("Server nicht erreichbar."); setAdminBusy(false); }
+  }
+  async function resetUserPw(u) {
+    const pw = (pwInputs[u.id]||"").trim();
+    if (pw.length < 10) { setUsersMsg("Passwort muss mindestens 10 Zeichen haben."); return; }
+    setUsersMsg(""); setAdminBusy(true);
+    try {
+      const d = await adminApi("users/reset-password",
+        { method:"POST", body: JSON.stringify({ id:u.id, password: pw }) });
+      if (d.ok) { setUsersMsg(`✓ Passwort für ${u.email} gesetzt.`); setPwInputs(p=>({...p,[u.id]:""})); }
+      else setUsersMsg(d.error || "Fehler.");
+    } catch(e) { setUsersMsg("Server nicht erreichbar."); }
+    setAdminBusy(false);
+  }
+
+  // Remember a location in the rolling "last 5" history (dedupe by coords,
+  // most-recent first). Covers both manual entries and the GPS location.
+  function pushRecent(l) {
+    if(!l || l.lat==null || l.lon==null) return;
+    const key = x => `${(+x.lat).toFixed(4)},${(+x.lon).toFixed(4)}`;
+    const k = key(l);
+    const entry = { lat:+l.lat, lon:+l.lon, name:l.name };
+    const next = [entry, ...recent.filter(r=>key(r)!==k)].slice(0,5);
+    setRecent(next); saveStored("wf_loc_recent", next);
+  }
 
   // Resolve the chosen location from the active modal tab (preset or link)
   function resolveLoc() {
@@ -994,6 +1205,9 @@ function App() {
             {locSaved ? "✓ gemerkt" : "★ merken"}
           </button>
           <button style={S.btnG} onClick={()=>setShowLoc(true)}>Ort ändern</button>
+          <button style={{...S.btnG,borderColor:C.signal,color:C.signal}}
+            title="Session-Feedback geben"
+            onClick={()=>setShowFeedback(true)}>📣 Feedback</button>
         </div>
       </div>
 
@@ -1468,6 +1682,14 @@ function App() {
         )}
       </div>
 
+      {/* FEEDBACK MODAL */}
+      {showFeedback&&(
+        <FeedbackModal loc={loc} onClose={()=>setShowFeedback(false)}
+          forecast={forecast ? {source:"foil-score",
+            predictedScore:(activeDay===0&&dayData)?dayData.dayScore:null,
+            predictedWindKt:(activeDay===0&&dayData)?dayData.midW:null} : null} />
+      )}
+
       {/* LOC MODAL */}
       {showLoc&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -1500,6 +1722,23 @@ function App() {
                 <div style={{fontSize:11,color:C.caution,lineHeight:1.5,background:"rgba(245,185,66,0.08)",
                   border:`1px solid ${C.caution}`,borderRadius:4,padding:"6px 10px",marginBottom:12}}>
                   ⚠️ {geoError}
+                </div>
+              )}
+              {recent.length>0&&(
+                <div style={{marginBottom:14}}>
+                  <div style={{fontFamily:"monospace",fontSize:10,color:C.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Zuletzt verwendet</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {recent.map((r,i)=>(
+                      <button key={i} onClick={()=>{ setLoc(r); pushRecent(r); saveStored("wf_loc",r); setShowLoc(false); }}
+                        style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:4,color:C.text,textAlign:"left",padding:"8px 12px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                        <span>
+                          <b style={{display:"block",fontSize:13}}>{r.name}</b>
+                          <span style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{(+r.lat).toFixed(4)}°N {(+r.lon).toFixed(4)}°E</span>
+                        </span>
+                        <span style={{fontSize:12,color:C.sky}}>↵</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               <div style={{fontSize:9,color:C.dim,textAlign:"center",marginBottom:12,letterSpacing:"0.05em"}}>
@@ -1555,11 +1794,11 @@ function App() {
               <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:14}}>
                 <button style={{...S.btn,background:"transparent",border:`1px solid ${C.border2}`,color:C.muted}} onClick={()=>{
                   const nl = resolveLoc(); if(!nl) return;
-                  setLoc(nl); setLinkError(""); setShowLoc(false);
+                  setLoc(nl); pushRecent(nl); setLinkError(""); setShowLoc(false);
                 }}>Nur übernehmen</button>
                 <button style={S.btn} onClick={()=>{
                   const nl = resolveLoc(); if(!nl) return;
-                  setLoc(nl); saveStored("wf_loc", nl); setLinkError(""); setShowLoc(false);
+                  setLoc(nl); pushRecent(nl); saveStored("wf_loc", nl); setLinkError(""); setShowLoc(false);
                 }}>Übernehmen & merken ★</button>
               </div>
             </div>
@@ -1571,7 +1810,7 @@ function App() {
         <span>WindFoil Weather Intelligence v3.3.6</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
-        <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");}}
+        <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
           title="Admin"
           style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:12,padding:0}}>⚙</button>
       </div>
@@ -1582,7 +1821,7 @@ function App() {
           <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,width:"100%",maxWidth:560}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
               <strong style={{fontFamily:"monospace",fontSize:14}}>⚙ Admin</strong>
-              <button onClick={()=>{setAdminOpen(false);setAdminAuthed(false);setAdminToken("");setAdminPw("");setAdminOut("");setAdminErr("");}}
+              <button onClick={()=>{setAdminOpen(false);setAdminAuthed(false);setAdminToken("");setAdminPw("");setAdminOut("");setAdminErr("");setAdminTab("actions");setUsers([]);setUsersMsg("");setPwInputs({});}}
                 style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
             </div>
             <div style={{padding:16}}>
@@ -1603,6 +1842,14 @@ function App() {
                 </div>
               ) : (
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  <div style={{display:"flex",gap:6}}>
+                    {[["actions","Aktionen"],["users","Benutzer"]].map(([t,l])=>(
+                      <button key={t} onClick={()=>{ setAdminTab(t); if(t==="users") loadUsers(); }}
+                        style={{background:adminTab===t?C.signal:"none",border:`1px solid ${adminTab===t?C.signal:C.border2}`,color:adminTab===t?"#fff":C.muted,borderRadius:4,padding:"4px 12px",fontSize:12,cursor:"pointer"}}>{l}</button>
+                    ))}
+                  </div>
+
+                  {adminTab==="actions" && (<>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                     <button style={{...S.btn,opacity:adminBusy?0.6:1}} disabled={adminBusy}
                       onClick={()=>adminRun("deploy","Deployment")}>🚀 Deploy starten</button>
@@ -1614,6 +1861,41 @@ function App() {
                   {adminBusy && <div style={{fontSize:11,color:C.caution}}>⏳ läuft… (kann bis zu 2 Min dauern)</div>}
                   {adminOut && (
                     <pre style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"10px 12px",fontSize:11,color:C.text,fontFamily:"monospace",whiteSpace:"pre-wrap",maxHeight:340,overflow:"auto",margin:0}}>{adminOut}</pre>
+                  )}
+                  </>)}
+
+                  {adminTab==="users" && (
+                    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span style={{fontSize:11,color:C.muted,fontFamily:"monospace"}}>{users.length} Benutzer</span>
+                        <button style={S.btnG} disabled={adminBusy} onClick={loadUsers}>↻ Aktualisieren</button>
+                      </div>
+                      {usersMsg && <div style={{fontSize:11,color:usersMsg.startsWith("✓")?C.go:C.caution}}>{usersMsg}</div>}
+                      {users.length===0 && !adminBusy && <div style={{fontSize:11,color:C.dim}}>Keine Benutzer gefunden.</div>}
+                      {users.map(u=>(
+                        <div key={u.id} style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                            <div style={{minWidth:0}}>
+                              <div style={{fontSize:13,color:C.text,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+                                {u.name||"—"}
+                                <span style={{fontSize:10,color:u.disabled?C.stop:C.go}}>{u.disabled?"● gesperrt":"● aktiv"}</span>
+                              </div>
+                              <div style={{fontSize:11,color:C.muted,fontFamily:"monospace",overflow:"hidden",textOverflow:"ellipsis"}}>{u.email}</div>
+                            </div>
+                            <button disabled={adminBusy} onClick={()=>toggleUser(u)}
+                              style={{...S.btnG,borderColor:u.disabled?C.go:C.stop,color:u.disabled?C.go:C.stop,opacity:adminBusy?0.6:1}}>
+                              {u.disabled?"Freischalten":"Sperren"}
+                            </button>
+                          </div>
+                          <div style={{display:"flex",gap:6}}>
+                            <input type="text" autoComplete="off" placeholder="Neues Passwort (min. 10)"
+                              value={pwInputs[u.id]||""} onChange={e=>setPwInputs(p=>({...p,[u.id]:e.target.value}))}
+                              style={{...S.inp,flex:1,fontSize:12}} />
+                            <button disabled={adminBusy} style={S.btnG} onClick={()=>resetUserPw(u)}>PW setzen</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}

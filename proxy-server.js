@@ -69,6 +69,25 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ""; // frontend gate, check
 const APP_DIR = process.env.APP_DIR || "/var/www/windfoil";
 const DEPLOY_SCRIPT = APP_DIR + "/deploy.sh";
 
+// ── Direct SQLite handle for admin user-management ────────────────────────────
+// Better Auth owns the user/account/session tables; this read/write handle to
+// the same DB file (WAL allows concurrent connections) powers the admin
+// enable/disable + password-reset endpoints. Opened lazily on first use.
+const Database = require("better-sqlite3");
+const DB_PATH = process.env.WINDFOIL_DB_PATH || path.join(__dirname, "data", "windfoil.db");
+let adminDb = null;
+function getAdminDb() {
+  if (!adminDb) {
+    adminDb = new Database(DB_PATH);
+    adminDb.pragma("journal_mode = WAL");
+    adminDb.pragma("foreign_keys = ON");
+    // Mirror the column auth.mjs adds, so this handle works even if it connects first.
+    try { adminDb.exec("ALTER TABLE user ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0"); }
+    catch (e) { /* column already exists */ }
+  }
+  return adminDb;
+}
+
 // Brute-force protection: lock after too many bad attempts
 const adminFails = new Map(); // ip -> { count, until }
 const MAX_FAILS = 5;
@@ -286,6 +305,71 @@ app.get("/api/admin/status", (req, res) => {
 app.get("/api/admin/check", (req, res) => {
   if (!adminGuard(req, res)) return;
   res.json({ ok: true });
+});
+
+// ── User management (Better Auth user/account/session tables) ─────────────────
+// List all registered users with their enable/disable state.
+app.get("/api/admin/users", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  try {
+    const db = getAdminDb();
+    const users = db.prepare(
+      "SELECT id, email, name, emailVerified, createdAt, COALESCE(disabled,0) AS disabled " +
+      "FROM user ORDER BY createdAt"
+    ).all();
+    res.json({ ok: true, users });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Enable/disable a user. Disabling also clears their sessions so the change
+// takes effect immediately (and the sign-in hook blocks any new session).
+app.post("/api/admin/users/set-disabled", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const id = req.body && req.body.id;
+  const disabled = req.body && req.body.disabled ? 1 : 0;
+  if (!id) return res.status(400).json({ ok: false, error: "User-ID fehlt." });
+  try {
+    const db = getAdminDb();
+    if (!db.prepare("SELECT 1 FROM user WHERE id = ?").get(id)) {
+      return res.status(404).json({ ok: false, error: "User nicht gefunden." });
+    }
+    db.prepare("UPDATE user SET disabled = ?, updatedAt = ? WHERE id = ?")
+      .run(disabled, new Date().toISOString(), id);
+    if (disabled) db.prepare("DELETE FROM session WHERE userId = ?").run(id);
+    res.json({ ok: true, id, disabled });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Reset a user's password. Hashes with Better Auth's own hasher so the new
+// password verifies on the next login, then clears sessions to force re-login.
+app.post("/api/admin/users/reset-password", async (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const id = req.body && req.body.id;
+  const password = (req.body && req.body.password) || "";
+  if (!id) return res.status(400).json({ ok: false, error: "User-ID fehlt." });
+  if (String(password).length < 10) {
+    return res.status(400).json({ ok: false, error: "Passwort muss mindestens 10 Zeichen haben." });
+  }
+  try {
+    const db = getAdminDb();
+    const acct = db.prepare(
+      "SELECT id FROM account WHERE userId = ? AND providerId = 'credential'"
+    ).get(id);
+    if (!acct) return res.status(404).json({ ok: false, error: "Kein Passwort-Konto für diesen User." });
+    const { auth } = await import("./src/auth.mjs");
+    const ctx = await auth.$context;
+    const hash = await ctx.password.hash(String(password));
+    const now = new Date().toISOString();
+    db.prepare("UPDATE account SET password = ?, updatedAt = ? WHERE id = ?").run(hash, now, acct.id);
+    db.prepare("DELETE FROM session WHERE userId = ?").run(id);
+    res.json({ ok: true, id });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 
