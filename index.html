@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.3.0 -->
+<html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>WindFoil Weather Intelligence</title><!-- v2.7.0 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -19,7 +19,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v3.3.0
+// WindFoil Weather Intelligence v2.7.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -152,7 +152,7 @@ function buildDemoForecast(lat, lon) {
   const keys=["time","windspeed_10m","windgusts_10m","winddirection_10m","temperature_2m",
                "surface_pressure","cape","lifted_index","cloudcover","relativehumidity_2m"];
   const merged = Object.fromEntries(keys.map(k=>[k,[]]));
-  for(let d=0; d<7; d++){
+  for(let d=0; d<4; d++){
     const day = generateDemoDay(lat, lon, d);
     keys.forEach(k => merged[k].push(...day[k]));
   }
@@ -187,7 +187,7 @@ async function tryFetchForecast(lat, lon) {
   const params = new URLSearchParams({
     latitude:lat, longitude:lon,
     hourly:"temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m,surface_pressure,relativehumidity_2m,cloudcover,cape,lifted_index",
-    wind_speed_unit:"ms", forecast_days:7, timezone:"auto",
+    wind_speed_unit:"ms", forecast_days:4, timezone:"auto",
   });
   return fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${params}`);
 }
@@ -243,20 +243,22 @@ function seaBreeze(windDir, hour, month) {
 
 // ── FoilScore ─────────────────────────────────────────────────────────────────
 function calcWindow(weight,wingM2,foilCm2,skill,knownPlaneMs) {
-  const sMin = {beginner:1.50,intermediate:1.25,advanced:1.00,pro:0.85}[skill]??1.15;
-  const sOpt = {beginner:1.60,intermediate:2.00,advanced:2.60,pro:3.20}[skill]??2.00;
-  const sMax = {beginner:2.00,intermediate:2.60,advanced:3.50,pro:4.50}[skill]??2.60;
+  const sm={beginner:1.3,intermediate:1.15,advanced:1.0,pro:0.9}[skill]??1.1;
   let minW;
   if(knownPlaneMs && knownPlaneMs>0){
+    // Rider's real-world planing threshold overrides the generic formula.
+    // Practice beats theory: this anchors the whole window to lived experience.
     minW = knownPlaneMs;
   } else {
     const load=weight/wingM2, foilF=1800/foilCm2;
-    minW=Math.max(2.5,(3.5+load*0.15+foilF*0.8)*sMin*0.85);
+    minW=Math.max(2.5,(3.5+load*0.15+foilF*0.8)*sm*0.85);
   }
+  // Window proportions around the planing threshold.
+  // optMin slightly above liftoff; optMax ~2.6x; max scaled by skill.
   return{ minWind:Math.round(minW*10)/10,
-          optMin: Math.round(minW*1.2*10)/10,
-          optMax: Math.round(minW*sOpt*10)/10,
-          maxWind:Math.round(minW*sMax*10)/10 };
+          optMin:Math.round(minW*1.25*10)/10,
+          optMax:Math.round(minW*2.6*10)/10,
+          maxWind:Math.round(minW*2.6*sm*10)/10 };
 }
 function scoreHour(w,win) {
   if(w<win.minWind) return Math.max(0,Math.round((w/win.minWind)*45));
@@ -623,16 +625,16 @@ function App() {
   // API may start mid-day (e.g. 17:00 local time) — find index where each
   // calendar day (00:00) begins, so "Heute" = today's 00:00 not hour[0]
   const dayStartIndices = (() => {
-    if(!forecast) return [0,24,48,72,96,120,144];
+    if(!forecast) return [0,24,48,72];
     const times = forecast.hourly.time;
-    if(!times.length) return [0,24,48,72,96,120,144];
+    if(!times.length) return [0,24,48,72];
     // CRITICAL: data is in the SPOT's timezone (timezone=auto), which may differ
     // from the user's browser clock. Anchor "today" to the FIRST timestamp's
     // calendar date in the data itself, so days are always correct for any user.
     const firstDateStr = times[0].slice(0,10);          // "2026-05-30"
     const [fy,fm,fd] = firstDateStr.split('-').map(Number);
     const result = [];
-    for(let d=0; d<7; d++){
+    for(let d=0; d<4; d++){
       // Build the target date by adding d days to the data's first date
       const target = new Date(fy, fm-1, fd + d);
       const y=target.getFullYear(), m=String(target.getMonth()+1).padStart(2,'0'), dy=String(target.getDate()).padStart(2,'0');
@@ -666,10 +668,10 @@ function App() {
     const midDir=dirs[14]??dirs[12]??180;
     const sb=seaBreeze(midDir,14,new Date().getMonth()+1); // getMonth() is local — correct
     const effW=midW+(sb.active?sb.boost:0);
-    // Choose window: use midW (not effW) — consistent with dayScores tabs.
+    // Choose window: either the single manual profile, or the best gear for this wind
     let win, pickedGear=null;
     if(useGear && gear.length){
-      const best = pickBestSetup(gear, rider.weight, rider.skill, midW);
+      const best = pickBestSetup(gear, rider.weight, rider.skill, effW);
       if(best){ win = best.win; pickedGear = best.gear; }
     }
     if(!win){
@@ -686,7 +688,7 @@ function App() {
     return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,effW,dayScore,thInfo,pickedGear,session};
   })();
 
-  const dayScores = forecast ? Array.from({length:7},(_,d)=>{
+  const dayScores = forecast ? Array.from({length:4},(_,d)=>{
     const start = dayStartIndices[d] ?? d*24;
     // representative wind for the day (midday avg) to pick gear
     const dw = forecast.hourly.windspeed_10m.slice(start+12,start+16).filter(Boolean);
@@ -707,7 +709,7 @@ function App() {
     const [fy,fm,fd] = firstDateStr ? firstDateStr.split('-').map(Number) : [0,0,0];
     // Is the data's first day actually "today" in the user's perception?
     // We label relative to the data itself for consistency across timezones.
-    return Array.from({length:7},(_,d)=>{
+    return Array.from({length:4},(_,d)=>{
       if(!firstDateStr) return `Tag ${d+1}`;
       const target = new Date(fy, fm-1, fd + d);
       if(d===0) return "Heute";
@@ -820,16 +822,14 @@ function App() {
   const S={
     wrap:{fontFamily:"'Barlow',sans-serif",background:C.bg,color:C.text,minHeight:"100vh",fontSize:14},
     hdr:{background:"rgba(10,14,20,.97)",borderBottom:`1px solid ${C.border}`,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:6,position:"sticky",top:0,zIndex:100},
-    locBar:{background:C.panel,borderBottom:`2px solid ${C.sky}`,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8},
-    riderBar:{background:C.panel,borderBottom:`1px solid ${C.border}`,borderTop:`2px solid ${C.signal}`,padding:"14px 20px"},
+    locBar:{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"6px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:6},
+    riderBar:{background:C.panel,borderBottom:`1px solid ${C.border}`,padding:"12px 20px"},
     main:{padding:"14px clamp(10px,3vw,18px) 40px",maxWidth:1200,margin:"0 auto"},
     card:{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,padding:"12px 16px",marginBottom:12},
     sec:{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted,marginBottom:8},
     btn:{background:C.signal,color:"#fff",border:"none",borderRadius:4,fontWeight:700,fontSize:13,padding:"7px 18px",cursor:"pointer",fontFamily:"monospace"},
     btnG:{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:4,fontSize:12,padding:"4px 10px",cursor:"pointer"},
     inp:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:4,padding:"5px 8px",fontFamily:"monospace",fontSize:12,outline:"none"},
-    fl:{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4},
-    fi:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:4,padding:"0 10px",fontFamily:"monospace",fontSize:14,outline:"none",height:40,width:"100%",boxSizing:"border-box"},
     grid2:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:12,marginBottom:12},
     grid6:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:12},
     cw:{height:190}, cwL:{height:210},
@@ -843,7 +843,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:"#fff"}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.3.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v2.7.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -864,10 +864,10 @@ function App() {
 
       {/* LOC BAR */}
       <div style={S.locBar}>
-        <div style={{display:"flex",alignItems:"center",gap:10,fontSize:15}}>
-          <span style={{fontSize:20}}>📍</span>
-          <b style={{color:"#fff",fontSize:16,letterSpacing:"0.02em"}}>{loc.name}</b>
-          <span style={{fontFamily:"monospace",fontSize:11,color:C.sky}}>{loc.lat.toFixed(4)}°N, {loc.lon.toFixed(4)}°E</span>
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>
+          <span>📍</span>
+          <b style={{color:"#fff"}}>{loc.name}</b>
+          <span style={{fontFamily:"monospace",fontSize:10,color:C.muted}}>{loc.lat.toFixed(4)}°N, {loc.lon.toFixed(4)}°E</span>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <button style={{...S.btnG,borderColor:locSaved?C.go:C.border2,color:locSaved?C.go:C.muted}}
@@ -881,48 +881,39 @@ function App() {
 
       {/* RIDER BAR */}
       <div style={S.riderBar}>
-        <div style={{fontFamily:"monospace",fontSize:11,textTransform:"uppercase",letterSpacing:"0.12em",color:C.signal,marginBottom:12,fontWeight:700}}>🏄 Rider-Profil &amp; Equipment</div>
-
-        {/* Rider fields — unified grid */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:10,marginBottom:10}}>
-          {[
-            {l:"Gewicht (kg)",k:"weight",step:1,min:40,max:150},
-            {l:"Wing (m²)",k:"wingSize",step:.5,min:2,max:12},
-            {l:"Foil Front (cm²)",k:"foilFront",step:50,min:600,max:3000},
-          ].map(f=>(
-            <div key={f.k}>
-              <label style={S.fl}>{f.l}</label>
+        <div style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted,marginBottom:10}}>🏄 Rider-Profil</div>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end"}}>
+          {[{l:"Gewicht (kg)",k:"weight",step:1,min:40,max:150},{l:"Wing (m²)",k:"wingSize",step:.5,min:2,max:12},{l:"Foil Front (cm²)",k:"foilFront",step:50,min:600,max:3000}].map(f=>(
+            <div key={f.k} style={{display:"flex",flexDirection:"column",gap:4}}>
+              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>{f.l}</label>
               <input type="number" value={ri[f.k]} step={f.step} min={f.min} max={f.max}
                 onChange={e=>setRi(r=>({...r,[f.k]:parseFloat(e.target.value)}))}
-                style={S.fi} />
+                style={{...S.inp,width:110,minWidth:90,flex:"1 1 90px",maxWidth:150,fontSize:13}} />
             </div>
           ))}
-          <div>
-            <label style={S.fl}>Skill-Level</label>
-            <select value={ri.skill} onChange={e=>setRi(r=>({...r,skill:e.target.value}))} style={S.fi}>
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>Skill-Level</label>
+            <select value={ri.skill} onChange={e=>setRi(r=>({...r,skill:e.target.value}))}
+              style={{...S.inp,width:140,fontSize:13}}>
               {["beginner","intermediate","advanced","pro"].map(s=><option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div>
-            <label style={S.fl} title="Optional: ab wie viel Wind du erfahrungsgemäß abhebst. Überschreibt die Formel.">Abheben ab (kn) · opt.</label>
-            <input type="number" value={ri.planeKn} step={0.5} min={4} max={30} placeholder="z.B. 11"
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}} title="Optional: ab wie viel Wind du erfahrungsgemäß abhebst. Überschreibt die Formel.">Abheben ab (kn) · optional</label>
+            <input type="number" value={ri.planeKn} step={0.5} min={4} max={30}
+              placeholder="z.B. 11"
               onChange={e=>setRi(r=>({...r,planeKn:e.target.value}))}
-              style={S.fi} />
+              style={{...S.inp,width:130,fontSize:13}} />
           </div>
-        </div>
-
-        {/* Action buttons */}
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
-          <button style={{...S.btn,flex:"1 1 180px",touchAction:"manipulation"}}
-            onClick={()=>{setRider({...ri});setActiveDay(0);}}>ANALYSE STARTEN →</button>
-          <button style={{...S.btn,flex:"1 1 180px",background:"transparent",border:`1px solid ${C.go}`,color:C.go,touchAction:"manipulation"}}
+          <button style={S.btn} onClick={()=>{setRider({...ri});setActiveDay(0);}}>ANALYSE STARTEN →</button>
+          <button style={{...S.btn,background:"transparent",border:`1px solid ${C.go}`,color:C.go}}
             onClick={()=>{ saveStored("wf_rider",ri); setRider({...ri}); setProfileSaved(true); setTimeout(()=>setProfileSaved(false),2000); }}>
             {profileSaved ? "✓ GESPEICHERT" : "PROFIL SPEICHERN"}
           </button>
         </div>
 
         {/* EQUIPMENT MANAGER */}
-        <div style={{paddingTop:12,borderTop:`1px solid ${C.border}`}}>
+        <div style={{marginTop:14,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <span style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted}}>🎒 Mein Equipment</span>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:useGear?C.go:C.muted,cursor:"pointer"}}>
@@ -945,36 +936,33 @@ function App() {
             </div>
           )}
 
-          {/* add new gear — unified grid */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8,alignItems:"end"}}>
-            <div>
-              <label style={S.fl}>Name</label>
-              <input value={newGear.name} placeholder="z.B. Leichtwind" onChange={e=>setNewGear(g=>({...g,name:e.target.value}))} style={{...S.fi,height:38}} />
+          {/* add new gear */}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>Name</label>
+              <input value={newGear.name} placeholder="z.B. Leichtwind" onChange={e=>setNewGear(g=>({...g,name:e.target.value}))} style={{...S.inp,width:110,fontSize:12}} />
             </div>
-            <div>
-              <label style={S.fl}>Wing (m²)</label>
-              <input type="number" step={0.5} value={newGear.wing} onChange={e=>setNewGear(g=>({...g,wing:e.target.value}))} style={{...S.fi,height:38}} />
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>Wing (m²)</label>
+              <input type="number" step={0.5} value={newGear.wing} onChange={e=>setNewGear(g=>({...g,wing:e.target.value}))} style={{...S.inp,width:80,fontSize:12}} />
             </div>
-            <div>
-              <label style={S.fl}>Foil (cm²)</label>
-              <input type="number" step={50} value={newGear.foil} onChange={e=>setNewGear(g=>({...g,foil:e.target.value}))} style={{...S.fi,height:38}} />
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>Foil (cm²)</label>
+              <input type="number" step={50} value={newGear.foil} onChange={e=>setNewGear(g=>({...g,foil:e.target.value}))} style={{...S.inp,width:90,fontSize:12}} />
             </div>
-            <div>
-              <label style={S.fl}>ab (kn)</label>
-              <input type="number" step={0.5} value={newGear.planeKn} placeholder="opt." onChange={e=>setNewGear(g=>({...g,planeKn:e.target.value}))} style={{...S.fi,height:38}} />
+            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <label style={{fontFamily:"monospace",fontSize:8,color:C.muted,textTransform:"uppercase"}}>ab (kn)</label>
+              <input type="number" step={0.5} value={newGear.planeKn} placeholder="opt." onChange={e=>setNewGear(g=>({...g,planeKn:e.target.value}))} style={{...S.inp,width:70,fontSize:12}} />
             </div>
-            <div>
-              <label style={S.fl}>&nbsp;</label>
-              <button style={{...S.btn,width:"100%",height:38,fontSize:11,padding:0,touchAction:"manipulation"}}
-                onClick={()=>{
-                  if(!newGear.wing||!newGear.foil) return;
-                  const entry={...newGear,id:Date.now()};
-                  const ng=[...gear,entry];
-                  setGear(ng); saveStored("wf_gear",ng);
-                  setNewGear({name:"",wing:"5.0",foil:"1800",planeKn:""});
-                  setActiveDay(0);
-                }}>+ Hinzufügen</button>
-            </div>
+            <button style={{...S.btn,fontSize:11,padding:"6px 12px"}}
+              onClick={()=>{
+                if(!newGear.wing||!newGear.foil) return;
+                const entry={...newGear,id:Date.now()};
+                const ng=[...gear,entry];
+                setGear(ng); saveStored("wf_gear",ng);
+                setNewGear({name:"",wing:"5.0",foil:"1800",planeKn:""});
+                setActiveDay(0);
+              }}>+ Hinzufügen</button>
           </div>
           {useGear && gear.length===0 && (
             <p style={{fontSize:10,color:C.caution,marginTop:8}}>Füge mindestens ein Equipment hinzu, damit die automatische Wahl greift.</p>
@@ -995,76 +983,70 @@ function App() {
 
         {!loading && forecast && dayData && (
           <>
-            {/* BADGES ROW */}
-            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:12}}>
-              {[
-                {icon:"💨",label:`Ø ${fmtW(dayData.avgW,windUnit)}`,c:dayData.avgW>=dayData.win.optMin&&dayData.avgW<=dayData.win.optMax?C.go:dayData.avgW<dayData.win.minWind?C.stop:C.caution},
-                {icon:"⬆",label:`Max Böe ${fmtW(dayData.maxG,windUnit)}`,c:dayData.maxG>dayData.win.maxWind?C.stop:C.caution},
-                {icon:"🌡",label:`${dayData.maxT.toFixed(0)}°C max`,c:C.sky},
-                {icon:dayData.thInfo.icon,label:dayData.thInfo.label,c:dayData.thInfo.color},
-                ...(dayData.sb.active?[{icon:"🌊",label:`Meeresbrise +${fmtW(dayData.sb.boost,windUnit)}`,c:C.sky}]:[]),
-              ].map((b,i)=>(
-                <div key={i} style={{border:`1px solid ${b.c}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:b.c,display:"flex",alignItems:"center",gap:6,background:C.surface}}>
-                  {b.icon} {b.label}
-                </div>
-              ))}
-            </div>
-
             {/* DAY TABS */}
-            <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
               {dayNames.map((name,d)=>{
-                const rawSc=dayScores[d];
-                const tabConf=(d===0 && stationCmp?.available)?stationCmp.confidence:null;
-                const sc=tabConf!=null?applyConfidence(rawSc,tabConf).score:rawSc;
-                const active=d===activeDay;
+                const sc=dayScores[d], active=d===activeDay;
                 const icon=sc>=75?"✅":sc>=45?"⚠️":"❌";
-                const uncertain=d>=4;
                 return(
                   <button key={d} onClick={()=>setActiveDay(d)} style={{
                     background:active?C.signal:C.surface, border:`1px solid ${active?C.signal:C.border2}`,
                     color:active?"#fff":C.muted, borderRadius:4, padding:"8px 14px", cursor:"pointer",
-                    display:"flex", flexDirection:"column", alignItems:"center", gap:2, minWidth:90,
-                    opacity:uncertain?0.72:1 }}>
+                    display:"flex", flexDirection:"column", alignItems:"center", gap:2, minWidth:90 }}>
                     <span style={{fontSize:14}}>{icon}</span>
                     <span style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase"}}>{name}</span>
                     <span style={{fontFamily:"monospace",fontWeight:900,fontSize:18,color:active?"#fff":sc2col(sc)}}>{sc}</span>
-                    {uncertain&&<span style={{fontSize:7,color:active?"rgba(255,255,255,.6)":C.caution,fontFamily:"monospace",letterSpacing:"0.05em"}}>≈ unsicher</span>}
                   </button>
                 );
               })}
             </div>
 
-            {/* FOIL-SCORE */}
-            {(()=>{
-              const conf = (activeDay===0 && stationCmp?.available) ? stationCmp.confidence : null;
-              const adj = applyConfidence(dayData.dayScore, conf);
-              const cc = classifyConfidence(conf);
-              const scoreColor = sc2col(adj.score);
-              return (
-                <div style={{...S.card,marginBottom:12,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",borderLeft:`3px solid ${scoreColor}`,background:`linear-gradient(90deg,${scoreColor}12 0%,${C.panel} 40%)`}}>
-                  <div style={{textAlign:"center",minWidth:100}}>
-                    <div style={{fontFamily:"monospace",fontWeight:900,fontSize:56,color:scoreColor,lineHeight:1}}>{adj.score}</div>
+            {/* SCORE + BADGES */}
+            {(()=>{ /* confidence applies to TODAY only (station obs are current) */ })()}
+            <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap",alignItems:"stretch"}}>
+              {(()=>{
+                const conf = (activeDay===0 && stationCmp?.available) ? stationCmp.confidence : null;
+                const adj = applyConfidence(dayData.dayScore, conf);
+                const cc = classifyConfidence(conf);
+                return (
+                  <div style={{...S.card,marginBottom:0,minWidth:150,textAlign:"center"}}>
+                    <div style={{fontFamily:"monospace",fontWeight:900,fontSize:52,color:sc2col(adj.score),lineHeight:1}}>{adj.score}</div>
                     <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>Foil-Score</div>
-                    {adj.adjusted && <div style={{fontSize:9,color:C.caution,marginTop:3}}>roh {dayData.dayScore} · justiert</div>}
-                  </div>
-                  <div style={{flex:1,minWidth:160}}>
                     {dayData.session && dayData.session.startHour!=null && dayData.dayScore>0 && (
-                      <div style={{fontSize:14,color:C.go,fontFamily:"monospace",fontWeight:700,marginBottom:4}}>
-                        ⏱ Beste Zeit: {String(dayData.session.startHour).padStart(2,"0")}–{String(dayData.session.endHour).padStart(2,"0")} Uhr
+                      <div style={{fontSize:10,color:C.go,marginTop:3}}>
+                        beste Zeit {String(dayData.session.startHour).padStart(2,"0")}–{String(dayData.session.endHour).padStart(2,"0")} Uhr
                       </div>
                     )}
-                    <div style={{fontSize:11,color:C.muted}}>
+                    {adj.adjusted && (
+                      <div style={{fontSize:9,color:C.caution,marginTop:3}}>roh {dayData.dayScore} · justiert</div>
+                    )}
+                    <div style={{fontSize:10,color:C.muted,marginTop:4}}>
                       {dayData.pickedGear
                         ? `${rider.weight}kg · ${dayData.pickedGear.name||dayData.pickedGear.wing+"m²"} (${dayData.pickedGear.wing}m²·${dayData.pickedGear.foil}cm²)`
-                        : `${rider.weight}kg · ${rider.wingSize}m² · ${rider.foilFront}cm²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}
+                        : `${rider.weight}kg·${rider.wingSize}m²·${rider.foilFront}cm²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}
                     </div>
                     {conf!=null && (
-                      <div style={{marginTop:6,fontSize:11,color:cc.color}}>{cc.icon} {cc.label} ({conf}%)</div>
+                      <div style={{marginTop:6,paddingTop:6,borderTop:`1px solid ${C.border}`,fontSize:10,color:cc.color}}>
+                        {cc.icon} {cc.label} ({conf}%)
+                      </div>
                     )}
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
+              <div style={{display:"flex",flexWrap:"wrap",gap:7,alignContent:"flex-start"}}>
+                {[
+                  {icon:"💨",label:`Ø ${fmtW(dayData.avgW,windUnit)}`,c:dayData.avgW>=dayData.win.optMin&&dayData.avgW<=dayData.win.optMax?C.go:dayData.avgW<dayData.win.minWind?C.stop:C.caution},
+                  {icon:"⬆",label:`Max Böe ${fmtW(dayData.maxG,windUnit)}`,c:dayData.maxG>dayData.win.maxWind?C.stop:C.caution},
+                  {icon:"🌡",label:`${dayData.maxT.toFixed(0)}°C max`,c:C.sky},
+                  {icon:dayData.thInfo.icon,label:dayData.thInfo.label,c:dayData.thInfo.color},
+                  ...(dayData.sb.active?[{icon:"🌊",label:`Meeresbrise +${fmtW(dayData.sb.boost,windUnit)}`,c:C.sky}]:[]),
+                ].map((b,i)=>(
+                  <div key={i} style={{border:`1px solid ${b.c}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:b.c,display:"flex",alignItems:"center",gap:6,background:C.surface}}>
+                    {b.icon} {b.label}
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* RECOMMENDATION */}
             <div style={{...S.card,borderLeft:`3px solid ${C.go}`}}>
@@ -1073,6 +1055,29 @@ function App() {
                 <strong style={{color:C.go,fontSize:13}}>Equipment-Empfehlung</strong>
               </div>
               <div style={{fontSize:12,color:C.muted,lineHeight:1.9}} dangerouslySetInnerHTML={{__html:rec}} />
+            </div>
+
+            {/* WIND CHART (full width) */}
+            <div style={S.card}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                <span style={S.sec}>Wind & Böen ({unitLabel(windUnit)})</span>
+                <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>Open-Meteo · Best Match</span>
+              </div>
+              <div style={S.cwL}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={windData}>
+                    <CartesianGrid {...gr} />
+                    <XAxis dataKey="h" {...ax} interval={3} />
+                    <YAxis {...ax} />
+                    <Tooltip {...TT} />
+                    <Legend wrapperStyle={{fontSize:10,fontFamily:"monospace",color:C.muted}} />
+                    <ReferenceArea y1={cvt(dayData.win.optMin,windUnit)} y2={cvt(dayData.win.optMax,windUnit)} fill="rgba(61,220,132,0.10)" stroke="rgba(61,220,132,0.3)" label={{value:"Optimal",fill:C.go,fontSize:9,position:"insideTopRight"}} />
+                    <ReferenceLine y={cvt(dayData.win.minWind,windUnit)} stroke={C.caution} strokeDasharray="4 3" label={{value:`Min ${cvt(dayData.win.minWind,windUnit).toFixed(windUnit==="bf"?0:1)}`,fill:C.caution,fontSize:9}} />
+                    <Line type="monotone" dataKey="wind" name="Wind" stroke={C.sky} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="gust" name="Böen" stroke={C.signal} strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* FOIL WINDOW */}
@@ -1450,7 +1455,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.3.0</span>
+        <span>WindFoil Weather Intelligence v2.7.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");}}
