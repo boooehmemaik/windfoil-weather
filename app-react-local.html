@@ -500,7 +500,7 @@ function AuthGate({children}){
 // Wires the frontend to the existing /api/feedback backend. Resolves the current
 // location to a spot first (/api/feedback/spot), then submits the debrief. The
 // backend only accepts feedback for the spot-local "today".
-function FeedbackModal({ loc, forecast, onClose }) {
+function FeedbackModal({ loc, forecast, onClose, onCalibrated }) {
   const [planed,setPlaned] = useState(null);   // null | true | false
   const [windKt,setWindKt] = useState(12);
   const [rating,setRating] = useState(0);
@@ -532,7 +532,7 @@ function FeedbackModal({ loc, forecast, onClose }) {
         setErr(d.error==="feedback_locked"
           ? "Feedback ist nur am Tag der Session möglich."
           : (d.error || "Speichern fehlgeschlagen."));
-      } else setDone(d.calibration || {});
+      } else { const cal=d.calibration||{}; setDone(cal); if(onCalibrated) onCalibrated(cal); }
     }catch{ setErr("Server nicht erreichbar."); }
     finally{ setBusy(false); }
   }
@@ -575,12 +575,10 @@ function FeedbackModal({ loc, forecast, onClose }) {
             <div style={{textAlign:"center",padding:"12px 4px"}}>
               <div style={{width:48,height:48,borderRadius:"50%",margin:"0 auto 12px",display:"grid",placeItems:"center",background:"rgba(61,220,132,0.16)",border:`1px solid ${C.go}`,color:C.go,fontSize:24}}>✓</div>
               <p style={{fontSize:15,fontWeight:700,marginBottom:6}}>Gespeichert für {dateLabel}</p>
-              <p style={{color:C.muted,fontSize:13,margin:0}}>Danke — das schärft deine Foil-Scores für {loc.name}.</p>
+              <p style={{color:C.muted,fontSize:13,margin:0}}>Danke — das schärft den Foil-Score für {loc.name}.</p>
               {done.rolling!=null && (
                 <div style={{marginTop:14,padding:12,borderRadius:8,background:C.bg,border:`1px solid ${C.border2}`,textAlign:"left",fontSize:13,color:C.text}}>
-                  {done.applied
-                    ? <span>Kalibriert: dein Abhebe-Schwellenwert liegt jetzt bei <b style={{color:C.go,fontFamily:"monospace"}}>{done.rolling} kn</b> (aus {done.samples} Sessions).</span>
-                    : <span>Deine echten Abheb-Momente liegen im Schnitt bei <b style={{color:C.go,fontFamily:"monospace"}}>{done.rolling} kn</b> über {done.samples} Sessions. Dein Schwellenwert ist manuell gesetzt.</span>}
+                  <span>Für diesen Spot kalibriert: dein Abhebe-Schwellenwert hier liegt bei <b style={{color:C.go,fontFamily:"monospace"}}>{done.rolling} kn</b> (aus {done.samples} {done.samples===1?"Session":"Sessions"}). Gilt nur für {loc.name} — deine anderen Spots bleiben unberührt.</span>
                 </div>
               )}
               <button onClick={onClose} style={{marginTop:16,width:"100%",padding:12,border:"none",borderRadius:6,cursor:"pointer",background:C.signal,color:"#fff",fontWeight:700,fontSize:14}}>Schließen</button>
@@ -670,6 +668,22 @@ function App() {
   const [windUnit,setWindUnit]  = useState("kn"); // 'ms' | 'kn' | 'bf'
   const [showLoc,setShowLoc]   = useState(false);
   const [showFeedback,setShowFeedback] = useState(false);
+  // Per-location calibrated planing threshold (from this spot's feedback only).
+  const [spotCal,setSpotCal]   = useState(null); // {rolling,samples} | null
+
+  // Pull the calibrated planing threshold for the CURRENT location (if the rider
+  // has logged feedback there). Read-only — never creates a spot. Falls back to
+  // null (=> formula / manual override) when signed out or no local feedback.
+  useEffect(()=>{
+    let cancelled=false;
+    if(loc&&loc.lat!=null&&loc.lon!=null){
+      fetch(`/api/feedback/spot-calibration?lat=${loc.lat}&lon=${loc.lon}`,{credentials:"include"})
+        .then(r=>r.ok?r.json():null)
+        .then(d=>{ if(!cancelled) setSpotCal(d&&d.calibration&&d.calibration.rolling!=null?d.calibration:null); })
+        .catch(()=>{ if(!cancelled) setSpotCal(null); });
+    }
+    return ()=>{ cancelled=true; };
+  },[loc&&loc.lat,loc&&loc.lon]);
   const [geoStatus,setGeoStatus]= useState(""); // "", "loading", "error"
   const [geoError,setGeoError] = useState("");
   const [locTab,setLocTab]     = useState("preset");
@@ -927,6 +941,13 @@ function App() {
     return result;
   })();
 
+  // Effective planing threshold for the ACTIVE location: a spot-calibrated value
+  // (derived from THIS spot's feedback) takes precedence over the rider's manual
+  // override; otherwise null => fall back to the formula. This keeps the local
+  // wind assessment shaping only the local score, never the global rider profile.
+  const effPlaneMs = (spotCal && spotCal.rolling!=null) ? knToMs(spotCal.rolling)
+                   : (rider.planeKn ? knToMs(parseFloat(rider.planeKn)) : null);
+
   // ── Derived day data ────────────────────────────────────────────────────────
   const dayData = (() => {
     if(!forecast) return null;
@@ -956,7 +977,7 @@ function App() {
       if(best){ win = best.win; pickedGear = best.gear; }
     }
     if(!win){
-      win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, rider.planeKn?knToMs(parseFloat(rider.planeKn)):null);
+      win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs);
     }
     const scores=wins.map(w=>scoreHour(w,win));
     const avgW=wins.reduce((a,b)=>a+b,0)/wins.length;
@@ -979,7 +1000,7 @@ function App() {
       const best = pickBestSetup(gear, rider.weight, rider.skill, dayMidW);
       if(best) win = best.win;
     }
-    if(!win) win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, rider.planeKn?knToMs(parseFloat(rider.planeKn)):null);
+    if(!win) win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs);
     return scoreDay(forecast.hourly.windspeed_10m,win,start);
   }) : [];
 
@@ -1197,6 +1218,12 @@ function App() {
           <span style={{fontSize:20}}>📍</span>
           <b style={{color:"#fff",fontSize:16,letterSpacing:"0.02em"}}>{loc.name}</b>
           <span style={{fontFamily:"monospace",fontSize:11,color:C.sky}}>{loc.lat.toFixed(4)}°N, {loc.lon.toFixed(4)}°E</span>
+          {spotCal && spotCal.rolling!=null && (
+            <span title={`Abhebe-Schwellenwert aus ${spotCal.samples} Session(s) an diesem Spot — gilt nur lokal`}
+              style={{fontFamily:"monospace",fontSize:10,color:C.go,background:"rgba(61,220,132,0.12)",border:`1px solid ${C.go}`,borderRadius:4,padding:"2px 7px"}}>
+              📍 lokal kalibriert · ab {spotCal.rolling} kn
+            </span>
+          )}
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <button style={{...S.btnG,borderColor:locSaved?C.go:C.border2,color:locSaved?C.go:C.muted}}
@@ -1685,6 +1712,7 @@ function App() {
       {/* FEEDBACK MODAL */}
       {showFeedback&&(
         <FeedbackModal loc={loc} onClose={()=>setShowFeedback(false)}
+          onCalibrated={cal=>setSpotCal(cal&&cal.rolling!=null?cal:null)}
           forecast={forecast ? {source:"foil-score",
             predictedScore:(activeDay===0&&dayData)?dayData.dayScore:null,
             predictedWindKt:(activeDay===0&&dayData)?dayData.midW:null} : null} />

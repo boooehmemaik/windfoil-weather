@@ -9,7 +9,7 @@
 // ============================================================================
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import { db, localDay, recalibratePlaningThreshold, hasEntitlement } from './db.mjs';
+import { db, localDay, recalibrateSpotPlaningThreshold, getSpotCalibration, hasEntitlement } from './db.mjs';
 
 export const feedbackRouter = Router();
 const nowIso = () => new Date().toISOString();
@@ -53,7 +53,27 @@ feedbackRouter.post('/spot', (req, res) => {
       .run(id, req.user.id, name, rlat, rlon, tz, nowIso());
     spot = db.prepare('SELECT * FROM spots WHERE id = ?').get(id);
   }
-  res.json({ spot });
+  res.json({ spot, calibration: getSpotCalibration(req.user.id, spot.id) });
+});
+
+// --- GET /api/feedback/spot-calibration?lat=&lon= ----------------------------
+// Read-only: resolve an EXISTING spot near these coords (never creates one) and
+// return its per-spot calibrated planing threshold so the dashboard can apply it
+// to the local score. Returns rolling=null when no spot / no local feedback yet.
+feedbackRouter.get('/spot-calibration', (req, res) => {
+  const lat = Number(req.query.lat), lon = Number(req.query.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon))
+    return res.status(400).json({ error: 'lat_lon_required' });
+  const rlat = Math.round(lat * 10000) / 10000;
+  const rlon = Math.round(lon * 10000) / 10000;
+  const spot = db.prepare(`
+    SELECT id FROM spots
+    WHERE (user_id IS NULL OR user_id = ?)
+      AND ABS(latitude - ?) < 0.01 AND ABS(longitude - ?) < 0.01
+    ORDER BY (user_id IS NULL) ASC
+    LIMIT 1`).get(req.user.id, rlat, rlon);
+  if (!spot) return res.json({ spotId: null, calibration: { rolling: null, samples: 0, scope: 'spot' } });
+  res.json({ spotId: spot.id, calibration: getSpotCalibration(req.user.id, spot.id) });
 });
 
 // --- GET /api/feedback/today?spot=<id> ---------------------------------------
@@ -70,7 +90,8 @@ feedbackRouter.get('/today', (req, res) => {
     WHERE user_id = ? AND spot_id = ? AND session_date = ?`)
     .get(req.user.id, spot, today);
 
-  res.json({ spotId: spot, timezone: spotRow.timezone, today, session: session || null });
+  res.json({ spotId: spot, timezone: spotRow.timezone, today, session: session || null,
+             calibration: getSpotCalibration(req.user.id, spot) });
 });
 
 // --- POST /api/feedback -------------------------------------------------------
@@ -146,8 +167,9 @@ feedbackRouter.post('/', (req, res) => {
   });
 
   const sessionId = tx();
-  // Close the loop: refresh the rolling planing threshold from feedback.
-  const calibration = recalibratePlaningThreshold(req.user.id);
+  // Close the loop PER SPOT: refresh only this spot's rolling threshold so the
+  // local wind assessment shapes the local score, not the rider's global profile.
+  const calibration = recalibrateSpotPlaningThreshold(req.user.id, b.spotId);
 
   res.json({ ok: true, sessionId, calibration });
 });
