@@ -60,10 +60,9 @@ node db/seed.mjs
 
 # 4) Build the CDN-free auth client bundle into local vendor.
 log "Building auth client bundle"
-mkdir -p public/vendor
-npx esbuild src/auth-client.js --bundle --format=esm \
+npx esbuild src/AuthGate.jsx --bundle --format=esm \
   --external:react --external:react-dom \
-  --outfile=public/vendor/auth-client.bundle.js
+  --outfile=vendor/auth-client.bundle.js
 # 5) Restart + health check.
 log "Restarting $SERVICE"
 sudo systemctl restart "$SERVICE"

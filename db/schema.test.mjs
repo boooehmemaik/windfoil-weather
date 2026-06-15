@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Schema test harness (Gialova sample data)
-// File version: 1.0.0  |  App target: v2.5.0
+// File version: 1.0.0  |  App target: v3.3.5
 // Runs the 001 migration on an in-memory SQLite DB via Node's built-in engine,
 // seeds realistic Gialova/Navarino data, and exercises the feedback-loop queries.
 //   Run:  node --experimental-sqlite db/schema.test.mjs

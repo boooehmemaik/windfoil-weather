@@ -17,7 +17,7 @@ data/
 node_modules/
 
 # Built artifacts (deploy.sh regenerates these)
-public/vendor/auth-client.bundle.js
+vendor/auth-client.bundle.js
 
 # Release archives
 *.tar.gz

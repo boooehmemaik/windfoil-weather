@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Seed (production, better-sqlite3)
-// File version: 1.0.0  |  App target: v2.5.0
+// File version: 1.0.0  |  App target: v3.3.5
 // Run once after migrations:  node db/seed.mjs
 // Idempotent: safe to run repeatedly. Adds the shared Gialova spot (user_id NULL)
 // that every rider sees by default.

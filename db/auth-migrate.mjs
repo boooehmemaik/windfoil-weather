@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Better Auth schema migration (programmatic, no CLI)
-// File version: 1.0.0  |  App target: v2.5.0
+// File version: 1.0.0  |  App target: v3.3.5
 // Run:  node db/auth-migrate.mjs
 // ----------------------------------------------------------------------------
 // Creates Better Auth's tables (user, session, account, verification) directly

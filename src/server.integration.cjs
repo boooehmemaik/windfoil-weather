@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Server integration bridge (CommonJS host)
-// File version: 2.0.0  |  App target: v2.5.0
+// File version: 2.0.0  |  App target: v3.3.5
 // ----------------------------------------------------------------------------
 // Your existing server is CommonJS; Better Auth + the v2.5.0 routers are ESM.
 // CJS can load ESM only via dynamic import(), so this bridge does exactly that

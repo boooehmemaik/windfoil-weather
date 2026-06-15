@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Equipment routes (Express)
-// File version: 1.0.1 (ESM .mjs)  |  App target: v2.5.0
+// File version: 1.0.1 (ESM .mjs)  |  App target: v3.3.5
 // Mount:  app.use('/api/equipment', requireAuth, equipmentRouter)
 // Replaces the old localStorage equipment manager now that gear is per-user.
 // ============================================================================

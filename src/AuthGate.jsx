@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Auth gate (login / signup / signout)
-// File version: 1.0.0  |  App target: v2.5.0
+// File version: 1.0.0  |  App target: v3.3.5
 // ----------------------------------------------------------------------------
 // Wrap your dashboard:   <AuthGate><Dashboard /></AuthGate>
 // Signed out  -> shows the login/create-account card.
