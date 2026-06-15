@@ -62,6 +62,7 @@ node db/seed.mjs
 log "Building auth client bundle"
 mkdir -p public/vendor
 npx esbuild src/auth-client.js --bundle --format=esm \
+  --external:react --external:react-dom \
   --outfile=public/vendor/auth-client.bundle.js
 # 5) Restart + health check.
 log "Restarting $SERVICE"
