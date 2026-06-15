@@ -377,6 +377,123 @@ const TT = {
 const ax = { tick:{fill:C.muted,fontSize:10,fontFamily:"monospace"}, axisLine:{stroke:C.border}, tickLine:false };
 const gr = { stroke:"rgba(255,255,255,0.05)" };
 
+// ── Auth Gate ─────────────────────────────────────────────────────────────────
+// Calls Better Auth REST endpoints directly — no client bundle needed in page.
+const CA={deep:'#0C2A30',panel:'#123A41',p2:'#0F333A',foam:'#EAF2EE',
+  haze:'#7FA6AC',lift:'#34D399',coral:'#FF6B5C',line:'rgba(234,242,238,.10)'};
+
+function AuthGate({children}){
+  const [sess,setSess]=useState(null); // null=loading, false=anon, obj=authed
+  const [mode,setMode]=useState('signin');
+  const [name,setName]=useState('');
+  const [email,setEmail]=useState('');
+  const [pw,setPw]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState('');
+
+  useEffect(()=>{
+    fetch('/api/auth/get-session',{credentials:'include'})
+      .then(r=>r.json()).then(d=>setSess(d&&d.user?d:false)).catch(()=>setSess(false));
+  },[]);
+
+  async function submit(){
+    setErr('');setBusy(true);
+    try{
+      const url=mode==='signup'?'/api/auth/sign-up/email':'/api/auth/sign-in/email';
+      const body=mode==='signup'?{name,email,password:pw}:{email,password:pw};
+      const r=await fetch(url,{method:'POST',credentials:'include',
+        headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const d=await r.json();
+      if(!r.ok)setErr(d.message||d.error||'Anmeldung fehlgeschlagen.');
+      else setSess(d);
+    }catch{setErr('Server nicht erreichbar.');}
+    finally{setBusy(false);}
+  }
+
+  async function doSignOut(){
+    await fetch('/api/auth/sign-out',{method:'POST',credentials:'include'});
+    setSess(false);setEmail('');setPw('');setErr('');
+  }
+
+  const INP={width:'100%',boxSizing:'border-box',background:CA.p2,color:CA.foam,
+    border:`1px solid ${CA.line}`,borderRadius:10,padding:'11px 12px',fontSize:16};
+
+  if(sess===null)return(
+    <div style={{minHeight:'100vh',display:'grid',placeItems:'center',background:CA.deep}}>
+      <p style={{color:CA.haze,fontFamily:'monospace'}}>Session wird geprüft…</p>
+    </div>
+  );
+
+  if(!sess)return(
+    <div style={{minHeight:'100vh',display:'grid',placeItems:'center',
+        background:'radial-gradient(120% 90% at 50% -10%,#10434C,#071e23)',padding:20}}>
+      <div style={{width:'100%',maxWidth:380,background:CA.deep,
+          border:`1px solid ${CA.line}`,borderRadius:18,padding:26,
+          boxShadow:'0 30px 70px -30px rgba(0,0,0,.75)'}}>
+        <div style={{fontSize:11,letterSpacing:'.2em',textTransform:'uppercase',
+          color:CA.lift,fontWeight:700,marginBottom:6}}>WindFoil</div>
+        <h1 style={{fontSize:21,fontWeight:700,color:CA.foam,margin:'0 0 4px'}}>
+          {mode==='signup'?'Account erstellen':'Willkommen zurück'}</h1>
+        <p style={{fontSize:13,color:CA.haze,margin:'0 0 20px'}}>
+          {mode==='signup'?'Sessions tracken & Score schärfen.':'Anmelden und lossurfen.'}</p>
+        <div style={{display:'flex',gap:6,background:CA.p2,padding:4,borderRadius:11,marginBottom:18}}>
+          {['signin','signup'].map(m=>(
+            <button key={m} onClick={()=>{setMode(m);setErr('');}}
+              style={{flex:1,padding:9,border:'none',borderRadius:8,cursor:'pointer',
+                background:mode===m?CA.panel:'transparent',
+                color:mode===m?CA.foam:CA.haze,fontWeight:600,fontSize:13}}>
+              {m==='signin'?'Anmelden':'Registrieren'}
+            </button>
+          ))}
+        </div>
+        {err&&<p style={{color:CA.coral,fontSize:13,margin:'0 0 12px'}}>{err}</p>}
+        {mode==='signup'&&(
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',fontSize:12,color:CA.haze,marginBottom:6}}>Name</label>
+            <input style={INP} value={name} onChange={e=>setName(e.target.value)}
+              autoComplete="name" placeholder="Dein Name"/>
+          </div>
+        )}
+        <div style={{marginBottom:12}}>
+          <label style={{display:'block',fontSize:12,color:CA.haze,marginBottom:6}}>E-Mail</label>
+          <input style={INP} type="email" value={email} onChange={e=>setEmail(e.target.value)}
+            autoComplete="email" placeholder="mail@example.com"/>
+        </div>
+        <div style={{marginBottom:20}}>
+          <label style={{display:'block',fontSize:12,color:CA.haze,marginBottom:6}}>
+            Passwort (min. 10 Zeichen)</label>
+          <input style={INP} type="password" value={pw} onChange={e=>setPw(e.target.value)}
+            autoComplete={mode==='signup'?'new-password':'current-password'}
+            onKeyDown={e=>e.key==='Enter'&&submit()}/>
+        </div>
+        <button onClick={submit} disabled={busy}
+          style={{width:'100%',padding:13,border:'none',borderRadius:11,cursor:'pointer',
+            background:CA.lift,color:'#05221B',fontWeight:700,fontSize:14,opacity:busy?0.5:1}}>
+          {busy?'Einen Moment…':mode==='signup'?'Account erstellen':'Anmelden'}
+        </button>
+      </div>
+    </div>
+  );
+
+  return(
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+          padding:'8px 16px',background:CA.deep,borderBottom:`1px solid ${CA.line}`}}>
+        <span style={{fontSize:13,color:CA.haze}}>
+          Eingeloggt als <b style={{color:CA.foam}}>{sess.user?.email}</b>
+        </span>
+        <button onClick={doSignOut}
+          style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
+            border:`1px solid ${CA.line}`,background:'transparent',
+            color:CA.foam,fontSize:13,fontWeight:600}}>
+          Abmelden
+        </button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
   const [loc,setLoc]           = useState(()=>loadStored("wf_loc",{lat:48.0703,lon:11.1167,name:"Wörthsee / Pilsensee"}));
@@ -1511,12 +1628,6 @@ function App() {
   );
 }
 
-    import('./vendor/auth-client.bundle.js').then(({default:AuthGate})=>{
-      const boot=document.getElementById("boot"); if(boot) boot.remove();
-      ReactDOM.createRoot(document.getElementById("root")).render(<AuthGate><App/></AuthGate>);
-    }).catch(err=>{
-      console.error("[WindFoil] auth-bundle nicht ladbar — starte ohne Login:",err);
-      const boot=document.getElementById("boot"); if(boot) boot.remove();
-      ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-    });
+    const boot=document.getElementById("boot"); if(boot) boot.remove();
+    ReactDOM.createRoot(document.getElementById("root")).render(<AuthGate><App/></AuthGate>);
   </script></body></html>
