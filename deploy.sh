@@ -10,7 +10,7 @@
 # ============================================================================
 set -euo pipefail
 
-SERVICE="${WINDFOIL_SERVICE:-windfoil}"
+SERVICE="${WINDFOIL_SERVICE:-windfoil-proxy}"
 BRANCH="${1:-${WINDFOIL_BRANCH:-main}}"
 
 # Always run from the repo root (this script's own directory).
