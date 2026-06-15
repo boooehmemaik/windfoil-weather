@@ -27,6 +27,7 @@ const { execFile } = require("child_process");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const { mountWindfoil } = require("./src/server.integration.cjs");
 
 // ── Minimal .env loader (no dependency) ───────────────────────────────────────
 // Reads KEY=VALUE lines from ./windfoil.env (or path in WF_ENV) into process.env,
@@ -107,8 +108,11 @@ if (!KEY) {
   console.warn("⚠️  WEATHERBIT_KEY not set — station endpoints will return 503.");
 }
 
+(async () => {
 app.use(cors());
-app.use(express.json()); // tighten to your domain in production
+// mountWindfoil installs selective json() (skips /api/auth so Better Auth can
+// read the raw body), the auth handler, and all /api/* domain routes.
+await mountWindfoil(app);
 
 // ── Simple in-memory cache to protect your quota ──────────────────────────────
 const cache = new Map();
@@ -287,3 +291,4 @@ app.get("/api/admin/check", (req, res) => {
 
 
 app.listen(PORT, () => console.log(`WindFoil station proxy on :${PORT} (key ${KEY ? "set" : "MISSING"}, admin ${ADMIN_TOKEN && ADMIN_PASSWORD ? "ENABLED" : "disabled"})`));
+})().catch(err => { console.error("[windfoil] startup error:", err); process.exit(1); });

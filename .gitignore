@@ -1,6 +1,27 @@
-node_modules/
-vendor/
-*.log
-.env
-.DS_Store
+# --- WindFoil .gitignore (v1.0.0) ---
+
+# Secrets — NEVER commit
 windfoil.env
+.env
+.env.*
+!*.env.example
+
+# Database (holds password hashes + user/session data) and its WAL sidecars
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+
+# Dependencies
+node_modules/
+
+# Built artifacts (deploy.sh regenerates these)
+public/vendor/auth-client.bundle.js
+
+# Release archives
+*.tar.gz
+
+# Logs / OS noise
+*.log
+.DS_Store
