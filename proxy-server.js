@@ -1,4 +1,4 @@
-// proxy-server.js v2.5.0
+// proxy-server.js v2.6.0
 // WindFoil Weather System — Secure backend proxy for real station data
 //
 // WHY THIS EXISTS
@@ -130,12 +130,14 @@ function adminGuard(req, res) {
 // once, cache it on disk + in memory, and refresh weekly. We keep only the few
 // fields we need (id/name/country/coords/elevation).
 const STATION_LIST_URL = "https://bulk.meteostat.net/v2/stations/lite.json.gz";
-const STATION_LIST_FILE = path.join(__dirname, "data", "meteostat-stations.json");
+// v2 cache filename: schema now also carries `he` (hourly-inventory end date),
+// so an older v3.6.0 cache without that field is ignored rather than reused.
+const STATION_LIST_FILE = path.join(__dirname, "data", "meteostat-stations-v2.json");
 const STATION_LIST_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 // How many of the nearest stations get live Weatherbit values (bounds API quota).
 const NEARBY_MAX_LIVE = parseInt(process.env.NEARBY_MAX_LIVE || "4", 10);
 
-let stationList = null;        // [{id,name,country,lat,lon,elev}]
+let stationList = null;        // [{id,name,country,lat,lon,elev,he}]
 let stationListLoading = null; // in-flight promise, dedupes concurrent loads
 
 function parseStationDump(json) {
@@ -149,6 +151,8 @@ function parseStationDump(json) {
       name: (s.name && (s.name.en || Object.values(s.name)[0])) || s.id,
       country: s.country || "",
       lat: loc.latitude, lon: loc.longitude, elev: loc.elevation ?? null,
+      // hourly-inventory end date (or null) — flags stations with usable history.
+      he: (s.inventory && s.inventory.hourly && s.inventory.hourly.end) || null,
     });
   }
   return out;
@@ -195,6 +199,74 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   const a = Math.sin(dLat / 2) ** 2 +
             Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// ── Station history bias (real station obs vs model over an overlapping window) ─
+// Meteostat hourly bulk is keyless but lags by months and is sparse — useless
+// for a "same recent week" mean, but ideal for estimating the model's SYSTEMATIC
+// bias at a station, which is time-stable. We compare the station's most recent
+// ~45 days of available data against the Open-Meteo archive for the SAME
+// dates/hours (both m/s, UTC). Wind in the bulk CSV is km/h → convert to m/s.
+const BIAS_WINDOW_DAYS = 45;
+const BIAS_MIN_SAMPLES = 50;
+const BIAS_MAX_STATION_KM = 60;
+
+async function downloadStationHourly(stationId) {
+  const r = await fetch(`https://bulk.meteostat.net/v2/hourly/${stationId}.csv.gz`);
+  if (!r.ok) throw new Error(`Meteostat hourly ${r.status}`);
+  const csv = zlib.gunzipSync(await r.buffer()).toString("utf8");
+  const recs = [];
+  for (const line of csv.split("\n")) {
+    if (!line) continue;
+    const c = line.split(",");
+    // cols: 0 date, 1 hour, …, 7 wdir, 8 wspd (km/h), 9 wpgt (km/h)
+    if (c[8] === "" || c[8] == null) continue;
+    const wind = parseFloat(c[8]) / 3.6;
+    if (!Number.isFinite(wind)) continue;
+    recs.push({ date: c[0], hour: parseInt(c[1], 10), wind });
+  }
+  return recs;
+}
+
+async function computeStationBias(station) {
+  const recs = await downloadStationHourly(station.id);
+  if (!recs.length) return { ok: false, error: "no_station_wind" };
+  const endD = recs[recs.length - 1].date;
+  const ed = new Date(endD + "T00:00:00Z");
+  const sd = new Date(ed); sd.setUTCDate(ed.getUTCDate() - BIAS_WINDOW_DAYS);
+  const startD = sd.toISOString().slice(0, 10);
+  const win = recs.filter(r => r.date >= startD && r.date <= endD);
+  if (!win.length) return { ok: false, error: "no_window_data" };
+
+  const p = new URLSearchParams({
+    latitude: station.lat, longitude: station.lon,
+    start_date: startD, end_date: endD,
+    hourly: "windspeed_10m", wind_speed_unit: "ms", timezone: "UTC",
+  });
+  const ar = await fetch(`https://archive-api.open-meteo.com/v1/archive?${p}`);
+  if (!ar.ok) throw new Error(`archive ${ar.status}`);
+  const arch = await ar.json();
+  const mt = (arch.hourly && arch.hourly.time) || [];
+  const mw = (arch.hourly && arch.hourly.windspeed_10m) || [];
+  const model = new Map();
+  for (let i = 0; i < mt.length; i++) {
+    if (mw[i] == null) continue;
+    model.set(mt[i].slice(0, 10) + " " + parseInt(mt[i].slice(11, 13), 10), mw[i]);
+  }
+  let sSum = 0, mSum = 0, n = 0;
+  for (const r of win) {
+    const m = model.get(r.date + " " + r.hour);
+    if (m == null) continue;
+    sSum += r.wind; mSum += m; n++;
+  }
+  if (n < BIAS_MIN_SAMPLES) return { ok: false, error: "insufficient_overlap", samples: n };
+  const stationMeanMs = sSum / n, modelMeanMs = mSum / n;
+  return {
+    ok: true, samples: n, periodStart: startD, periodEnd: endD,
+    stationMeanMs: Math.round(stationMeanMs * 100) / 100,
+    modelMeanMs: Math.round(modelMeanMs * 100) / 100,
+    biasMs: Math.round((stationMeanMs - modelMeanMs) * 100) / 100,
+  };
 }
 
 if (!KEY) {
@@ -333,6 +405,48 @@ app.get("/api/station/nearby", async (req, res) => {
       temp: s.temp ?? null, obs_time: s.obs_time ?? null, live: !!s.live,
     })),
   });
+});
+
+// ── Endpoint: station-vs-model wind bias (Meteostat history + Open-Meteo archive)
+// Picks the nearest real station that has hourly history and returns the
+// systematic wind bias over an overlapping window. Cached 24h (bias is stable
+// and the source is a multi-MB bulk download).
+app.get("/api/station/bias", async (req, res) => {
+  const la = parseFloat(req.query.lat), lo = parseFloat(req.query.lon);
+  if (!Number.isFinite(la) || !Number.isFinite(lo))
+    return res.status(400).json({ ok: false, error: "lat/lon required" });
+
+  const ck = `bias:${la.toFixed(3)}:${lo.toFixed(3)}`;
+  const hit = cacheGet(ck);
+  if (hit) return res.json({ ...hit, cached: true });
+
+  const list = await getStationList();
+  if (!list.length) return res.json({ ok: false, error: "station list unavailable" });
+
+  const box = 1.1, lonBox = box / Math.max(0.2, Math.cos(la * Math.PI / 180));
+  const cand = [];
+  for (const s of list) {
+    if (!s.he) continue; // only stations with hourly history
+    if (Math.abs(s.lat - la) > box || Math.abs(s.lon - lo) > lonBox) continue;
+    const km = haversineKm(la, lo, s.lat, s.lon);
+    if (km <= BIAS_MAX_STATION_KM) cand.push({ ...s, km });
+  }
+  cand.sort((a, b) => a.km - b.km);
+
+  for (const st of cand.slice(0, 3)) {
+    try {
+      const b = await computeStationBias(st);
+      if (b.ok) {
+        const out = {
+          station: { id: st.id, name: st.name, country: st.country, km: Math.round(st.km) },
+          ...b,
+        };
+        cacheSet(ck, out, 24 * 60 * 60 * 1000);
+        return res.json(out);
+      }
+    } catch (e) { /* try the next-nearest station */ }
+  }
+  res.json({ ok: false, error: "no_usable_station_history" });
 });
 
 // ── Endpoint: historical hourly observations ──────────────────────────────────

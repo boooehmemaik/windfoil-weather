@@ -1,5 +1,14 @@
 # WindFoil — Version History
 
+## v3.7.0 (2026-06-16)
+**Historische Station-↔-Modell-Korrelation via Meteostat (Bias)**
+- Ersetzt die Weatherbit-History (lieferte planbedingt nie Daten) durch einen echten Bias: neuer Endpoint `GET /api/station/bias` (`proxy-server.js` v2.6.0)
+- Methode: nächste Meteostat-Station mit Stunden-Historie, deren letzte ~45 verfügbaren Tage gegen das Open-Meteo-Archiv **derselben Daten/Stunden** (beide m/s, UTC, Zeitstempel-Alignment). Ein Bias ist zeitstabil → Meteostats ~8-Monats-Verzug ist dafür irrelevant. Meteostat-Wind (km/h) → m/s
+- Adaptive Stationswahl (≤60 km, mit Stunden-Inventar), 24 h-Cache (Bulk-Download)
+- Stationsliste um `he` (hourly-Inventar-Ende) erweitert → Cache-Datei auf `meteostat-stations-v2.json` versioniert
+- `index.html`: `runStationComparison` nutzt `/api/station/bias` (statt der leeren Weatherbit-History) und speist die 35%-Hist-Komponente von `computeConfidence`; Vergleichskarte zeigt Bias-Station + Zeitfenster
+- Wirkung verifiziert: z. B. Gialova/GR — Modell unterschätzt Wind um 2,4 m/s → Konfidenz 92→74, Foil-Score wird korrekt gedämpft (vorher blind für systematischen Bias)
+
 ## v3.6.0 (2026-06-16)
 **Echte Wetterstationen im Umkreis (Meteostat)**
 - Ersetzt die fingierten Open-Meteo-Gitterpunkte durch echte Messstationen: neuer Proxy-Endpoint `GET /api/station/nearby` (in `proxy-server.js`, v2.5.0)

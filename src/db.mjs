@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Database layer (better-sqlite3)
-// File version: 1.0.1 (ESM .mjs)  |  App target: v3.6.0
+// File version: 1.0.1 (ESM .mjs)  |  App target: v3.7.0
 // ----------------------------------------------------------------------------
 // Production note: requires `npm i better-sqlite3`. (The test harness uses the
 // experimental built-in node:sqlite instead; this file is the real runtime.)

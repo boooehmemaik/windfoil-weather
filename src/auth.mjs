@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Better Auth configuration
-// File version: 1.0.1 (ESM .mjs)  |  App target: v3.6.0
+// File version: 1.0.1 (ESM .mjs)  |  App target: v3.7.0
 // ----------------------------------------------------------------------------
 // Install:  npm i better-auth better-sqlite3
 // Better Auth OWNS its tables (user, session, account, verification) and creates
