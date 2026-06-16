@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.4.0 (2026-06-16)
+**Server-seitige Persistenz für iOS Safari**
+- Orte (aktiver Spot + „zuletzt verwendet") wandern von localStorage in die DB: neue Tabelle `user_locations` (Migration 003), Route `src/locations.routes.mjs` unter `/api/locations`
+- Rider-Profil, Gear-Setups und Auto-Setup-Toggle persistiert via generischem Key-Value-Store: neue Tabelle `user_prefs` (Migration 004), Route `src/prefs.routes.mjs` unter `/api/prefs`
+- Grund: iOS Safari verwirft localStorage (Private Mode / „Alle Cookies blockieren" / ITP-Purge) → manuell hinzugefügte Orte & Einstellungen waren nach Reload weg
+- `index.html` / `app-react-local.html`: Hydrations-Effekte laden Server-Daten beim Start; `savePref()`-Helfer; localStorage nur noch Offline-Cache
+- `src/server.integration.cjs`: beide Router unter `requireAuth` eingehängt (File-Version 2.1.0)
+
 ## v3.3.6 (2026-06-15)
 **Auth-Gate im Frontend verdrahtet**
 - `index.html` / `app-react-local.html`: Root-Render auf `<AuthGate><App/></AuthGate>` umgestellt via dynamischem `import()` des ESM-Bundles
