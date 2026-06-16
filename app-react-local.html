@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.8.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.8.1 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -30,7 +30,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v3.8.0
+// WindFoil Weather Intelligence v3.8.1
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -846,7 +846,7 @@ function App() {
       if(d && d.ok && Array.isArray(d.stations) && d.stations.length){
         setNearbyStations(d.stations);
         setNearbyRadius(d.radiusKm ?? null);
-        setNearbyStatus(d.stations.some(s=>s.live) ? "live" : "meta");
+        setNearbyStatus(d.stations.some(s=>s.src==="obs") ? "live" : d.stations.some(s=>s.src==="model") ? "model" : "meta");
         return;
       }
       setNearbyStations([]);
@@ -1275,7 +1275,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.1</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1743,7 +1743,7 @@ function App() {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
                 <span style={S.sec}>📡 Echte Wetterstationen{nearbyRadius?` (Umkreis ${nearbyRadius} km)`:""}</span>
                 <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>
-                  {nearbyStatus==="loading"?"⏳ lädt…":nearbyStatus==="live"?"✅ Live":nearbyStatus==="meta"?"○ nur Stationsinfo":nearbyStatus==="unavailable"?"– keine Stationen":""}
+                  {nearbyStatus==="loading"?"⏳ lädt…":nearbyStatus==="live"?"✅ Messung+Modell":nearbyStatus==="model"?"≈ Modellwind":nearbyStatus==="meta"?"○ nur Stationsinfo":nearbyStatus==="unavailable"?"– keine Stationen":""}
                 </span>
               </div>
               {nearbyStatus==="loading" && (
@@ -1758,9 +1758,15 @@ function App() {
                     const dirTxt = st.dir!=null ? ["N","NO","O","SO","S","SW","W","NW"][Math.round(st.dir/45)%8] : "–";
                     return (
                       <div key={i} style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"10px 12px"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,gap:6}}>
                           <b style={{color:C.text,fontSize:12}}>{st.name}</b>
-                          <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>{st.km} km</span>
+                          <span style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                            <span style={{fontFamily:"monospace",fontSize:8,color:st.src==="obs"?C.go:C.muted}}
+                              title={st.src==="obs"?"Echte Stationsmessung (Weatherbit)":"Modellwind am Stationsstandort (Open-Meteo)"}>
+                              {st.src==="obs"?"● Messung":st.src==="model"?"≈ Modell":""}
+                            </span>
+                            <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>{st.km} km</span>
+                          </span>
                         </div>
                         <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:C.muted}}>
                           <span style={{color:C.sky}}>💨 {st.wind!=null?fmtW(st.wind,windUnit):"–"}</span>
@@ -1769,7 +1775,7 @@ function App() {
                           <span>🌡 {st.temp!=null?st.temp.toFixed(0)+"°":"–"}</span>
                         </div>
                         <div style={{fontFamily:"monospace",fontSize:8,color:C.dim,marginTop:5}}>
-                          {st.lat.toFixed(3)}°, {st.lon.toFixed(3)}°{st.country?` · ${st.country}`:""}{st.live?"":" · keine Live-Werte"}
+                          {st.lat.toFixed(3)}°, {st.lon.toFixed(3)}°{st.country?` · ${st.country}`:""}
                         </div>
                       </div>
                     );
@@ -1777,7 +1783,7 @@ function App() {
                 </div>
               )}
               <div style={{fontSize:9,color:C.dim,marginTop:8,lineHeight:1.5}}>
-                Echte Messstationen im Umkreis (Quelle: Meteostat). Aktuelle Windwerte für die nächstgelegenen Stationen über den Weatherbit-Proxy; weiter entfernte Stationen zeigen nur Position und Distanz.
+                Echte Messstationen im Umkreis (Quelle: Meteostat). Windwerte: Standard ist aktueller Modellwind am Stationsstandort (Open-Meteo, ≈ Modell); die nächstgelegenen Stationen zeigen echte Messungen (● Messung, Weatherbit), solange das Tageskontingent reicht.
               </div>
             </div>
 
@@ -1930,7 +1936,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.8.0</span>
+        <span>WindFoil Weather Intelligence v3.8.1</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

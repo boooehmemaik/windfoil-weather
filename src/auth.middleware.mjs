@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Auth middleware
-// File version: 1.0.1 (ESM .mjs)  |  App target: v3.8.0
+// File version: 1.0.1 (ESM .mjs)  |  App target: v3.8.1
 // ----------------------------------------------------------------------------
 // requireAuth resolves the Better Auth session from the incoming request and
 // puts the user on req.user (what feedback.routes.js expects). 401 if absent.

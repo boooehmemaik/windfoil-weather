@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Score-drift chart
-// File version: 1.0.0  |  App target: v3.8.0
+// File version: 1.0.0  |  App target: v3.8.1
 // ----------------------------------------------------------------------------
 // Visualizes the feedback loop: what the model predicted vs. what the rider
 // actually experienced, per session. Default export is a demo wrapper so the

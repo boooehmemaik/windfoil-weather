@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Analytics routes (Express)
-// File version: 1.0.1 (ESM .mjs)  |  App target: v3.8.0
+// File version: 1.0.1 (ESM .mjs)  |  App target: v3.8.1
 // Mount:  app.use('/api/analytics', requireAuth, analyticsRouter)
 // ============================================================================
 import { Router } from 'express';

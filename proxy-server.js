@@ -1,4 +1,4 @@
-// proxy-server.js v2.6.0
+// proxy-server.js v2.6.1
 // WindFoil Weather System — Secure backend proxy for real station data
 //
 // WHY THIS EXISTS
@@ -134,8 +134,10 @@ const STATION_LIST_URL = "https://bulk.meteostat.net/v2/stations/lite.json.gz";
 // so an older v3.6.0 cache without that field is ignored rather than reused.
 const STATION_LIST_FILE = path.join(__dirname, "data", "meteostat-stations-v2.json");
 const STATION_LIST_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-// How many of the nearest stations get live Weatherbit values (bounds API quota).
-const NEARBY_MAX_LIVE = parseInt(process.env.NEARBY_MAX_LIVE || "4", 10);
+// How many of the nearest stations get upgraded to REAL Weatherbit obs (the rest
+// keep the free Open-Meteo model baseline). Kept low: the Weatherbit free tier is
+// ~50 calls/day, and exceeding it is what previously blanked the panel.
+const NEARBY_MAX_LIVE = parseInt(process.env.NEARBY_MAX_LIVE || "2", 10);
 
 let stationList = null;        // [{id,name,country,lat,lon,elev,he}]
 let stationListLoading = null; // in-flight promise, dedupes concurrent loads
@@ -334,10 +336,38 @@ async function weatherbitCurrent(lat, lon) {
   if (hit) return { ...hit, cached: true };
   const url = `https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&units=M&key=${KEY}`;
   const r = await fetch(url);
+  // 429 (daily quota) returns an empty body — handle it without a JSON throw.
+  if (!r.ok) return { ok: false, error: `weatherbit ${r.status}` };
   const j = await r.json();
   const norm = normalizeCurrent(j);
   if (norm.ok) cacheSet(ck, norm, CACHE_TTL.current);
   return norm;
+}
+
+// Current wind at many coords in ONE Open-Meteo call (keyless, unlimited).
+// Returns a Map "lat,lon" -> {wind,gust,dir,temp} (m/s). Model data, the
+// always-available baseline for the nearby panel.
+async function openMeteoCurrentBatch(points) {
+  if (!points.length) return new Map();
+  const p = new URLSearchParams({
+    latitude: points.map(s => s.lat).join(","),
+    longitude: points.map(s => s.lon).join(","),
+    current: "wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m",
+    wind_speed_unit: "ms",
+  });
+  const out = new Map();
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!r.ok) return out;
+  const d = await r.json();
+  const arr = Array.isArray(d) ? d : [d];
+  points.forEach((s, i) => {
+    const c = arr[i] && arr[i].current;
+    if (c) out.set(`${s.lat},${s.lon}`, {
+      wind: c.wind_speed_10m, gust: c.wind_gusts_10m,
+      dir: c.wind_direction_10m, temp: c.temperature_2m,
+    });
+  });
+  return out;
 }
 
 // ── Endpoint: current observation ─────────────────────────────────────────────
@@ -383,16 +413,27 @@ app.get("/api/station/nearby", async (req, res) => {
   }
   chosen = chosen.slice(0, 8);
 
-  // Live values for the nearest few only (each is a separate Weatherbit call).
+  // Baseline: current MODEL wind at every station in one keyless Open-Meteo call,
+  // so the panel always has data (src:"model").
+  try {
+    const model = await openMeteoCurrentBatch(chosen);
+    for (const s of chosen) {
+      const m = model.get(`${s.lat},${s.lon}`);
+      if (m) { s.wind = m.wind; s.gust = m.gust; s.dir = m.dir; s.temp = m.temp; s.src = "model"; }
+    }
+  } catch (e) { /* stations stay metadata-only */ }
+
+  // Upgrade the nearest few to REAL Weatherbit observations while quota lasts;
+  // on any failure (e.g. 429) silently keep the model baseline.
   const liveCount = KEY ? Math.min(NEARBY_MAX_LIVE, chosen.length) : 0;
   await Promise.all(chosen.slice(0, liveCount).map(async (s) => {
     try {
       const cur = await weatherbitCurrent(s.lat, s.lon);
       if (cur && cur.ok) {
         s.wind = cur.wind; s.gust = cur.gust; s.dir = cur.dir;
-        s.temp = cur.temp; s.obs_time = cur.obs_time; s.live = true;
+        s.temp = cur.temp; s.obs_time = cur.obs_time; s.src = "obs";
       }
-    } catch (e) { /* leave this station metadata-only */ }
+    } catch (e) { /* keep model baseline */ }
   }));
 
   res.json({
@@ -402,7 +443,8 @@ app.get("/api/station/nearby", async (req, res) => {
       lat: s.lat, lon: s.lon, elev: s.elev,
       km: Math.round(s.distanceKm),
       wind: s.wind ?? null, gust: s.gust ?? null, dir: s.dir ?? null,
-      temp: s.temp ?? null, obs_time: s.obs_time ?? null, live: !!s.live,
+      temp: s.temp ?? null, obs_time: s.obs_time ?? null,
+      src: s.src || null, live: !!s.src,
     })),
   });
 });

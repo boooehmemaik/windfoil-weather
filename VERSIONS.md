@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.8.1 (2026-06-16)
+**Fix: „echte Wetterstationen" zeigten keine Werte mehr**
+- Ursache: Weatherbit-Free-Quota (50/Tag) durch das Nearby-Panel (bis zu 4 Calls/Aufruf) erschöpft → HTTP 429 mit leerem Body → alle Stationswerte null
+- Lösung „beides kombinieren" (`proxy-server.js` v2.6.1): Open-Meteo liefert als keyless/unbegrenzte Basis aktuellen Modellwind für ALLE Stationen in EINER Batch-Anfrage; die nächsten Stationen werden zusätzlich auf echte Weatherbit-Messung „geupgradet", solange Quota reicht — sonst stiller Fallback auf Modell. Panel zeigt nie mehr „keine Daten"
+- `weatherbitCurrent` härter (kein JSON-Throw bei 429, gibt `{ok:false}` zurück); neuer `openMeteoCurrentBatch`-Helfer; Response-Feld `src` ("obs"|"model")
+- `NEARBY_MAX_LIVE` Default 4→2 (quota-schonend; per Env überschreibbar)
+- Frontend: Quellen-Tag je Station (● Messung / ≈ Modell), Status „Messung+Modell" bzw. „Modellwind", ehrliche Fußnote
+
 ## v3.8.0 (2026-06-16)
 **Dark/Light-Theme, pro User wählbar & gespeichert**
 - Zwei vollständige Paletten (`THEMES.dark` / `THEMES.light`) mit identischen Tokens; Light Mode behält Struktur & Akzent-Sprache des Dark Mode, Akzente leicht abgedunkelt für Kontrast auf Weiß
