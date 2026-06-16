@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>WindFoil — Hilfe</title><!-- v3.5.0 -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --bg:#0a0e14; --surface:#111820; --panel:#151d28; --border:#1e2d3d;
+    --border2:#243040; --sky:#3a9ad9; --signal:#f07820; --go:#3ddc84;
+    --caution:#f5b942; --text:#d8e4f0; --muted:#5a7a96;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:'Barlow',sans-serif;font-size:15px;line-height:1.6;
+    -webkit-text-size-adjust:100%}
+  header{position:sticky;top:0;z-index:10;background:rgba(10,14,20,.97);
+    border-bottom:1px solid var(--border);padding:12px 18px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  header .brand{font-family:monospace;font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted)}
+  header .brand b{color:var(--signal)}
+  a.back{color:var(--sky);text-decoration:none;font-size:13px;font-weight:500}
+  a.back:hover{text-decoration:underline}
+  main{max-width:760px;margin:0 auto;padding:22px 18px 60px}
+  h1{font-size:24px;font-weight:700;margin:8px 0 4px}
+  .lead{color:var(--muted);margin:0 0 26px}
+  section{background:var(--surface);border:1px solid var(--border);
+    border-left:3px solid var(--signal);border-radius:8px;
+    padding:16px 18px;margin-bottom:16px}
+  section h2{font-size:17px;font-weight:700;margin:0 0 8px;display:flex;
+    align-items:center;gap:8px}
+  section h2 .ico{font-size:18px}
+  section p{margin:0 0 8px}
+  ul{margin:6px 0 0;padding-left:20px}
+  li{margin-bottom:6px}
+  code,kbd{background:var(--panel);border:1px solid var(--border2);
+    border-radius:4px;padding:1px 6px;font-family:monospace;font-size:13px;color:var(--text)}
+  .note{background:var(--panel);border:1px solid var(--border2);
+    border-radius:6px;padding:10px 14px;color:var(--muted);font-size:13px;margin-top:10px}
+  .tag{display:inline-block;background:var(--panel);border:1px solid var(--border2);
+    color:var(--sky);border-radius:4px;padding:1px 8px;font-family:monospace;font-size:11px}
+  footer{border-top:1px solid var(--border);background:var(--surface);
+    text-align:center;padding:14px;color:var(--muted);font-family:monospace;font-size:11px}
+  footer a{color:var(--sky);text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">WindFoil · <b>Hilfe</b></span>
+  <a class="back" href="/">← Zurück zur App</a>
+</header>
+
+<main>
+  <h1>Hilfe & Anleitung</h1>
+  <p class="lead">So holst du das Beste aus der WindFoil-Vorhersage heraus — Standort, Foil-Score, Equipment und Feedback.</p>
+
+  <section>
+    <h2><span class="ico">📍</span> Standort wählen</h2>
+    <p>Oben über <b>„Ort ändern"</b> legst du fest, für welchen Spot die Vorhersage gilt. Drei Wege:</p>
+    <ul>
+      <li><b>Vorlage:</b> einen der vorgegebenen Spots antippen.</li>
+      <li><b>Link / Koordinaten:</b> einen Google-Maps-Link einfügen (die Koordinaten stehen nach dem <code>@</code>) oder Koordinaten direkt eingeben. Mit <b>Name</b> kannst du dem Spot einen eigenen Namen geben.</li>
+      <li><b>Mein Standort:</b> per GPS deinen aktuellen Ort übernehmen.</li>
+    </ul>
+    <p><b>Übernehmen &amp; merken ★</b> speichert den Spot dauerhaft, <b>Nur übernehmen</b> nutzt ihn nur für diese Sitzung. Zuletzt verwendete Spots erscheinen unter „Zuletzt verwendet".</p>
+    <div class="note">Deine Spots werden serverseitig zu deinem Konto gespeichert und sind nach dem Login auf jedem Gerät da — auch wenn dein Browser den lokalen Speicher löscht (z. B. iPhone/Safari).</div>
+  </section>
+
+  <section>
+    <h2><span class="ico">🎯</span> Foil-Score verstehen</h2>
+    <p>Der <b>Foil-Score</b> (0–100) bewertet, wie gut ein Tag zum Wingfoilen passt — auf dich und dein Setup abgestimmt. Höher ist besser; die Farbe zeigt die Eignung auf einen Blick.</p>
+    <ul>
+      <li><b>Beste Zeit:</b> das vorhergesagte Zeitfenster mit den besten Bedingungen am Tag.</li>
+      <li><b>7-Tage-Analyse:</b> Tage 4–7 sind unsicherer und mit <span class="tag">≈ unsicher</span> sowie gedämpft dargestellt.</li>
+      <li><b>Stationsabgleich:</b> wo verfügbar, wird das Modell mit echten Messstationen abgeglichen (Konfidenz-Wert).</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="ico">🏄</span> Profil &amp; „Abheben ab"</h2>
+    <p>Im Profil hinterlegst du <b>Gewicht</b> und <b>Skill-Level</b> — beides fließt in den Score ein. Optional gibst du bei <b>„Abheben ab (kn)"</b> an, ab wie viel Wind du erfahrungsgemäß ins Gleiten/Foilen kommst; dieser Wert überschreibt die Formel.</p>
+    <p>Mit <b>Profil speichern</b> wird alles deinem Konto zugeordnet.</p>
+  </section>
+
+  <section>
+    <h2><span class="ico">🎒</span> Equipment &amp; automatische Setup-Wahl</h2>
+    <p>Lege deine Setups an (<b>Name</b>, <b>Wing</b> in m², <b>Foil</b> in cm², optional <b>„ab (kn)"</b>). Aktivierst du <b>„Automatische Setup-Wahl"</b>, schlägt die App pro Tag das passende Setup aus deinem Material vor.</p>
+    <div class="note">Lege mindestens ein Equipment an, damit die automatische Wahl greift.</div>
+  </section>
+
+  <section>
+    <h2><span class="ico">📣</span> Session-Feedback</h2>
+    <p>Nach einer Session gibst du über <b>📣 Feedback</b> an, wie es war (abgehoben ja/nein, gefühlter Wind beim Abheben, Bewertung, ob die Bedingungen zur Prognose passten). Daraus lernt die App und <b>kalibriert deine Abhebe-Schwelle pro Spot</b> — die Vorhersage wird mit der Zeit genauer auf dich zugeschnitten.</p>
+  </section>
+
+  <section>
+    <h2><span class="ico">⚙️</span> Einheiten &amp; Anzeige</h2>
+    <p>Die Windeinheit lässt sich zwischen <b>Knoten (kn)</b>, <b>m/s</b> und <b>Beaufort (bf)</b> umschalten. Datenquellen: Open-Meteo, ERA5/ECMWF, ergänzt um deine Eingaben.</p>
+  </section>
+
+  <section>
+    <h2><span class="ico">📲</span> Als App aufs iPhone</h2>
+    <p>In Safari über <b>Teilen → „Zum Home-Bildschirm"</b> hinzufügen — dann startet WindFoil im Vollbild wie eine App. Funktionsumfang ist identisch zur Webseite. Melde dich an, damit Spots und Einstellungen sicher serverseitig gespeichert werden.</p>
+  </section>
+</main>
+
+<footer>
+  WindFoil Weather Intelligence v3.5.0 · <a href="/">Zur App</a>
+</footer>
+</body></html>

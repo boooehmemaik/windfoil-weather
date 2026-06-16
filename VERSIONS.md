@@ -1,5 +1,11 @@
 # WindFoil — Version History
 
+## v3.5.0 (2026-06-16)
+**Hilfeseite + Footer-Link**
+- Neue statische Hilfeseite `help.html` (themen-konform, von nginx unter `/help.html` ausgeliefert): Standort, Foil-Score, Profil, Equipment, Feedback, Einheiten, iOS-Standalone
+- `index.html` / `app-react-local.html`: „❓ Hilfe"-Link im Footer auf `/help.html`
+- Neuer Projekt-Subagent `.claude/agents/windfoil-help.md` baut/aktualisiert die Hilfe und hält den Footer-Link konsistent
+
 ## v3.4.0 (2026-06-16)
 **Server-seitige Persistenz für iOS Safari**
 - Orte (aktiver Spot + „zuletzt verwendet") wandern von localStorage in die DB: neue Tabelle `user_locations` (Migration 003), Route `src/locations.routes.mjs` unter `/api/locations`

@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Auth client (frontend)
-// File version: 1.0.0  |  App target: v3.4.0
+// File version: 1.0.0  |  App target: v3.5.0
 // ----------------------------------------------------------------------------
 // Used by AuthGate.jsx and anywhere the UI needs the session.
 // baseURL points at the same origin the dashboard is served from; the auth
