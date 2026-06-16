@@ -684,6 +684,23 @@ function App() {
     }
     return ()=>{ cancelled=true; };
   },[loc&&loc.lat,loc&&loc.lon]);
+
+  // Hydrate the active spot + recent list from the SERVER on mount. This is what
+  // makes manually added spots survive on iOS Safari, where localStorage is
+  // dropped (Private Browsing / "Block All Cookies" / ITP). localStorage is now
+  // only an offline cache; the server copy wins when it's available.
+  useEffect(()=>{
+    let cancelled=false;
+    fetch("/api/locations",{credentials:"include"})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{
+        if(cancelled||!d) return;
+        if(Array.isArray(d.recent)&&d.recent.length){ setRecent(d.recent); saveStored("wf_loc_recent",d.recent); }
+        if(d.active&&d.active.lat!=null&&d.active.lon!=null){ setLoc(d.active); saveStored("wf_loc",d.active); }
+      })
+      .catch(()=>{});
+    return ()=>{ cancelled=true; };
+  },[]);
   const [geoStatus,setGeoStatus]= useState(""); // "", "loading", "error"
   const [geoError,setGeoError] = useState("");
   const [locTab,setLocTab]     = useState("preset");
@@ -1148,13 +1165,27 @@ function App() {
 
   // Remember a location in the rolling "last 5" history (dedupe by coords,
   // most-recent first). Covers both manual entries and the GPS location.
-  function pushRecent(l) {
+  //
+  // Source of truth is the SERVER (per-user) — iOS Safari silently drops
+  // localStorage (Private Browsing / "Block All Cookies" / ITP purge), so the
+  // old localStorage-only list kept vanishing on reload. We still mirror to
+  // localStorage as an offline cache. Pass {active:true} to also persist it as
+  // the saved/default spot ("★ merken").
+  function pushRecent(l, opts) {
     if(!l || l.lat==null || l.lon==null) return;
+    const active = !!(opts && opts.active);
     const key = x => `${(+x.lat).toFixed(4)},${(+x.lon).toFixed(4)}`;
     const k = key(l);
     const entry = { lat:+l.lat, lon:+l.lon, name:l.name };
     const next = [entry, ...recent.filter(r=>key(r)!==k)].slice(0,5);
     setRecent(next); saveStored("wf_loc_recent", next);
+    if(active) saveStored("wf_loc", l);
+    fetch("/api/locations",{method:"POST",credentials:"include",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({lat:+l.lat,lon:+l.lon,name:l.name,setActive:active})})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d&&Array.isArray(d.recent)){ setRecent(d.recent); saveStored("wf_loc_recent",d.recent); } })
+      .catch(()=>{});
   }
 
   // Resolve the chosen location from the active modal tab (preset or link)
@@ -1228,7 +1259,7 @@ function App() {
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <button style={{...S.btnG,borderColor:locSaved?C.go:C.border2,color:locSaved?C.go:C.muted}}
             title="Aktuellen Ort als Standard merken"
-            onClick={()=>{ saveStored("wf_loc",loc); setLocSaved(true); setTimeout(()=>setLocSaved(false),2000); }}>
+            onClick={()=>{ pushRecent(loc,{active:true}); setLocSaved(true); setTimeout(()=>setLocSaved(false),2000); }}>
             {locSaved ? "✓ gemerkt" : "★ merken"}
           </button>
           <button style={S.btnG} onClick={()=>setShowLoc(true)}>Ort ändern</button>
@@ -1757,7 +1788,7 @@ function App() {
                   <div style={{fontFamily:"monospace",fontSize:10,color:C.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Zuletzt verwendet</div>
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
                     {recent.map((r,i)=>(
-                      <button key={i} onClick={()=>{ setLoc(r); pushRecent(r); saveStored("wf_loc",r); setShowLoc(false); }}
+                      <button key={i} onClick={()=>{ setLoc(r); pushRecent(r,{active:true}); setShowLoc(false); }}
                         style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:4,color:C.text,textAlign:"left",padding:"8px 12px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                         <span>
                           <b style={{display:"block",fontSize:13}}>{r.name}</b>
@@ -1826,7 +1857,7 @@ function App() {
                 }}>Nur übernehmen</button>
                 <button style={S.btn} onClick={()=>{
                   const nl = resolveLoc(); if(!nl) return;
-                  setLoc(nl); pushRecent(nl); saveStored("wf_loc", nl); setLinkError(""); setShowLoc(false);
+                  setLoc(nl); pushRecent(nl,{active:true}); setLinkError(""); setShowLoc(false);
                 }}>Übernehmen & merken ★</button>
               </div>
             </div>
