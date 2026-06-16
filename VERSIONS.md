@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.6.0 (2026-06-16)
+**Echte Wetterstationen im Umkreis (Meteostat)**
+- Ersetzt die fingierten Open-Meteo-Gitterpunkte durch echte Messstationen: neuer Proxy-Endpoint `GET /api/station/nearby` (in `proxy-server.js`, v2.5.0)
+- Stationssuche keyless via Meteostat-Bulk-Metadaten (auf Disk + im Speicher gecacht, wöchentlich aktualisiert); adaptiver Radius 25→50→75 km bis ≥5 Stationen; Haversine-Distanz
+- Aktuelle Windwerte für die nächstgelegenen Stationen (`NEARBY_MAX_LIVE`, Default 4) über den bestehenden Weatherbit-Proxy (gecacht, quota-schonend); weiter entfernte zeigen nur Position/Distanz
+- `weatherbitCurrent()` aus der `/current`-Route extrahiert und geteilt
+- `index.html` / `app-react-local.html`: `fetchNearbyStations` ruft jetzt `/api/station/nearby`; Label „Echte Wetterstationen (Umkreis X km)", ehrliche Fußnoten, neuer `nearbyRadius`-State
+
 ## v3.5.0 (2026-06-16)
 **Hilfeseite + Footer-Link**
 - Neue statische Hilfeseite `help.html` (themen-konform, von nginx unter `/help.html` ausgeliefert): Standort, Foil-Score, Profil, Equipment, Feedback, Einheiten, iOS-Standalone

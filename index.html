@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.5.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.6.0 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -20,7 +20,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v3.5.0
+// WindFoil Weather Intelligence v3.6.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -741,7 +741,8 @@ function App() {
   const [stations,setStations] = useState([]);
   const [stationUrl,setStationUrl] = useState("");
   const [nearbyStations,setNearbyStations] = useState([]);
-  const [nearbyStatus,setNearbyStatus] = useState(""); // "", "loading", "demo", "live"
+  const [nearbyStatus,setNearbyStatus] = useState(""); // "", "loading", "live", "meta", "unavailable"
+  const [nearbyRadius,setNearbyRadius] = useState(null); // chosen search radius (km)
   const [stationCmp,setStationCmp] = useState(null); // { current, hist, confidence, notes, available }
   const [stationCmpStatus,setStationCmpStatus] = useState(""); // "", "loading", "ok", "unavailable"
   // Admin tab
@@ -770,66 +771,29 @@ function App() {
     return()=>clearInterval(t);
   },[]);
 
-  // ── Fetch local weather stations within ~10-20km radius ─────────────────────
-  // Open-Meteo has no public raw-station endpoint, so we sample grid points
-  // around the spot (~9-15 km offsets) to approximate local stations.
+  // ── Find REAL weather stations near the spot ────────────────────────────────
+  // Server-side discovery via Meteostat (keyless bulk metadata, haversine within
+  // an adaptive radius); current wind for the nearest few comes from the
+  // Weatherbit-backed proxy. Replaces the old fake "grid sample" approximation.
   async function fetchNearbyStations(lat, lon) {
     setNearbyStatus("loading");
-    const offsets = [
-      { dlat: 0.10,  dlon: 0.00,  name: "Nord",     km: 11 },
-      { dlat:-0.10,  dlon: 0.00,  name: "Süd",      km: 11 },
-      { dlat: 0.00,  dlon: 0.12,  name: "Ost",      km: 11 },
-      { dlat: 0.00,  dlon:-0.12,  name: "West",     km: 11 },
-      { dlat: 0.09,  dlon: 0.09,  name: "Nordost",  km: 13 },
-      { dlat:-0.09,  dlon:-0.09,  name: "Südwest",  km: 13 },
-    ];
-    const now = new Date();
-    const hourIdx = now.getHours();
-    const results = [];
-    let anyLive = false;
-
-    await Promise.all(offsets.map(async (off) => {
-      const sLat = Math.round((parseFloat(lat) + off.dlat) * 10000) / 10000;
-      const sLon = Math.round((parseFloat(lon) + off.dlon) * 10000) / 10000;
-      try {
-        const params = new URLSearchParams({
-          latitude:sLat, longitude:sLon,
-          hourly:"windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m",
-          wind_speed_unit:"ms", forecast_days:1, timezone:"auto",
-        });
-        const r = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal: AbortSignal.timeout(6000) });
-        if(r.ok){
-          const d = await r.json();
-          const h = d.hourly;
-          anyLive = true;
-          results.push({
-            name: off.name, km: off.km, lat: sLat, lon: sLon, live: true,
-            wind:  h.windspeed_10m?.[hourIdx],
-            gust:  h.windgusts_10m?.[hourIdx],
-            dir:   h.winddirection_10m?.[hourIdx],
-            temp:  h.temperature_2m?.[hourIdx],
-          });
-          return;
-        }
-        throw new Error("http");
-      } catch(e) {
-        // Demo fallback for this station
-        const base = Math.abs(sLat-36.98)<2 ? 5.5 : 4.5;
-        results.push({
-          name: off.name, km: off.km, lat: sLat, lon: sLon, live: false,
-          wind: Math.round((base + (Math.random()-0.5)*2)*10)/10,
-          gust: Math.round((base*1.4 + Math.random())*10)/10,
-          dir:  Math.round(200 + Math.random()*80),
-          temp: Math.round((22 + (Math.random()-0.5)*3)*10)/10,
-        });
+    try {
+      const r = await fetch(`${PROXY_BASE}/nearby?lat=${lat}&lon=${lon}`, { signal: AbortSignal.timeout(15000) });
+      const d = await r.json();
+      if(d && d.ok && Array.isArray(d.stations) && d.stations.length){
+        setNearbyStations(d.stations);
+        setNearbyRadius(d.radiusKm ?? null);
+        setNearbyStatus(d.stations.some(s=>s.live) ? "live" : "meta");
+        return;
       }
-    }));
-
-    // Sort by compass name order for stable display
-    const order = ["Nord","Nordost","Ost","Südost","Süd","Südwest","West","Nordwest"];
-    results.sort((a,b)=>order.indexOf(a.name)-order.indexOf(b.name));
-    setNearbyStations(results);
-    setNearbyStatus(anyLive ? "live" : "demo");
+      setNearbyStations([]);
+      setNearbyRadius(null);
+      setNearbyStatus("unavailable");
+    } catch(e) {
+      setNearbyStations([]);
+      setNearbyRadius(null);
+      setNearbyStatus("unavailable");
+    }
   }
 
   // ── Reverse geocode coords → place name via Open-Meteo (no key needed) ──────
@@ -1253,7 +1217,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:"#fff"}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.5.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.6.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1709,13 +1673,16 @@ function App() {
             {/* NEARBY STATIONS */}
             <div style={S.card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
-                <span style={S.sec}>📡 Lokale Wetterstationen (Umkreis ~10–15 km)</span>
+                <span style={S.sec}>📡 Echte Wetterstationen{nearbyRadius?` (Umkreis ${nearbyRadius} km)`:""}</span>
                 <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>
-                  {nearbyStatus==="loading"?"⏳ lädt…":nearbyStatus==="live"?"✅ Live":nearbyStatus==="demo"?"⚠️ Demo":""}
+                  {nearbyStatus==="loading"?"⏳ lädt…":nearbyStatus==="live"?"✅ Live":nearbyStatus==="meta"?"○ nur Stationsinfo":nearbyStatus==="unavailable"?"– keine Stationen":""}
                 </span>
               </div>
               {nearbyStatus==="loading" && (
-                <p style={{fontSize:11,color:C.dim}}>Stationen im Umkreis werden abgefragt…</p>
+                <p style={{fontSize:11,color:C.dim}}>Echte Stationen im Umkreis werden gesucht…</p>
+              )}
+              {nearbyStatus==="unavailable" && (
+                <p style={{fontSize:11,color:C.dim}}>Keine Stationen gefunden bzw. Stationsliste nicht erreichbar.</p>
               )}
               {nearbyStations.length>0 && (
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8}}>
@@ -1734,7 +1701,7 @@ function App() {
                           <span>🌡 {st.temp!=null?st.temp.toFixed(0)+"°":"–"}</span>
                         </div>
                         <div style={{fontFamily:"monospace",fontSize:8,color:C.dim,marginTop:5}}>
-                          {st.lat.toFixed(3)}°, {st.lon.toFixed(3)}° {st.live?"":"· demo"}
+                          {st.lat.toFixed(3)}°, {st.lon.toFixed(3)}°{st.country?` · ${st.country}`:""}{st.live?"":" · keine Live-Werte"}
                         </div>
                       </div>
                     );
@@ -1742,7 +1709,7 @@ function App() {
                 </div>
               )}
               <div style={{fontSize:9,color:C.dim,marginTop:8,lineHeight:1.5}}>
-                Werte interpoliert aus Open-Meteo-Gitterpunkten rund um den Spot (aktuelle Stunde). Dienen als räumlicher Vergleich, nicht als geeichte Stationsmessung.
+                Echte Messstationen im Umkreis (Quelle: Meteostat). Aktuelle Windwerte für die nächstgelegenen Stationen über den Weatherbit-Proxy; weiter entfernte Stationen zeigen nur Position und Distanz.
               </div>
             </div>
 
@@ -1895,7 +1862,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.5.0</span>
+        <span>WindFoil Weather Intelligence v3.6.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

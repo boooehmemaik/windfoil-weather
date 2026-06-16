@@ -1,4 +1,4 @@
-// proxy-server.js v2.4.0
+// proxy-server.js v2.5.0
 // WindFoil Weather System — Secure backend proxy for real station data
 //
 // WHY THIS EXISTS
@@ -27,6 +27,7 @@ const { execFile } = require("child_process");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 const { mountWindfoil } = require("./src/server.integration.cjs");
 
 // ── Minimal .env loader (no dependency) ───────────────────────────────────────
@@ -123,6 +124,79 @@ function adminGuard(req, res) {
   return ip;
 }
 
+// ── Meteostat station discovery (keyless bulk metadata) ───────────────────────
+// Real weather-station list powering the "nearby stations" feature. Meteostat
+// has no rate-limited key for the bulk metadata, so we download the global list
+// once, cache it on disk + in memory, and refresh weekly. We keep only the few
+// fields we need (id/name/country/coords/elevation).
+const STATION_LIST_URL = "https://bulk.meteostat.net/v2/stations/lite.json.gz";
+const STATION_LIST_FILE = path.join(__dirname, "data", "meteostat-stations.json");
+const STATION_LIST_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// How many of the nearest stations get live Weatherbit values (bounds API quota).
+const NEARBY_MAX_LIVE = parseInt(process.env.NEARBY_MAX_LIVE || "4", 10);
+
+let stationList = null;        // [{id,name,country,lat,lon,elev}]
+let stationListLoading = null; // in-flight promise, dedupes concurrent loads
+
+function parseStationDump(json) {
+  const arr = JSON.parse(json);
+  const out = [];
+  for (const s of arr) {
+    const loc = s && s.location;
+    if (!loc || typeof loc.latitude !== "number" || typeof loc.longitude !== "number") continue;
+    out.push({
+      id: s.id,
+      name: (s.name && (s.name.en || Object.values(s.name)[0])) || s.id,
+      country: s.country || "",
+      lat: loc.latitude, lon: loc.longitude, elev: loc.elevation ?? null,
+    });
+  }
+  return out;
+}
+
+async function downloadStationList() {
+  const r = await fetch(STATION_LIST_URL);
+  if (!r.ok) throw new Error(`Meteostat ${r.status}`);
+  const gz = await r.buffer();
+  const list = parseStationDump(zlib.gunzipSync(gz).toString("utf8"));
+  try { fs.writeFileSync(STATION_LIST_FILE, JSON.stringify(list)); }
+  catch (e) { /* read-only fs: keep the list in memory only */ }
+  return list;
+}
+
+// Lazy, cached accessor. Fresh disk cache wins; otherwise download, falling back
+// to a stale disk copy (then an empty list) if the network is down.
+function getStationList() {
+  if (stationList) return Promise.resolve(stationList);
+  if (stationListLoading) return stationListLoading;
+  stationListLoading = (async () => {
+    try {
+      const st = fs.statSync(STATION_LIST_FILE);
+      if (Date.now() - st.mtimeMs < STATION_LIST_TTL_MS) {
+        // The disk copy is already the minimal {id,name,country,lat,lon,elev} list.
+        return (stationList = JSON.parse(fs.readFileSync(STATION_LIST_FILE, "utf8")));
+      }
+    } catch (e) { /* no usable cache yet */ }
+    try {
+      stationList = await downloadStationList();
+    } catch (e) {
+      console.warn("[nearby] station list download failed:", e.message);
+      try { stationList = JSON.parse(fs.readFileSync(STATION_LIST_FILE, "utf8")); }
+      catch (e2) { stationList = []; }
+    }
+    return stationList;
+  })();
+  return stationListLoading.finally(() => { stationListLoading = null; });
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 if (!KEY) {
   console.warn("⚠️  WEATHERBIT_KEY not set — station endpoints will return 503.");
 }
@@ -181,26 +255,84 @@ function normalizeHistory(json) {
   };
 }
 
+// Reusable current-observation fetch (cached). Shared by /current and /nearby.
+async function weatherbitCurrent(lat, lon) {
+  const ck = `cur:${lat}:${lon}`;
+  const hit = cacheGet(ck);
+  if (hit) return { ...hit, cached: true };
+  const url = `https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&units=M&key=${KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  const norm = normalizeCurrent(j);
+  if (norm.ok) cacheSet(ck, norm, CACHE_TTL.current);
+  return norm;
+}
+
 // ── Endpoint: current observation ─────────────────────────────────────────────
 app.get("/api/station/current", async (req, res) => {
   if (!KEY) return res.status(503).json({ ok: false, error: "API key not configured" });
   const { lat, lon } = req.query;
   if (!lat || !lon) return res.status(400).json({ ok: false, error: "lat/lon required" });
-
-  const ck = `cur:${lat}:${lon}`;
-  const hit = cacheGet(ck);
-  if (hit) return res.json({ ...hit, cached: true });
-
   try {
-    const url = `https://api.weatherbit.io/v2.0/current?lat=${lat}&lon=${lon}&units=M&key=${KEY}`;
-    const r = await fetch(url);
-    const j = await r.json();
-    const norm = normalizeCurrent(j);
-    if (norm.ok) cacheSet(ck, norm, CACHE_TTL.current);
-    res.json(norm);
+    res.json(await weatherbitCurrent(lat, lon));
   } catch (e) {
     res.status(502).json({ ok: false, error: e.message });
   }
+});
+
+// ── Endpoint: real weather stations near a point (Meteostat + Weatherbit) ─────
+// Discovery is keyless (Meteostat bulk metadata); current wind for the nearest
+// few stations comes from the existing Weatherbit-backed cache (quota-bounded).
+// Radius adapts: widen 25→50→75 km until at least 5 stations are found.
+app.get("/api/station/nearby", async (req, res) => {
+  const { lat, lon } = req.query;
+  const la = parseFloat(lat), lo = parseFloat(lon);
+  if (!Number.isFinite(la) || !Number.isFinite(lo))
+    return res.status(400).json({ ok: false, error: "lat/lon required", stations: [] });
+
+  const list = await getStationList();
+  if (!list.length)
+    return res.json({ ok: false, error: "station list unavailable", stations: [] });
+
+  // Cheap bounding-box prefilter before the haversine pass (lon widens by 1/cos).
+  const box = 1.1, lonBox = box / Math.max(0.2, Math.cos(la * Math.PI / 180));
+  const withDist = [];
+  for (const s of list) {
+    if (Math.abs(s.lat - la) > box || Math.abs(s.lon - lo) > lonBox) continue;
+    withDist.push({ ...s, distanceKm: haversineKm(la, lo, s.lat, s.lon) });
+  }
+  withDist.sort((a, b) => a.distanceKm - b.distanceKm);
+
+  let radiusKm = 75, chosen = [];
+  for (const rad of [25, 50, 75]) {
+    chosen = withDist.filter(s => s.distanceKm <= rad);
+    radiusKm = rad;
+    if (chosen.length >= 5) break;
+  }
+  chosen = chosen.slice(0, 8);
+
+  // Live values for the nearest few only (each is a separate Weatherbit call).
+  const liveCount = KEY ? Math.min(NEARBY_MAX_LIVE, chosen.length) : 0;
+  await Promise.all(chosen.slice(0, liveCount).map(async (s) => {
+    try {
+      const cur = await weatherbitCurrent(s.lat, s.lon);
+      if (cur && cur.ok) {
+        s.wind = cur.wind; s.gust = cur.gust; s.dir = cur.dir;
+        s.temp = cur.temp; s.obs_time = cur.obs_time; s.live = true;
+      }
+    } catch (e) { /* leave this station metadata-only */ }
+  }));
+
+  res.json({
+    ok: true, radiusKm,
+    stations: chosen.map(s => ({
+      id: s.id, name: s.name, country: s.country,
+      lat: s.lat, lon: s.lon, elev: s.elev,
+      km: Math.round(s.distanceKm),
+      wind: s.wind ?? null, gust: s.gust ?? null, dir: s.dir ?? null,
+      temp: s.temp ?? null, obs_time: s.obs_time ?? null, live: !!s.live,
+    })),
+  });
 });
 
 // ── Endpoint: historical hourly observations ──────────────────────────────────

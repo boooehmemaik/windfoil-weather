@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Post-session feedback form
-// File version: 1.0.0  |  App target: v3.5.0
+// File version: 1.0.0  |  App target: v3.6.0
 // ----------------------------------------------------------------------------
 // Drop-in React component. In your app, render <SessionFeedback> with real
 // props and set demo={false}. The default export below is a DEMO wrapper so the
