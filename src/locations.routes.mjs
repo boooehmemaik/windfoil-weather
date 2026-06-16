@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Location routes (Express)
-// File version: 1.0.0 (ESM .mjs)  |  App target: v3.7.0
+// File version: 1.0.0 (ESM .mjs)  |  App target: v3.8.0
 // Mount:  app.use('/api/locations', requireAuth, locationRouter)
 // ----------------------------------------------------------------------------
 // Per-user replacement for the wf_loc / wf_loc_recent localStorage keys, which

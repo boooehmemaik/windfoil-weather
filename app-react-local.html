@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.7.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.8.0 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -10,6 +10,16 @@
 input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select,button,textarea{font-size:inherit}}</style>
 <script type="importmap">{"imports":{"react":"vendor/react-esm-shim.js","react-dom":"vendor/react-esm-shim.js"}}</script></head>
 <body><div id="boot"><div class="ring"></div><div>WindFoil wird geladen…</div></div><div id="root"></div>
+  <script>
+    /* Pre-paint the saved theme before React mounts, to avoid a dark flash in light mode. */
+    try {
+      if (JSON.parse(localStorage.getItem("wf_theme")) === "light") {
+        document.documentElement.style.background = document.body.style.background = "#e7edf3";
+        var b = document.getElementById("boot");
+        if (b) { b.style.background = "#e7edf3"; b.style.color = "#5b7186"; }
+      }
+    } catch (e) {}
+  </script>
   <script src="vendor/react.production.min.js"></script>
   <script src="vendor/react-dom.production.min.js"></script>
   <script src="vendor/prop-types.min.js"></script>
@@ -20,7 +30,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v3.7.0
+// WindFoil Weather Intelligence v3.8.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -52,11 +62,27 @@ function unitLabel(unit) {
 // Convert a full array ms→display unit
 function cvtArr(arr, unit) { return arr.map(v=>cvt(v,unit)); }
 
-const C = {
-  bg:"#0a0e14",surface:"#111820",panel:"#151d28",border:"#1e2d3d",border2:"#243040",
-  sky:"#3a9ad9",signal:"#f07820",caution:"#f5b942",go:"#3ddc84",stop:"#e84040",
-  text:"#d8e4f0",muted:"#5a7a96",dim:"#2a3d52",
+// Two full palettes. The light theme keeps the dark theme's structure and accent
+// language (same tokens), just inverted for a crisp bright look. Accents are
+// darkened slightly so they stay legible on white.
+const THEMES = {
+  dark: {
+    bg:"#0a0e14",surface:"#111820",panel:"#151d28",border:"#1e2d3d",border2:"#243040",
+    sky:"#3a9ad9",signal:"#f07820",caution:"#f5b942",go:"#3ddc84",stop:"#e84040",
+    text:"#d8e4f0",muted:"#5a7a96",dim:"#2a3d52",
+    headerBg:"rgba(10,14,20,.97)",gridStroke:"rgba(255,255,255,0.05)",
+  },
+  light: {
+    bg:"#e7edf3",surface:"#f3f6fa",panel:"#ffffff",border:"#cdd9e6",border2:"#b6c6d6",
+    sky:"#1f7fc0",signal:"#dd6510",caution:"#b07d10",go:"#149048",stop:"#d62828",
+    text:"#13202e",muted:"#5b7186",dim:"#9fb1c2",
+    headerBg:"rgba(247,249,252,.97)",gridStroke:"rgba(0,0,0,0.06)",
+  },
 };
+// Live palette — mutated in place by applyTheme() so the ~280 C.* reads and the
+// derived style objects below all pick up a theme switch on the next render,
+// without threading colors through every component.
+const C = { ...THEMES.dark };
 
 // ── Demo data generator (realistic Navarino/May values) ──────────────────────
 // ── Demo data v2.2.0 ─────────────────────────────────────────────────────────
@@ -385,19 +411,19 @@ function applyConfidence(rawScore, confidence) {
 }
 
 function classifyConfidence(c) {
-  if(c==null) return { label:"Kein Abgleich", color:"#5a7a96", icon:"○" };
-  if(c>=80)   return { label:"Hohe Sicherheit", color:"#3ddc84", icon:"●" };
-  if(c>=55)   return { label:"Mittlere Sicherheit", color:"#f5b942", icon:"◐" };
-  return { label:"Geringe Sicherheit", color:"#e84040", icon:"◔" };
+  if(c==null) return { label:"Kein Abgleich", color:C.muted, icon:"○" };
+  if(c>=80)   return { label:"Hohe Sicherheit", color:C.go, icon:"●" };
+  if(c>=55)   return { label:"Mittlere Sicherheit", color:C.caution, icon:"◐" };
+  return { label:"Geringe Sicherheit", color:C.stop, icon:"◔" };
 }
 
 // ── Chart helpers ─────────────────────────────────────────────────────────────
 const TT = {
-  contentStyle:{background:"#151d28",border:"1px solid #1e2d3d",borderRadius:4,fontSize:11,fontFamily:"monospace",color:C.text},
+  contentStyle:{background:C.panel,border:`1px solid ${C.border}`,borderRadius:4,fontSize:11,fontFamily:"monospace",color:C.text},
   labelStyle:{color:C.muted}, itemStyle:{color:C.text},
 };
 const ax = { tick:{fill:C.muted,fontSize:10,fontFamily:"monospace"}, axisLine:{stroke:C.border}, tickLine:false };
-const gr = { stroke:"rgba(255,255,255,0.05)" };
+const gr = { stroke:C.gridStroke };
 
 // ── Auth Gate ─────────────────────────────────────────────────────────────────
 // Calls Better Auth REST endpoints directly — no client bundle needed in page.
@@ -405,6 +431,20 @@ const gr = { stroke:"rgba(255,255,255,0.05)" };
 // matches the dashboard look instead of the old standalone teal scheme.
 const CA={deep:C.panel,panel:C.surface,p2:C.bg,foam:C.text,
   haze:C.muted,lift:C.signal,coral:C.stop,line:C.border2};
+
+// Switch palette in place. Rewrites C plus every style object derived from it
+// (chart tooltip/axes/grid + auth palette), so a re-render re-themes everything.
+function applyTheme(name){
+  Object.assign(C, THEMES[name] || THEMES.dark);
+  Object.assign(TT.contentStyle, { background:C.panel, border:`1px solid ${C.border}`, color:C.text });
+  Object.assign(TT.labelStyle, { color:C.muted });
+  Object.assign(TT.itemStyle, { color:C.text });
+  Object.assign(ax.tick, { fill:C.muted });
+  Object.assign(ax.axisLine, { stroke:C.border });
+  gr.stroke = C.gridStroke;
+  Object.assign(CA, { deep:C.panel, panel:C.surface, p2:C.bg, foam:C.text,
+    haze:C.muted, lift:C.signal, coral:C.stop, line:C.border2 });
+}
 
 function AuthGate({children}){
   const [sess,setSess]=useState(null); // null=loading, false=anon, obj=authed
@@ -688,6 +728,18 @@ function App() {
   const [activeDay,setActiveDay]= useState(0);
   const [clock,setClock]       = useState("");
   const [windUnit,setWindUnit]  = useState("kn"); // 'ms' | 'kn' | 'bf'
+  const [theme,setThemeState]   = useState(()=>loadStored("wf_theme","dark")); // 'dark' | 'light'
+  // Apply the palette synchronously so the style object S (built below) and all
+  // C.* reads in this render already reflect the active theme.
+  applyTheme(theme==="light"?"light":"dark");
+  // Persisting setter (localStorage cache + per-user server store).
+  const setTheme = (t)=>{ setThemeState(t); savePref("wf_theme", t); };
+  // Keep the page/body background (visible during overscroll) in sync.
+  useEffect(()=>{
+    const bg = (THEMES[theme]||THEMES.dark).bg;
+    document.documentElement.style.background = bg;
+    document.body.style.background = bg;
+  },[theme]);
   const [showLoc,setShowLoc]   = useState(false);
   const [showFeedback,setShowFeedback] = useState(false);
   // Per-location calibrated planing threshold (from this spot's feedback only).
@@ -736,6 +788,7 @@ function App() {
         if(d.wf_rider&&typeof d.wf_rider==="object"){ setRider(d.wf_rider); setRi(d.wf_rider); saveStored("wf_rider",d.wf_rider); }
         if(Array.isArray(d.wf_gear)){ setGear(d.wf_gear); saveStored("wf_gear",d.wf_gear); }
         if(typeof d.wf_usegear==="boolean"){ setUseGear(d.wf_usegear); saveStored("wf_usegear",d.wf_usegear); }
+        if(d.wf_theme==="light"||d.wf_theme==="dark"){ setThemeState(d.wf_theme); saveStored("wf_theme",d.wf_theme); }
       })
       .catch(()=>{});
     return ()=>{ cancelled=true; };
@@ -1198,7 +1251,7 @@ function App() {
 
   const S={
     wrap:{fontFamily:"'Barlow',sans-serif",background:C.bg,color:C.text,minHeight:"100vh",fontSize:14},
-    hdr:{background:"rgba(10,14,20,.97)",borderBottom:`1px solid ${C.border}`,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:6,position:"sticky",top:0,zIndex:100},
+    hdr:{background:C.headerBg,borderBottom:`1px solid ${C.border}`,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:6,position:"sticky",top:0,zIndex:100},
     locBar:{background:C.panel,borderBottom:`2px solid ${C.sky}`,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8},
     riderBar:{background:C.panel,borderBottom:`1px solid ${C.border}`,borderTop:`2px solid ${C.signal}`,padding:"14px 20px"},
     main:{padding:"14px clamp(10px,3vw,18px) 40px",maxWidth:1200,margin:"0 auto"},
@@ -1221,8 +1274,8 @@ function App() {
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
-            <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:"#fff"}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.7.0</div>
+            <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1237,6 +1290,11 @@ function App() {
               </button>
             ))}
           </div>
+          <button onClick={()=>setTheme(theme==="light"?"dark":"light")}
+            title={theme==="light"?"Dark Mode":"Light Mode"}
+            style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:3,padding:"2px 8px",fontFamily:"monospace",fontSize:13,cursor:"pointer",lineHeight:1.2}}>
+            {theme==="light"?"☾":"☀"}
+          </button>
           <span style={{fontFamily:"monospace",fontSize:13,color:C.signal}}>{clock}</span>
         </div>
       </header>
@@ -1872,7 +1930,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.7.0</span>
+        <span>WindFoil Weather Intelligence v3.8.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Profile routes (Express)
-// File version: 1.0.1 (ESM .mjs)  |  App target: v3.7.0
+// File version: 1.0.1 (ESM .mjs)  |  App target: v3.8.0
 // Mount:  app.use('/api/profile', requireAuth, profileRouter)
 // ============================================================================
 import { Router } from 'express';

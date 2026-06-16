@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.8.0 (2026-06-16)
+**Dark/Light-Theme, pro User wählbar & gespeichert**
+- Zwei vollständige Paletten (`THEMES.dark` / `THEMES.light`) mit identischen Tokens; Light Mode behält Struktur & Akzent-Sprache des Dark Mode, Akzente leicht abgedunkelt für Kontrast auf Weiß
+- Lebende Palette `C` + `applyTheme(name)`: schaltet `C` und alle abgeleiteten Style-Objekte (Chart-Tooltip/Achsen/Grid, Auth-Palette) in-place um → ein Re-Render thematisiert die ~280 `C.*`-Stellen ohne Umbau
+- Umschalter (☀/☾) im Header; vorher hartcodierte dunkle Stellen (Header-BG, Tooltip, Status-Farben, WINDFOIL-Titel) auf Tokens umgestellt
+- Persistenz pro User über den Prefs-Store (`wf_theme` zur Allowlist) + localStorage-Cache; Hydration beim Start
+- Inline-Pre-Paint-Skript setzt den gespeicherten Theme-Hintergrund vor dem React-Mount (kein Dark-Flash im Light Mode)
+
 ## v3.7.0 (2026-06-16)
 **Historische Station-↔-Modell-Korrelation via Meteostat (Bias)**
 - Ersetzt die Weatherbit-History (lieferte planbedingt nie Daten) durch einen echten Bias: neuer Endpoint `GET /api/station/bias` (`proxy-server.js` v2.6.0)
