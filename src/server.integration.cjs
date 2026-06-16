@@ -37,6 +37,7 @@ async function mountWindfoil(app) {
     { equipmentRouter },
     { analyticsRouter },
     { locationRouter },
+    { prefsRouter },
   ] = await Promise.all([
     import('./auth.mjs'),
     import('better-auth/node'),
@@ -47,6 +48,7 @@ async function mountWindfoil(app) {
     import('./equipment.routes.mjs'),
     import('./analytics.routes.mjs'),
     import('./locations.routes.mjs'),
+    import('./prefs.routes.mjs'),
   ]);
 
   // Domain migrations on boot (Better Auth tables are created by the CLI/deploy).
@@ -67,6 +69,7 @@ async function mountWindfoil(app) {
   app.use('/api/equipment', requireAuth, equipmentRouter);
   app.use('/api/analytics', requireAuth, analyticsRouter);
   app.use('/api/locations', requireAuth, locationRouter);
+  app.use('/api/prefs',     requireAuth, prefsRouter);
 
   return app;
 }

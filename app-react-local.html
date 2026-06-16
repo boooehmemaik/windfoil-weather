@@ -315,6 +315,18 @@ function saveStored(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); return true; }
   catch(e) { return false; }
 }
+// Persist a setting to localStorage AND the per-user server store. iOS Safari
+// drops localStorage (Private Browsing / "Block All Cookies" / ITP), so the
+// server copy is the durable one; the local write is just an offline cache.
+// Fire-and-forget — the UI already updated from React state.
+function savePref(key, val) {
+  saveStored(key, val);
+  fetch(`/api/prefs/${key}`, {
+    method: "PUT", credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ value: val }),
+  }).catch(()=>{});
+}
 
 // ── Real station vs model: confidence scoring v2.2.0 ─────────────────────────
 const PROXY_BASE = "/api/station";
@@ -697,6 +709,23 @@ function App() {
         if(cancelled||!d) return;
         if(Array.isArray(d.recent)&&d.recent.length){ setRecent(d.recent); saveStored("wf_loc_recent",d.recent); }
         if(d.active&&d.active.lat!=null&&d.active.lon!=null){ setLoc(d.active); saveStored("wf_loc",d.active); }
+      })
+      .catch(()=>{});
+    return ()=>{ cancelled=true; };
+  },[]);
+
+  // Hydrate rider profile / gear / auto-setup toggle from the SERVER on mount,
+  // for the same iOS-Safari reason as the locations above. setRider (not just
+  // setRi) so the loaded profile immediately drives the analysis.
+  useEffect(()=>{
+    let cancelled=false;
+    fetch("/api/prefs",{credentials:"include"})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{
+        if(cancelled||!d) return;
+        if(d.wf_rider&&typeof d.wf_rider==="object"){ setRider(d.wf_rider); setRi(d.wf_rider); saveStored("wf_rider",d.wf_rider); }
+        if(Array.isArray(d.wf_gear)){ setGear(d.wf_gear); saveStored("wf_gear",d.wf_gear); }
+        if(typeof d.wf_usegear==="boolean"){ setUseGear(d.wf_usegear); saveStored("wf_usegear",d.wf_usegear); }
       })
       .catch(()=>{});
     return ()=>{ cancelled=true; };
@@ -1306,7 +1335,7 @@ function App() {
           <button style={{...S.btn,flex:"1 1 180px",touchAction:"manipulation"}}
             onClick={()=>{setRider({...ri});setActiveDay(0);}}>ANALYSE STARTEN →</button>
           <button style={{...S.btn,flex:"1 1 180px",background:"transparent",border:`1px solid ${C.go}`,color:C.go,touchAction:"manipulation"}}
-            onClick={()=>{ saveStored("wf_rider",ri); setRider({...ri}); setProfileSaved(true); setTimeout(()=>setProfileSaved(false),2000); }}>
+            onClick={()=>{ savePref("wf_rider",ri); setRider({...ri}); setProfileSaved(true); setTimeout(()=>setProfileSaved(false),2000); }}>
             {profileSaved ? "✓ GESPEICHERT" : "PROFIL SPEICHERN"}
           </button>
         </div>
@@ -1316,7 +1345,7 @@ function App() {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <span style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted}}>🎒 Mein Equipment</span>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:useGear?C.go:C.muted,cursor:"pointer"}}>
-              <input type="checkbox" checked={useGear} onChange={e=>{setUseGear(e.target.checked); saveStored("wf_usegear",e.target.checked); setActiveDay(0);}} />
+              <input type="checkbox" checked={useGear} onChange={e=>{setUseGear(e.target.checked); savePref("wf_usegear",e.target.checked); setActiveDay(0);}} />
               Automatische Setup-Wahl
             </label>
           </div>
@@ -1328,7 +1357,7 @@ function App() {
                 <div key={g.id} style={{display:"flex",alignItems:"center",gap:6,background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"5px 8px",fontSize:11}}>
                   <span style={{color:C.text}}>{g.name||`${g.wing}m²`}</span>
                   <span style={{color:C.muted,fontFamily:"monospace",fontSize:10}}>{g.wing}m² · {g.foil}cm²{g.planeKn?` · ab ${g.planeKn}kn`:""}</span>
-                  <button onClick={()=>{const ng=gear.filter(x=>x.id!==g.id); setGear(ng); saveStored("wf_gear",ng); setActiveDay(0);}}
+                  <button onClick={()=>{const ng=gear.filter(x=>x.id!==g.id); setGear(ng); savePref("wf_gear",ng); setActiveDay(0);}}
                     style={{background:"none",border:"none",color:C.stop,cursor:"pointer",fontSize:13,padding:0,lineHeight:1}}>×</button>
                 </div>
               ))}
@@ -1360,7 +1389,7 @@ function App() {
                   if(!newGear.wing||!newGear.foil) return;
                   const entry={...newGear,id:Date.now()};
                   const ng=[...gear,entry];
-                  setGear(ng); saveStored("wf_gear",ng);
+                  setGear(ng); savePref("wf_gear",ng);
                   setNewGear({name:"",wing:"5.0",foil:"1800",planeKn:""});
                   setActiveDay(0);
                 }}>+ Hinzufügen</button>
