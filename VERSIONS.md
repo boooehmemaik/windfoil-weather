@@ -1,5 +1,12 @@
 # WindFoil — Version History
 
+## v3.8.2 (2026-06-19)
+**Wettermodell-Auswahl: AROME-HD für Italien + Preset-Liste reduziert**
+- Forecast (`index.html`) nutzt jetzt pro Spot das beste hochauflösende Modell: für Orte im AROME-Gitter (Italien-Festland bis ~lon 16, inkl. Lago di Garda/**Torbole**, Venedig, Rom, Sardinien) `meteofrance_arome_france_hd` (1,5 km — Goldstandard für thermische Alpen-/Seewinde wie Ora/Peler); sonst weiterhin Open-Meteo `best_match`
+- Robuster Fallback: liegt ein Punkt außerhalb der AROME-Domain (Sizilien/Süd-Apulien → null-Werte) oder schlägt der Call fehl, wird still auf `best_match` zurückgeschaltet
+- FC-Statusanzeige zeigt das aktive Modell (z. B. „✅ AROME-HD 1.5km")
+- „Orte ändern": Voreinstellungen auf **Wörthsee / Pilsensee** reduziert (Griechenland-Presets entfernt)
+
 ## v3.8.1 (2026-06-16)
 **Fix: „echte Wetterstationen" zeigten keine Werte mehr**
 - Ursache: Weatherbit-Free-Quota (50/Tag) durch das Nearby-Panel (bis zu 4 Calls/Aufruf) erschöpft → HTTP 429 mit leerem Body → alle Stationswerte null

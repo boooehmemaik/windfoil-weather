@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.8.1 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.8.2 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -30,7 +30,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v3.8.1
+// WindFoil Weather Intelligence v3.8.2
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -210,13 +210,43 @@ async function fetchWithTimeout(url, ms = 7000) {
   }
 }
 
+// Pick the best high-resolution model for a given spot.
+// Météo-France AROME-HD (1.5 km) is the gold standard for Alpine/lake thermal
+// winds (Lago di Garda: Ora/Peler etc.). Its grid covers France plus most of
+// mainland Italy up to ~lon 16 — Torbole, Venedig, Rom, Sardinien are inside;
+// Sizilien / Süd-Apulien fall outside and use Open-Meteo best_match instead.
+function pickForecastModel(lat, lon) {
+  const inAromeItaly = lat >= 36 && lat <= 47.2 && lon >= 6.5 && lon <= 16;
+  return inAromeItaly ? "meteofrance_arome_france_hd" : "";
+}
+
+const MODEL_LABELS = { meteofrance_arome_france_hd:"AROME-HD 1.5km" };
+
+function hasWindData(fc){
+  return fc && fc.hourly && Array.isArray(fc.hourly.windspeed_10m)
+    && fc.hourly.windspeed_10m.some(v => v != null);
+}
+
 async function tryFetchForecast(lat, lon) {
-  const params = new URLSearchParams({
+  const base = {
     latitude:lat, longitude:lon,
     hourly:"temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m,surface_pressure,relativehumidity_2m,cloudcover,cape,lifted_index",
     wind_speed_unit:"ms", forecast_days:7, timezone:"auto",
-  });
-  return fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${params}`);
+  };
+  const model = pickForecastModel(lat, lon);
+  if (model) {
+    try {
+      const p = new URLSearchParams({ ...base, models:model });
+      const fc = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${p}`);
+      // AROME's grid ends near lon 16 — if this point is outside it (all-null
+      // winds) silently fall through to the global best_match model.
+      if (hasWindData(fc)) { fc.__model = model; return fc; }
+    } catch(_) { /* fall back to best_match below */ }
+  }
+  const p = new URLSearchParams(base);
+  const fc = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${p}`);
+  fc.__model = "best_match";
+  return fc;
 }
 
 async function tryFetchHistorical(lat, lon) {
@@ -823,10 +853,6 @@ function App() {
 
   const PRESETS = [
     {lat:48.0703,lon:11.1167,name:"Wörthsee / Pilsensee"},
-    {lat:36.9833,lon:21.6667,name:"Navarino / Gialova"},
-    {lat:36.8900,lon:21.7500,name:"Pylos"},
-    {lat:37.0736,lon:22.4294,name:"Sparti"},
-    {lat:37.5000,lon:22.3731,name:"Korinthia"},
   ];
 
   useEffect(()=>{
@@ -915,7 +941,8 @@ function App() {
     let fc = null;
     try {
       fc = await tryFetchForecast(l.lat, l.lon);
-      setApiStatus(s=>({...s,forecast:"✅ Live"}));
+      const ml = MODEL_LABELS[fc.__model];
+      setApiStatus(s=>({...s,forecast:ml ? `✅ ${ml}` : "✅ Live"}));
       setLoadMsg("Forecast geladen. Lade ERA5-Archiv…");
     } catch(e) {
       setApiStatus(s=>({...s,forecast:"⚠️ Demo"}));
@@ -1275,7 +1302,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.1</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.2</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1936,7 +1963,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.8.1</span>
+        <span>WindFoil Weather Intelligence v3.8.2</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
