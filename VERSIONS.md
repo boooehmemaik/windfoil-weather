@@ -1,5 +1,12 @@
 # WindFoil — Version History
 
+## v3.8.4 (2026-06-23)
+**Echte Stations-Messung als Overlay (Ist vs. Forecast) — Torbole/Gardasee**
+- Neu: `proxy-server.js` v2.6.2 holt serverseitig den **realen Anemometer-Feed** hinter dem addicted-sports-Webcam-Graph („Wetterdaten", profiwetter/DWD-Station). Der Endpoint braucht CSRF-Token + Session-Cookie → daher Proxy, nicht aus dem Browser
+- Endpoint `GET /api/station/measured?lat&lon&date=YYYY-MM-DD`: liefert 24 Stundenwerte (m/s, an die Forecast-Kontrakt-Einheit angeglichen) — Wind = Mittel der 10-Min-`wsavg`, Böe = Max `wsmax`; no-op (`ok:false`) für Spots ohne bekannte Station. Registry `MEASURED_STATIONS` (aktuell Torbole), per Haversine ≤6 km gematcht; 5-Min-Cache
+- Frontend (`index.html`) zeichnet bei verfügbarer Station zwei Zusatzlinien in der „Foil-Fenster Analyse": **Ist Wind (weiß)** + **Ist Böe (rot, gepunktet)** neben dem Forecast (blau/orange); Caption nennt Quelle + letzten Messzeitpunkt. Reagiert auf Tageswechsel, datums-gematcht
+- Schließt den in v3.8.3 vermerkten offenen Punkt („echte Stations-Kalibrierung steht noch aus") als sichtbaren Ist-vs-Forecast-Abgleich; bestätigt den systematischen Under-Forecast (23.06.: Modell morgens ~Ø −1.9 kn Wind / −4.8 kn Böe, Peler komplett verpasst)
+
 ## v3.8.3 (2026-06-23)
 **Fix: Thermik-/Ora-Analyse für den Gardasee + realistischere kanalisierte Winde**
 - Thermik/Seebrise war fest auf einen W-SW-Spot (250°, „Navarino Bay / Ionisches Meer") verdrahtet → die Garda-**Ora** (aus Süd ~195°) wurde nie als thermische Brise erkannt und der Text nannte den falschen Spot

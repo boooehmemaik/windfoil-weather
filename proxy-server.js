@@ -1,4 +1,4 @@
-// proxy-server.js v2.6.1
+// proxy-server.js v2.6.2
 // WindFoil Weather System — Secure backend proxy for real station data
 //
 // WHY THIS EXISTS
@@ -369,6 +369,97 @@ async function openMeteoCurrentBatch(points) {
   });
   return out;
 }
+
+// ── Real measured-station feed (addicted-sports / profiwetter webcams) ────────
+// A handful of spots expose a LIVE anemometer feed (knots, ~10-min sampling)
+// behind their webcam "Wetterdaten" graph. We proxy it server-side because the
+// endpoint needs a CSRF token + session cookie that the browser can't obtain
+// cross-origin. This is real measurement — the ground truth against which our
+// Open-Meteo/AROME forecast (the normal chart) can be validated.
+const ADDICTED_BASE = "https://en.addicted-sports.com";
+const MEASURED_STATIONS = [
+  { wc: "torbole", path: "gardasee/torbole", lat: 45.869, lon: 10.873, label: "Torbole (Gardasee)" },
+];
+const KN_PER_MS = 1.94384; // feed is in knots; we return m/s to match the forecast contract
+
+function findMeasuredStation(lat, lon) {
+  for (const s of MEASURED_STATIONS) {
+    if (haversineKm(lat, lon, s.lat, s.lon) <= 6) return s;
+  }
+  return null;
+}
+
+// Fetch the webcam page (scrape CSRF token + keep the session cookie), then call
+// getWeatherData.php for the given local day. Returns 24 hourly slots in m/s:
+// wind = mean of the 10-min wsavg, gust = max wsmax, dir = last sample of the
+// hour. Nulls where the day hasn't reached that hour yet (or no sample exists).
+async function fetchMeasuredDay(st, dateStr) {
+  const [y, m, d] = dateStr.split("-");
+  const pageRes = await fetch(`${ADDICTED_BASE}/webcam/${st.path}/`);
+  const html = await pageRes.text();
+  const tok = (html.match(/name="csrf-token"\s+content="([a-f0-9]+)"/) || [])[1];
+  if (!tok) return { ok: false, error: "csrf_unavailable" };
+  const cookie = (pageRes.headers.raw()["set-cookie"] || []).map(c => c.split(";")[0]).join("; ");
+
+  const api = `${ADDICTED_BASE}/fileadmin/webcam/src/getWeatherData.php`
+    + `?startimg=${y}/${m}/${d}/0000&stopimg=${y}/${m}/${d}/2359&graph=true&wc=${encodeURIComponent(st.wc)}`;
+  const apiRes = await fetch(api, {
+    headers: { CsrfToken: tok, Cookie: cookie, "X-Requested-With": "XMLHttpRequest" },
+  });
+  const j = await apiRes.json();
+  const meas = j && j.measurment; // note: upstream spells it "measurment"
+  if (!meas || typeof meas !== "object") return { ok: false, error: "no_measurement" };
+
+  const acc = Array.from({ length: 24 }, () => ({ w: [], g: [], dir: null }));
+  let n = 0, latest = null;
+  for (const k in meas) {
+    const v = meas[k]; const ts = v && v.tsdatetime;
+    if (!ts) continue;
+    const h = parseInt(ts.slice(11, 13), 10);
+    if (!(h >= 0 && h < 24)) continue;
+    const wa = parseFloat(v.wsavg), wm = parseFloat(v.wsmax), dd = parseFloat(v.dir);
+    if (Number.isFinite(wa)) acc[h].w.push(wa / KN_PER_MS);
+    if (Number.isFinite(wm)) acc[h].g.push(wm / KN_PER_MS);
+    if (Number.isFinite(dd)) acc[h].dir = Math.round(dd);
+    n++; if (!latest || ts > latest) latest = ts;
+  }
+  const wind = Array(24).fill(null), gust = Array(24).fill(null), dir = Array(24).fill(null);
+  for (let h = 0; h < 24; h++) {
+    if (acc[h].w.length) wind[h] = Math.round(acc[h].w.reduce((a, b) => a + b, 0) / acc[h].w.length * 100) / 100;
+    if (acc[h].g.length) gust[h] = Math.round(Math.max(...acc[h].g) * 100) / 100;
+    dir[h] = acc[h].dir;
+  }
+  return {
+    ok: true, wc: st.wc, label: st.label, unit: "ms",
+    source: `addicted-sports / profiwetter (${st.label})`,
+    date: dateStr, hourly: { wind, gust, dir },
+    samples: n, latest: latest ? latest.slice(11, 16) : null,
+  };
+}
+
+// ── Endpoint: real measured day (ground-truth overlay) ────────────────────────
+// GET /api/station/measured?lat=..&lon=..&date=YYYY-MM-DD
+// No-ops (ok:false) for spots without a known measured station, so the frontend
+// can call it for any location and simply skip the overlay when absent.
+app.get("/api/station/measured", async (req, res) => {
+  const la = parseFloat(req.query.lat), lo = parseFloat(req.query.lon);
+  const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || "") ? req.query.date : null;
+  if (!Number.isFinite(la) || !Number.isFinite(lo) || !dateStr)
+    return res.status(400).json({ ok: false, error: "lat/lon/date required" });
+  const st = findMeasuredStation(la, lo);
+  if (!st) return res.json({ ok: false, error: "no_measured_station" });
+
+  const ck = `measured:${st.wc}:${dateStr}`;
+  const hit = cacheGet(ck);
+  if (hit) return res.json({ ...hit, cached: true });
+  try {
+    const out = await fetchMeasuredDay(st, dateStr);
+    if (out.ok) cacheSet(ck, out, CACHE_TTL.current);
+    res.json(out);
+  } catch (e) {
+    res.status(502).json({ ok: false, error: e.message });
+  }
+});
 
 // ── Endpoint: current observation ─────────────────────────────────────────────
 app.get("/api/station/current", async (req, res) => {

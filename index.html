@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.8.3 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.8.4 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -30,7 +30,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v3.8.3
+// WindFoil Weather Intelligence v3.8.4
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -828,6 +828,7 @@ function App() {
   const [loadMsg,setLoadMsg]   = useState("Verbinde mit Open-Meteo…");
   const [apiStatus,setApiStatus]= useState({forecast:"⏳",historical:"⏳"});
   const [activeDay,setActiveDay]= useState(0);
+  const [measured,setMeasured] = useState(null); // real station feed for the active day (null = none)
   const [clock,setClock]       = useState("");
   const [windUnit,setWindUnit]  = useState("kn"); // 'ms' | 'kn' | 'bf'
   const [theme,setThemeState]   = useState(()=>loadStored("wf_theme","dark")); // 'dark' | 'light'
@@ -1083,6 +1084,25 @@ function App() {
 
   useEffect(()=>{ loadData(loc); },[loc]);
 
+  // ── Real measured-station overlay (ground truth vs forecast) ──────────────
+  // For spots with a live anemometer (e.g. Torbole) fetch the actual measured
+  // wind/gust for the displayed day. Backend no-ops for spots without one, so
+  // the overlay simply doesn't appear elsewhere. Keyed by the day's date so it
+  // stays correct when switching day tabs.
+  useEffect(()=>{
+    if(!forecast || !forecast.hourly.time.length){ setMeasured(null); return; }
+    const times=forecast.hourly.time;
+    const [fy,fm,fd]=times[0].slice(0,10).split('-').map(Number);
+    const t=new Date(fy,fm-1,fd+activeDay);
+    const ds=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    let cancelled=false;
+    fetch(`/api/station/measured?lat=${loc.lat}&lon=${loc.lon}&date=${ds}`)
+      .then(r=>r.json())
+      .then(d=>{ if(!cancelled) setMeasured(d&&d.ok?d:null); })
+      .catch(()=>{ if(!cancelled) setMeasured(null); });
+    return ()=>{ cancelled=true; };
+  },[forecast,activeDay,loc]);
+
   // ── Compute day start indices from actual calendar dates ──────────────────
   // API may start mid-day (e.g. 17:00 local time) — find index where each
   // calendar day (00:00) begins, so "Heute" = today's 00:00 not hour[0]
@@ -1234,7 +1254,16 @@ function App() {
   })();
 
   // ── Chart data ──────────────────────────────────────────────────────────────
-  const windData  = dayData?dayData.labels.map((l,i)=>({h:l,wind:cvt(dayData.wins[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i]})):[];
+  // Real measured series for THIS day (only when the feed's date matches the
+  // displayed day). Aligned to the chart by the row's clock hour, not its index.
+  const activeDateStr = forecast ? (forecast.hourly.time[dayStartIndices[activeDay]]||"").slice(0,10) : null;
+  const meas = (measured && measured.ok && measured.date===activeDateStr) ? measured.hourly : null;
+  const windData  = dayData?dayData.labels.map((l,i)=>{
+    const hh=parseInt(l.slice(0,2),10);
+    const mw = meas && meas.wind[hh]!=null ? cvt(meas.wind[hh],windUnit) : null;
+    const mg = meas && meas.gust[hh]!=null ? cvt(meas.gust[hh],windUnit) : null;
+    return {h:l,wind:cvt(dayData.wins[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i],mwind:mw,mgust:mg};
+  }):[];
   const dirData   = dayData?dayData.labels.map((l,i)=>({idx:i,dir:dayData.dirs[i]})):[];
   const tempData  = dayData?dayData.labels.map((l,i)=>({h:l,temp:dayData.temp[i]})):[];
   const presData  = dayData?dayData.labels.map((l,i)=>({h:l,pres:Math.round(dayData.pres[i])})):[];
@@ -1375,7 +1404,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.3</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.4</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1624,6 +1653,9 @@ function App() {
             {/* FOIL WINDOW */}
             <div style={S.card}>
               <div style={S.sec}>Foil-Fenster Analyse — Rider-spezifisch + Foil-Score</div>
+              {meas && <div style={{fontSize:10,color:C.muted,fontFamily:"monospace",marginBottom:6}}>
+                Weiß/rot = echte Station ({measured.source}{measured.latest?`, zuletzt ${measured.latest}`:""}) vs. Forecast (blau/orange)
+              </div>}
               <div style={S.cwL}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={windData}><CartesianGrid {...gr} />
@@ -1636,6 +1668,8 @@ function App() {
                     <ReferenceLine yAxisId="l" y={cvt(dayData.win.minWind,windUnit)} stroke={C.caution} strokeDasharray="4 3" />
                     <Line yAxisId="l" type="monotone" dataKey="wind" name={`Wind ${unitLabel(windUnit)}`} stroke={C.sky} strokeWidth={2} dot={false} />
                     <Line yAxisId="l" type="monotone" dataKey="gust" name={`Böen ${unitLabel(windUnit)}`} stroke={C.signal} strokeDasharray="4 3" strokeWidth={1.5} dot={false} />
+                    {meas && windData.some(d=>d.mwind!=null) && <Line yAxisId="l" type="monotone" dataKey="mwind" name={`Ist Wind ${unitLabel(windUnit)}`} stroke={C.text} strokeWidth={2} dot={false} connectNulls />}
+                    {meas && windData.some(d=>d.mgust!=null) && <Line yAxisId="l" type="monotone" dataKey="mgust" name={`Ist Böe ${unitLabel(windUnit)}`} stroke={C.stop} strokeDasharray="2 2" strokeWidth={1.5} dot={false} connectNulls />}
                     <Line yAxisId="r" type="monotone" dataKey="score" name="Foil-Score" stroke={C.go} strokeWidth={1.5} dot={false} strokeOpacity={0.8} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -2036,7 +2070,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.8.3</span>
+        <span>WindFoil Weather Intelligence v3.8.4</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
