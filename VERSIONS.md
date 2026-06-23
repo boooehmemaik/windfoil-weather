@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.8.3 (2026-06-23)
+**Fix: Thermik-/Ora-Analyse für den Gardasee + realistischere kanalisierte Winde**
+- Thermik/Seebrise war fest auf einen W-SW-Spot (250°, „Navarino Bay / Ionisches Meer") verdrahtet → die Garda-**Ora** (aus Süd ~195°) wurde nie als thermische Brise erkannt und der Text nannte den falschen Spot
+- Neu: spot-abhängiges `thermalRegime(lat,lon)` — Gardasee (inkl. **Torbole**) nutzt jetzt die Ora-Richtung (Süd ~195°, Peak ~15 Uhr); `seaBreeze()` rechnet wrap-around-sicher, `computeThermik()` kreditiert eine sonnengetriebene Tal-/Seewind-Brise (taucht nicht in CAPE auf), damit ein Ora-Tag nicht mehr „Kaum Thermik" zeigt
+- Thermik-Box-Text ist jetzt spotabhängig (Regime-Label/Herkunft/Peak-Stunde) statt hartkodiert „Navarino Bay"
+- Forecast holt im AROME-Gitter zusätzlich `best_match` und nimmt **pro Stunde den stärkeren Wind** (Ensemble-Hüllkurve): ein einzelnes Gitter unterschätzt die kanalisierten Garda-Winde (Pelèr/Ora); Status zeigt „AROME-HD + Best (max/h)"
+- Hinweis: Modelle unterschätzen die kanalisierten N-/S-Winde am Nordsee weiterhin systematisch (morgens real 12–16 kn vs. ~5 kn Prognose) — eine echte Stations-Kalibrierung steht noch aus
+
 ## v3.8.2 (2026-06-19)
 **Wettermodell-Auswahl: AROME-HD für Italien + Preset-Liste reduziert**
 - Forecast (`index.html`) nutzt jetzt pro Spot das beste hochauflösende Modell: für Orte im AROME-Gitter (Italien-Festland bis ~lon 16, inkl. Lago di Garda/**Torbole**, Venedig, Rom, Sardinien) `meteofrance_arome_france_hd` (1,5 km — Goldstandard für thermische Alpen-/Seewinde wie Ora/Peler); sonst weiterhin Open-Meteo `best_match`

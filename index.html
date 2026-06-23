@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.8.2 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.8.3 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -30,7 +30,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v3.8.2
+// WindFoil Weather Intelligence v3.8.3
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -220,11 +220,53 @@ function pickForecastModel(lat, lon) {
   return inAromeItaly ? "meteofrance_arome_france_hd" : "";
 }
 
-const MODEL_LABELS = { meteofrance_arome_france_hd:"AROME-HD 1.5km" };
+const MODEL_LABELS = {
+  meteofrance_arome_france_hd:"AROME-HD 1.5km",
+  arome_best_max:"AROME-HD + Best (max/h)",
+};
+
+// Local thermal-wind regime — the dominant afternoon thermal-breeze direction,
+// a human label, and its typical peak hour. Geography differs per spot (the
+// Gardasee's "Ora" funnels up the lake from the south; a coastal sea breeze
+// blows W-SW off the open sea), so the alignment target must be spot-specific
+// instead of the old hard-coded 250°.
+function thermalRegime(lat, lon){
+  // Lago di Garda — afternoon "Ora" comes up the lake from the south.
+  if(lat>=45.4 && lat<=45.95 && lon>=10.5 && lon<=11.0)
+    return { dir:195, label:"Ora (Süd)", origin:"vom Gardasee-Süden", peakHour:15 };
+  // Generic coastal sea breeze.
+  return { dir:250, label:"Meeresbrise (W-SW)", origin:"vom Meer", peakHour:14 };
+}
 
 function hasWindData(fc){
   return fc && fc.hourly && Array.isArray(fc.hourly.windspeed_10m)
     && fc.hourly.windspeed_10m.some(v => v != null);
+}
+
+// Per-hour upper-envelope merge of two forecasts that share the same hourly
+// time grid. For each hour keep whichever model reports the stronger wind, and
+// carry THAT model's gust + direction so speed/dir stay self-consistent.
+// Garda's Pelèr/Ora are channeled valley winds a single grid often under-
+// forecasts; the envelope recovers the stronger, more realistic value (AROME
+// resolves the morning Pelèr better, best_match/ICON the afternoon Ora peak).
+function mergeForecastsMax(a, b){
+  if(!hasWindData(a)) return b;
+  if(!hasWindData(b)) return a;
+  // Both come from forecast_days=7 + timezone=auto, so they start at the same
+  // local 00:00; bail out (use a) if the grids don't actually line up.
+  if(a.hourly.time?.[0] !== b.hourly.time?.[0]) return a;
+  const out = JSON.parse(JSON.stringify(a));
+  const ha=a.hourly, hb=b.hourly, ho=out.hourly;
+  const n = Math.min(ha.windspeed_10m.length, hb.windspeed_10m.length);
+  for(let i=0;i<n;i++){
+    const wa=ha.windspeed_10m[i], wb=hb.windspeed_10m[i];
+    if(wb!=null && (wa==null || wb>wa)){
+      ho.windspeed_10m[i]=wb;
+      if(hb.windgusts_10m?.[i]!=null)      ho.windgusts_10m[i]=hb.windgusts_10m[i];
+      if(hb.winddirection_10m?.[i]!=null)  ho.winddirection_10m[i]=hb.winddirection_10m[i];
+    }
+  }
+  return out;
 }
 
 async function tryFetchForecast(lat, lon) {
@@ -233,18 +275,33 @@ async function tryFetchForecast(lat, lon) {
     hourly:"temperature_2m,windspeed_10m,windgusts_10m,winddirection_10m,surface_pressure,relativehumidity_2m,cloudcover,cape,lifted_index",
     wind_speed_unit:"ms", forecast_days:7, timezone:"auto",
   };
+  const fetchModel = (models) => {
+    const p = new URLSearchParams(models ? { ...base, models } : base);
+    return fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${p}`);
+  };
   const model = pickForecastModel(lat, lon);
   if (model) {
     try {
-      const p = new URLSearchParams({ ...base, models:model });
-      const fc = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${p}`);
+      // Fetch the high-res model AND the global best_match in parallel, then
+      // take the per-hour stronger wind. A single grid (even AROME 1.5km)
+      // under-forecasts the channeled Gardasee winds; the envelope is closer
+      // to reality, especially the afternoon Ora peak.
+      const [arome, best] = await Promise.all([
+        fetchModel(model).catch(()=>null),
+        fetchModel("").catch(()=>null),
+      ]);
+      if (hasWindData(arome) && hasWindData(best)) {
+        const merged = mergeForecastsMax(arome, best);
+        merged.__model = "arome_best_max";
+        return merged;
+      }
       // AROME's grid ends near lon 16 — if this point is outside it (all-null
-      // winds) silently fall through to the global best_match model.
-      if (hasWindData(fc)) { fc.__model = model; return fc; }
+      // winds) silently fall through to whichever model has data.
+      if (hasWindData(arome)) { arome.__model = model; return arome; }
+      if (hasWindData(best))  { best.__model = "best_match"; return best; }
     } catch(_) { /* fall back to best_match below */ }
   }
-  const p = new URLSearchParams(base);
-  const fc = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${p}`);
+  const fc = await fetchModel("");
   fc.__model = "best_match";
   return fc;
 }
@@ -269,7 +326,10 @@ async function tryFetchHistorical(lat, lon) {
 }
 
 // ── Thermik ───────────────────────────────────────────────────────────────────
-function computeThermik(h, idx) {
+// Smallest angle between two compass bearings (0–180°).
+function angDiff(a, b){ let d=Math.abs(a-b)%360; return d>180?360-d:d; }
+
+function computeThermik(h, idx, regime) {
   const cape=(h.cape?.[idx]??0), li=(h.lifted_index?.[idx]??0), temp=(h.temperature_2m?.[idx]??20);
   const cloud=(h.cloudcover?.[idx]??50), humid=(h.relativehumidity_2m?.[idx]??60);
   const hour = h.time?.[idx] ? parseInt(h.time[idx].slice(11,13),10) : 12;
@@ -279,7 +339,16 @@ function computeThermik(h, idx) {
   const tempPts = Math.max(0,(temp-20)*1.5);
   const cloudF = 1-(cloud/100)*0.6;
   const humidF = Math.max(0.4,1-((humid-40)/120));
-  return Math.round(Math.max(0,Math.min(100,(capePts+liPts+tempPts)*solar*cloudF*humidF)));
+  // Thermal lake/valley breeze (Ora etc.): a sun-driven wind that does NOT
+  // register in CAPE/lifted-index. When the afternoon wind aligns with the
+  // spot's thermal regime, credit it so a pumping Ora day no longer reads
+  // "Kaum Thermik".
+  let breezePts = 0;
+  if(regime && hour>=11 && hour<=18){
+    const dir=h.winddirection_10m?.[idx];
+    if(dir!=null) breezePts = Math.max(0,1-angDiff(dir,regime.dir)/60)*solar*25;
+  }
+  return Math.round(Math.max(0,Math.min(100,(capePts+liPts+tempPts)*solar*cloudF*humidF+breezePts)));
 }
 
 function classifyThermik(max) {
@@ -289,9 +358,12 @@ function classifyThermik(max) {
   return{icon:"⛈",label:"Starke Thermik",desc:"Intensive Instabilität. Sturmböen und Gewitter möglich!",color:C.stop};
 }
 
-function seaBreeze(windDir, hour, month) {
+function seaBreeze(windDir, hour, month, regime) {
   if(hour<10||hour>19) return{active:false,boost:0,align:0};
-  const align=Math.max(0,1-Math.abs(windDir-250)/60);
+  // Align against the spot's thermal-breeze direction (Garda Ora ~195°, coastal
+  // sea breeze 250°), wrap-around safe so e.g. 198° still matches a 195° target.
+  const target = regime?.dir ?? 250;
+  const align=Math.max(0,1-angDiff(windDir,target)/60);
   const season=[0,.4,.5,.7,.9,1,1,1,.8,.6,.4,.2,.3][month]??0.5;
   const hf=Math.sin(Math.PI*(hour-10)/9);
   const boost=align*season*hf*3.5;
@@ -1058,12 +1130,13 @@ function App() {
       if(t){ const hh=t.slice(11,13), mm=t.slice(14,16); return `${hh}:${mm}`; }
       return `${String(i).padStart(2,'0')}:00`;
     });
-    const thermik=Array.from({length:24},(_,i)=>computeThermik(h,s+i));
+    const regime=thermalRegime(loc.lat,loc.lon);
+    const thermik=Array.from({length:24},(_,i)=>computeThermik(h,s+i,regime));
     const slice=(arr,a,b)=>arr.slice(a,b).filter(Boolean);
     const midW=slice(wins,12,16).reduce((a,b)=>a+b,0)/4||wins[12]||0;
     const midG=slice(gust,12,16).reduce((a,b)=>a+b,0)/4||gust[12]||0;
     const midDir=dirs[14]??dirs[12]??180;
-    const sb=seaBreeze(midDir,14,new Date().getMonth()+1); // getMonth() is local — correct
+    const sb=seaBreeze(midDir,14,new Date().getMonth()+1,regime); // getMonth() is local — correct
     const effW=midW+(sb.active?sb.boost:0);
     // Choose window: use midW (not effW) — consistent with dayScores tabs.
     let win, pickedGear=null;
@@ -1082,7 +1155,7 @@ function App() {
     const dayScore=scoreDay(wins,win);
     const session=bestSession(wins,win); // {score,startHour,endHour}
     const thInfo=classifyThermik(maxTh);
-    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,effW,dayScore,thInfo,pickedGear,session};
+    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,dayScore,thInfo,pickedGear,session};
   })();
 
   const dayScores = forecast ? Array.from({length:7},(_,d)=>{
@@ -1302,7 +1375,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.2</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.3</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1681,7 +1754,7 @@ function App() {
                 <strong style={{color:C.caution,fontSize:13}}>Thermik-Analyse — {dayData.thInfo.label}</strong>
                 <p style={{fontSize:12,color:C.muted,marginTop:4,lineHeight:1.7}}>
                   {dayData.thInfo.desc}
-                  {dayData.sb.active&&<><br/><br/>🌊 <b style={{color:C.sky}}>Meeresbrise aktiv:</b> W-SW (Ionisches Meer) +{fmtW(dayData.sb.boost,windUnit)} um ~14:30 Uhr. Ausrichtungsgrad {Math.round(dayData.sb.align*100)}% — typisch für Navarino Bay.</>}
+                  {dayData.sb.active&&<><br/><br/>🌊 <b style={{color:C.sky}}>Thermische Brise aktiv:</b> {dayData.regime.label} ({dayData.regime.origin}) +{fmtW(dayData.sb.boost,windUnit)} um ~{dayData.regime.peakHour}:00 Uhr. Ausrichtungsgrad {Math.round(dayData.sb.align*100)}%.</>}
                 </p>
               </div>
             </div>
@@ -1963,7 +2036,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.8.2</span>
+        <span>WindFoil Weather Intelligence v3.8.3</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
