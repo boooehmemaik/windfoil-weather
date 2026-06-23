@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.8.5 (2026-06-23)
+**Windrichtungs-Chart: Richtungspfeile statt Punkte**
+- Der „Windrichtung (°)"-Scatter (`index.html`) zeichnet pro Stunde jetzt einen gedrehten Pfeil (neue `DirArrow`-Shape) statt eines Punkts — der Pfeil zeigt in die Wehrichtung (Meteo-`dir` ist Herkunft → +180°; SVG-Korrektur −90°, sodass 0° = Nord nach oben zeigt). Farbe konsistent zur bisherigen Caution-Markierung
+
 ## v3.8.4 (2026-06-23)
 **Echte Stations-Messung als Overlay (Ist vs. Forecast) — Torbole/Gardasee**
 - Neu: `proxy-server.js` v2.6.2 holt serverseitig den **realen Anemometer-Feed** hinter dem addicted-sports-Webcam-Graph („Wetterdaten", profiwetter/DWD-Station). Der Endpoint braucht CSRF-Token + Session-Cookie → daher Proxy, nicht aus dem Browser
