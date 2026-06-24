@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.8.6 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.8.7 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -30,7 +30,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v3.8.6
+// WindFoil Weather Intelligence v3.8.7
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -284,7 +284,7 @@ function mergeForecastsMax(a, b){
 // exact bearing, so we lift every forenoon hour whose direction is NOT the
 // southern Ora sector. Heuristic first pass — should be auto-calibrated against
 // the real station feed (/api/station/measured) once enough days are logged.
-const PELER = { windFactor:1.40, gustFactor:1.35, oraBearing:195, oraGuard:70, lastHour:12 };
+const PELER = { windFactor:1.40, gustFactor:1.45, oraBearing:195, oraGuard:70, lastHour:12 };
 function isPelerHour(hour, dir){
   if(dir==null || hour==null || hour>PELER.lastHour) return false;
   return angDiff(dir, PELER.oraBearing) > PELER.oraGuard; // not within 70° of the S-Ora
@@ -1454,7 +1454,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.6</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.7</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2120,7 +2120,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.8.6</span>
+        <span>WindFoil Weather Intelligence v3.8.7</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
