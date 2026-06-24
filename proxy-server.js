@@ -378,15 +378,29 @@ async function openMeteoCurrentBatch(points) {
 // Open-Meteo/AROME forecast (the normal chart) can be validated.
 const ADDICTED_BASE = "https://en.addicted-sports.com";
 const MEASURED_STATIONS = [
-  { wc: "torbole", path: "gardasee/torbole", lat: 45.869, lon: 10.873, label: "Torbole (Gardasee)" },
+  // type "addicted": addicted-sports getWeatherData.php (knots, CSRF — see below)
+  { type: "addicted", wc: "torbole", path: "gardasee/torbole", lat: 45.869, lon: 10.873, label: "Torbole (Gardasee)" },
+  // type "neverin": neverin.hr JSON API fronting the official ZHMS station
+  // (m/s, full hourly series, NO gusts). Covers the whole Ulcinj riviera (town
+  // ~3 km, Velika Plaža/Ada Bojana further SE) → wider radius.
+  { type: "neverin", station: "ulcinj", tz: "Europe/Podgorica", lat: 41.9166, lon: 19.25293, radiusKm: 12, label: "Ulcinj (ZHMS)" },
 ];
 const KN_PER_MS = 1.94384; // feed is in knots; we return m/s to match the forecast contract
 
 function findMeasuredStation(lat, lon) {
   for (const s of MEASURED_STATIONS) {
-    if (haversineKm(lat, lon, s.lat, s.lon) <= 6) return s;
+    if (haversineKm(lat, lon, s.lat, s.lon) <= (s.radiusKm || 6)) return s;
   }
   return null;
+}
+
+// Epoch (seconds, UTC) → the station's LOCAL calendar date + hour, DST-safe via
+// Intl. The measured overlay aligns to the chart by the row's local clock hour.
+function localPartsTZ(epochSec, tz) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false,
+  }).formatToParts(new Date(epochSec * 1000)).reduce((o, p) => (o[p.type] = p.value, o), {});
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: parseInt(parts.hour, 10) % 24 };
 }
 
 // Fetch the webcam page (scrape CSRF token + keep the session cookie), then call
@@ -437,6 +451,38 @@ async function fetchMeasuredDay(st, dateStr) {
   };
 }
 
+// neverin.hr JSON API → official ZHMS station. archive.hourly holds parallel
+// arrays (datetime = unix UTC epoch, wspeed in m/s, wdir in deg; wgust empty —
+// these stations don't report gusts). We bin the requested LOCAL day into 24
+// hourly slots, matching the addicted contract (gust stays null, so the
+// frontend simply omits the gust line).
+async function fetchMeasuredDayNeverin(st, dateStr) {
+  const r = await fetch(`https://api.neverin.hr/v2/stations/?station=${encodeURIComponent(st.station)}`);
+  if (!r.ok) return { ok: false, error: `upstream_${r.status}` };
+  const j = await r.json();
+  const h = j && j.data && j.data.archive && j.data.archive.hourly;
+  if (!h || !Array.isArray(h.datetime)) return { ok: false, error: "no_hourly" };
+
+  const wind = Array(24).fill(null), gust = Array(24).fill(null), dir = Array(24).fill(null);
+  let n = 0, latestHour = -1;
+  for (let i = 0; i < h.datetime.length; i++) {
+    const ep = parseFloat(h.datetime[i]);
+    if (!Number.isFinite(ep)) continue;
+    const { date, hour } = localPartsTZ(ep, st.tz);
+    if (date !== dateStr) continue;
+    const w = parseFloat(h.wspeed && h.wspeed[i]), dd = parseFloat(h.wdir && h.wdir[i]);
+    if (Number.isFinite(w)) wind[hour] = Math.round(w * 100) / 100;
+    if (Number.isFinite(dd)) dir[hour] = Math.round(dd);
+    n++; if (hour > latestHour) latestHour = hour;
+  }
+  return {
+    ok: true, wc: st.station, label: st.label, unit: "ms",
+    source: `ZHMS / meteo.co.me (${st.label})`,
+    date: dateStr, hourly: { wind, gust, dir },
+    samples: n, latest: latestHour >= 0 ? `${String(latestHour).padStart(2, "0")}:00` : null,
+  };
+}
+
 // ── Endpoint: real measured day (ground-truth overlay) ────────────────────────
 // GET /api/station/measured?lat=..&lon=..&date=YYYY-MM-DD
 // No-ops (ok:false) for spots without a known measured station, so the frontend
@@ -449,11 +495,13 @@ app.get("/api/station/measured", async (req, res) => {
   const st = findMeasuredStation(la, lo);
   if (!st) return res.json({ ok: false, error: "no_measured_station" });
 
-  const ck = `measured:${st.wc}:${dateStr}`;
+  const ck = `measured:${st.wc || st.station}:${dateStr}`;
   const hit = cacheGet(ck);
   if (hit) return res.json({ ...hit, cached: true });
   try {
-    const out = await fetchMeasuredDay(st, dateStr);
+    const out = st.type === "neverin"
+      ? await fetchMeasuredDayNeverin(st, dateStr)
+      : await fetchMeasuredDay(st, dateStr);
     if (out.ok) cacheSet(ck, out, CACHE_TTL.current);
     res.json(out);
   } catch (e) {
