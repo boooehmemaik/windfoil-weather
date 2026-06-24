@@ -496,14 +496,20 @@ app.get("/api/station/measured", async (req, res) => {
   if (!st) return res.json({ ok: false, error: "no_measured_station" });
 
   const ck = `measured:${st.wc || st.station}:${dateStr}`;
+  // Distance from the queried point to the station is computed PER REQUEST (not
+  // cached): one cache entry serves many nearby spots (e.g. the whole Ulcinj
+  // riviera), each at a different distance from the town station.
+  const withKm = (o) => (o && o.ok)
+    ? { ...o, stationLat: st.lat, stationLon: st.lon, km: Math.round(haversineKm(la, lo, st.lat, st.lon)) }
+    : o;
   const hit = cacheGet(ck);
-  if (hit) return res.json({ ...hit, cached: true });
+  if (hit) return res.json(withKm({ ...hit, cached: true }));
   try {
     const out = st.type === "neverin"
       ? await fetchMeasuredDayNeverin(st, dateStr)
       : await fetchMeasuredDay(st, dateStr);
     if (out.ok) cacheSet(ck, out, CACHE_TTL.current);
-    res.json(out);
+    res.json(withKm(out));
   } catch (e) {
     res.status(502).json({ ok: false, error: e.message });
   }
