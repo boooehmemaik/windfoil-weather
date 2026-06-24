@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.8.7 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.8.8 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -28,9 +28,12 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
   <script src="vendor/babel.min.js"></script>
   <script type="text/babel" data-presets="react">
 const { useState, useEffect, useCallback, useRef } = React;
-const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
+const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, ReferenceDot, Cell } = Recharts;
+// 16-point compass abbreviation from a meteorological bearing (deg the wind comes FROM).
+const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.8.7
+// WindFoil Weather Intelligence v3.8.8
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -878,6 +881,7 @@ function App() {
   const [apiStatus,setApiStatus]= useState({forecast:"⏳",historical:"⏳"});
   const [activeDay,setActiveDay]= useState(0);
   const [measured,setMeasured] = useState(null); // real station feed for the active day (null = none)
+  const [live,setLive] = useState(null); // current-only real station snapshot (null = none)
   const [clock,setClock]       = useState("");
   const [windUnit,setWindUnit]  = useState("kn"); // 'ms' | 'kn' | 'bf'
   const [theme,setThemeState]   = useState(()=>loadStored("wf_theme","dark")); // 'dark' | 'light'
@@ -1152,6 +1156,21 @@ function App() {
       .catch(()=>{ if(!cancelled) setMeasured(null); });
     return ()=>{ cancelled=true; };
   },[forecast,activeDay,loc]);
+
+  // ── Live "now" marker for spots with a current-only anemometer (e.g. Talamone)
+  // Backend no-ops (ok:false) where no live station exists. Refreshes each minute
+  // to track the ~60 s feed; independent of the displayed day (always "now").
+  useEffect(()=>{
+    if(!loc){ setLive(null); return; }
+    let cancelled=false;
+    const load=()=>fetch(`/api/station/live?lat=${loc.lat}&lon=${loc.lon}`)
+      .then(r=>r.json())
+      .then(d=>{ if(!cancelled) setLive(d&&d.ok?d:null); })
+      .catch(()=>{ if(!cancelled) setLive(null); });
+    load();
+    const id=setInterval(load,60000);
+    return ()=>{ cancelled=true; clearInterval(id); };
+  },[loc]);
 
   // ── Compute day start indices from actual calendar dates ──────────────────
   // API may start mid-day (e.g. 17:00 local time) — find index where each
@@ -1454,7 +1473,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.7</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.8</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1706,6 +1725,20 @@ function App() {
               {meas && <div style={{fontSize:10,color:C.muted,fontFamily:"monospace",marginBottom:6}}>
                 Weiß/rot = echte Station ({measured.source}{measured.latest?`, zuletzt ${measured.latest}`:""}) vs. Forecast (blau/orange)
               </div>}
+              {live && live.wind!=null && <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",margin:"2px 0 8px",padding:"6px 10px",borderRadius:8,background:"rgba(61,220,132,0.08)",border:`1px solid ${C.go}44`,fontSize:11}}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:5,color:C.go,fontWeight:600,whiteSpace:"nowrap"}}>
+                  <span style={{width:7,height:7,borderRadius:"50%",background:live.sensorOk?C.go:C.stop,boxShadow:`0 0 6px ${live.sensorOk?C.go:C.stop}`}} />
+                  Live jetzt
+                </span>
+                <span style={{color:C.text,fontFamily:"monospace"}}>
+                  {fmtW(live.wind,windUnit)} {unitLabel(windUnit)}
+                  {live.gust!=null && <> · Böe {fmtW(live.gust,windUnit)}</>}
+                  {live.dir!=null && <> · {compass(live.dir)} {Math.round(live.dir)}°</>}
+                </span>
+                <span style={{color:C.muted,fontFamily:"monospace",fontSize:10}}>
+                  {live.source}{live.time?` · ${live.time}`:""}{live.sensorOk?"":" · Sensor-Kontakt verloren"}
+                </span>
+              </div>}
               <div style={S.cwL}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={windData}><CartesianGrid {...gr} />
@@ -1720,6 +1753,12 @@ function App() {
                     <Line yAxisId="l" type="monotone" dataKey="gust" name={`Böen ${unitLabel(windUnit)}`} stroke={C.signal} strokeDasharray="4 3" strokeWidth={1.5} dot={false} />
                     {meas && windData.some(d=>d.mwind!=null) && <Line yAxisId="l" type="monotone" dataKey="mwind" name={`Ist Wind ${unitLabel(windUnit)}`} stroke={C.text} strokeWidth={2} dot={false} connectNulls />}
                     {meas && windData.some(d=>d.mgust!=null) && <Line yAxisId="l" type="monotone" dataKey="mgust" name={`Ist Böe ${unitLabel(windUnit)}`} stroke={C.stop} strokeDasharray="2 2" strokeWidth={1.5} dot={false} connectNulls />}
+                    {(()=>{ // live "now" marker — only on today's tab, at the current clock hour
+                      if(!(live && activeDay===0 && live.wind!=null && live.time)) return null;
+                      const lh=`${live.time.slice(0,2)}:00`;
+                      if(!windData.some(d=>d.h===lh)) return null;
+                      return <ReferenceDot yAxisId="l" x={lh} y={cvt(live.wind,windUnit)} r={5} fill={C.go} stroke="#fff" strokeWidth={1.5} ifOverflow="extendDomain" label={{value:"Live",position:"top",fontSize:9,fill:C.go,fontFamily:"monospace"}} />;
+                    })()}
                     <Line yAxisId="r" type="monotone" dataKey="score" name="Foil-Score" stroke={C.go} strokeWidth={1.5} dot={false} strokeOpacity={0.8} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -2120,7 +2159,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.8.7</span>
+        <span>WindFoil Weather Intelligence v3.8.8</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

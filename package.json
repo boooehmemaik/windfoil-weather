@@ -1,6 +1,6 @@
 {
   "name": "windfoil-station-proxy",
-  "version": "3.8.7",
+  "version": "3.8.8",
   "description": "WindFoil Weather Intelligence — backend server with auth, feedback loop and SQLite persistence.",
   "main": "proxy-server.js",
   "scripts": {

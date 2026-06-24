@@ -461,6 +461,75 @@ app.get("/api/station/measured", async (req, res) => {
   }
 });
 
+// ── Live snapshot stations (current reading only, no day series) ──────────────
+// Some spots expose a real anemometer as a CURRENT-conditions feed only (latest
+// value + day high), not a full day series like MEASURED_STATIONS. We surface
+// these as a live "now" marker rather than a full Ist-vs-Forecast overlay.
+const LIVE_STATIONS = [
+  {
+    key: "talamone", lat: 42.554, lon: 11.128, radiusKm: 6,
+    label: "Talamone (Baia di Talamone)",
+    source: "VTC Velapassion · Davis Vantage Vue",
+    // WView/SteelSeries feed; hotlink-protected → needs the Referer of its page,
+    // otherwise the server answers 404. Values are in km/h (see `windunit`).
+    url: "https://www.velapassion.it/stazione/last_loop_pkt.txt",
+    referer: "https://www.velapassion.it/stazione/livedata.htm",
+    unit: "kmh",
+  },
+];
+const UNIT_TO_MS = { kmh: 1 / 3.6, mph: 0.44704, kn: 1 / KN_PER_MS, ms: 1 };
+
+function findLiveStation(lat, lon) {
+  for (const s of LIVE_STATIONS) {
+    if (haversineKm(lat, lon, s.lat, s.lon) <= (s.radiusKm || 6)) return s;
+  }
+  return null;
+}
+
+async function fetchLiveSnapshot(st) {
+  const r = await fetch(st.url, {
+    headers: { Referer: st.referer, "User-Agent": "Mozilla/5.0", "X-Requested-With": "XMLHttpRequest" },
+  });
+  if (!r.ok) return { ok: false, error: `upstream_${r.status}` };
+  const j = await r.json();
+  const f = UNIT_TO_MS[st.unit] || 1;
+  const toMs = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? Math.round(n * f * 100) / 100 : null; };
+  const dirOf = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? Math.round(n) : null; };
+  // WView/SteelSeries (Mark Crossley gauges) keys; tolerate missing fields.
+  return {
+    ok: true, key: st.key, label: st.label, source: st.source, unit: "ms",
+    wind: toMs(j.wspeed != null ? j.wspeed : j.wlatest),
+    gust: toMs(j.wgust),
+    gustMax: toMs(j.wgustTM),
+    dir: dirOf(j.bearing != null ? j.bearing : j.avgbearing),
+    time: typeof j.date === "string" ? j.date : null, // local HH:MM
+    timestamp: parseFloat(j.timestamp) || null,        // unix UTC
+    sensorOk: !(j.SensorContactLost && String(j.SensorContactLost) !== "0"),
+  };
+}
+
+// ── Endpoint: live "now" reading (current-only ground truth) ──────────────────
+// GET /api/station/live?lat=..&lon=..  → ok:false (no error noise) where no live
+// station exists, so the frontend can call it for any spot and skip the marker.
+app.get("/api/station/live", async (req, res) => {
+  const la = parseFloat(req.query.lat), lo = parseFloat(req.query.lon);
+  if (!Number.isFinite(la) || !Number.isFinite(lo))
+    return res.status(400).json({ ok: false, error: "lat/lon required" });
+  const st = findLiveStation(la, lo);
+  if (!st) return res.json({ ok: false, error: "no_live_station" });
+
+  const ck = `live:${st.key}`;
+  const hit = cacheGet(ck);
+  if (hit) return res.json({ ...hit, cached: true });
+  try {
+    const out = await fetchLiveSnapshot(st);
+    if (out.ok) cacheSet(ck, out, 60 * 1000); // feed updates ~every 60 s
+    res.json(out);
+  } catch (e) {
+    res.status(502).json({ ok: false, error: e.message });
+  }
+});
+
 // ── Endpoint: current observation ─────────────────────────────────────────────
 app.get("/api/station/current", async (req, res) => {
   if (!KEY) return res.status(503).json({ ok: false, error: "API key not configured" });
