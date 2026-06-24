@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.8.5 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.8.6 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
@@ -30,7 +30,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v3.8.5
+// WindFoil Weather Intelligence v3.8.6
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -230,9 +230,13 @@ const MODEL_LABELS = {
 // Gardasee's "Ora" funnels up the lake from the south; a coastal sea breeze
 // blows W-SW off the open sea), so the alignment target must be spot-specific
 // instead of the old hard-coded 250°.
+// Lago di Garda bounding box (Torbole/Riva north end down to the south basin).
+function isGardaSpot(lat, lon){
+  return lat>=45.4 && lat<=45.95 && lon>=10.5 && lon<=11.0;
+}
 function thermalRegime(lat, lon){
   // Lago di Garda — afternoon "Ora" comes up the lake from the south.
-  if(lat>=45.4 && lat<=45.95 && lon>=10.5 && lon<=11.0)
+  if(isGardaSpot(lat,lon))
     return { dir:195, label:"Ora (Süd)", origin:"vom Gardasee-Süden", peakHour:15 };
   // Generic coastal sea breeze.
   return { dir:250, label:"Meeresbrise (W-SW)", origin:"vom Meer", peakHour:14 };
@@ -267,6 +271,37 @@ function mergeForecastsMax(a, b){
     }
   }
   return out;
+}
+
+// ── Pelèr boost (channeled north wind, Lago di Garda) ─────────────────────────
+// The Pelèr funnels DOWN the lake from the north (night → forenoon). It is a
+// narrow, terrain-channeled jet that even AROME-HD 1.5km systematically under-
+// forecasts BOTH in strength AND direction: on 2026-06-23 the measured Torbole
+// station ran ~1.4–2× the model and blew steady N (~360°), while the grid put
+// the same flow at ~30–100° (E) in the morning and even drew a phantom afternoon
+// S-"Ora" that never filled. A narrow north window therefore misses it. At this
+// north-end spot the forenoon wind is Pelèr-dominated regardless of the grid's
+// exact bearing, so we lift every forenoon hour whose direction is NOT the
+// southern Ora sector. Heuristic first pass — should be auto-calibrated against
+// the real station feed (/api/station/measured) once enough days are logged.
+const PELER = { windFactor:1.40, gustFactor:1.35, oraBearing:195, oraGuard:70, lastHour:12 };
+function isPelerHour(hour, dir){
+  if(dir==null || hour==null || hour>PELER.lastHour) return false;
+  return angDiff(dir, PELER.oraBearing) > PELER.oraGuard; // not within 70° of the S-Ora
+}
+function applyPelerBoost(fc, lat, lon){
+  if(!isGardaSpot(lat,lon) || !hasWindData(fc)) return fc;
+  const h=fc.hourly, dirs=h.winddirection_10m||[], times=h.time||[];
+  let boosted=0;
+  for(let i=0;i<h.windspeed_10m.length;i++){
+    const hour = times[i] ? parseInt(times[i].slice(11,13),10) : null;
+    if(!isPelerHour(hour, dirs[i])) continue;
+    if(h.windspeed_10m[i]!=null) h.windspeed_10m[i]=Math.round(h.windspeed_10m[i]*PELER.windFactor*100)/100;
+    if(h.windgusts_10m && h.windgusts_10m[i]!=null) h.windgusts_10m[i]=Math.round(h.windgusts_10m[i]*PELER.gustFactor*100)/100;
+    boosted++;
+  }
+  if(boosted) fc.__pelerBoost = true;
+  return fc;
 }
 
 async function tryFetchForecast(lat, lon) {
@@ -1028,8 +1063,9 @@ function App() {
     let fc = null;
     try {
       fc = await tryFetchForecast(l.lat, l.lon);
+      applyPelerBoost(fc, l.lat, l.lon); // lift the under-forecast channeled N-wind at Garda
       const ml = MODEL_LABELS[fc.__model];
-      setApiStatus(s=>({...s,forecast:ml ? `✅ ${ml}` : "✅ Live"}));
+      setApiStatus(s=>({...s,forecast:(ml ? `✅ ${ml}` : "✅ Live")+(fc.__pelerBoost ? " +Pelèr" : "")}));
       setLoadMsg("Forecast geladen. Lade ERA5-Archiv…");
     } catch(e) {
       setApiStatus(s=>({...s,forecast:"⚠️ Demo"}));
@@ -1418,7 +1454,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.5</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.6</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2084,7 +2120,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.8.5</span>
+        <span>WindFoil Weather Intelligence v3.8.6</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

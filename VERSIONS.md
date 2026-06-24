@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.8.6 (2026-06-24)
+**Pelèr-Boost: richtungs-/tageszeit-abhängige Korrektur des kanalisierten Nordwinds (Gardasee)**
+- Neu in `index.html`: `applyPelerBoost(fc,lat,lon)` hebt am Gardasee die vom Modell systematisch unterschätzten Pelèr-Stunden an (Wind ×1.40, Böe ×1.35). Gegate auf Garda-Spots (`isGardaSpot`, aus `thermalRegime` extrahiert) × Vormittag (≤12:00) × **nicht** Süd-Ora-Sektor (`angDiff(dir,195°)>70°`)
+- Warum tageszeit-/sektor- statt eng-nordgegatet: das Modell verfehlt den Pelèr **doppelt** — in Stärke (real ~1.4–2× Modell) UND Richtung (realer N-Wind ~360° erscheint im Gitter als ~30–100° E, dazu ein Phantom-Nachmittags-Ora). Ein schmales Nordfenster würde fast nie zünden; am Nordende ist der Vormittagswind ohnehin Pelèr-dominiert
+- Verifiziert an Torbole 23.06.: geboostete Morgenwerte (7–8 kt / 17–18 kt Böe) treffen die Messung (7–10 kt / 16–22 kt) deutlich besser als das Rohmodell (5–6 kt / 12–14 kt); Nachmittags-Ora (S, ≥13 h) bleibt unangetastet
+- FC-Statusbadge zeigt „+Pelèr", wenn der Boost griff. Heuristik erster Stufe — soll später aus `/api/station/measured` (v3.8.4-Feed) auto-kalibriert werden
+- Anmerkung: ein Nachmittags-Pelèr, den das Modell als Süd-Ora fehlprognostiziert (wie real am 23.06. bis 13 h), kann der Boost bewusst nicht „erfinden" — das ist ein Richtungs-, kein Magnitudenfehler
+
 ## v3.8.5 (2026-06-23)
 **Windrichtungs-Chart: Richtungspfeile statt Punkte**
 - Der „Windrichtung (°)"-Scatter (`index.html`) zeichnet pro Stunde jetzt einen gedrehten Pfeil (neue `DirArrow`-Shape) statt eines Punkts — der Pfeil zeigt in die Wehrichtung (Meteo-`dir` ist Herkunft → +180°; SVG-Korrektur −90°, sodass 0° = Nord nach oben zeigt). Farbe konsistent zur bisherigen Caution-Markierung
