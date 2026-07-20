@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.8.13 (2026-07-20)
+**Wind-Favicon (Browser-Tab-Logo)**
+- Neu: `favicon.svg` — wind-themed SVG im App-Palette-Look (Tile `#0a0e14`, Wind-Streamlines Orange `#f07820` + Blau-Akzent `#5a7a96`), gut lesbar bei 16 px
+- `index.html`: `<link rel="icon" type="image/svg+xml">` + `apple-touch-icon` + `theme-color`. Wird über nginx direkt aus dem App-Root (`/favicon.svg`) ausgeliefert
+
 ## v3.8.12 (2026-07-20)
 **Vasiliki/Lefkada: „Eric"-Thermik-Regime + METAR-Ground-Truth (Aktion/Preveza)**
 - `index.html`: neue `isVasilikiSpot()`-Box (Süd-Lefkada) → `thermalRegime()` liefert für Vasiliki jetzt **„Eric (WNW)" mit `dir:300`, Peak 15 h** statt der generischen 250°-Meeresbrise. Vasilikis Cross-Shore-Thermik fällt um Kap Doukato aus WNW ein, nicht W-SW — die Ausrichtungs-/Alignment-Ziele des Charts stimmen damit für den Spot

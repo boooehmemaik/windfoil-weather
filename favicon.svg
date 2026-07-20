@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="WindFoil">
+  <rect width="32" height="32" rx="7" fill="#0a0e14"/>
+  <g fill="none" stroke-linecap="round">
+    <!-- wind gust streamlines with curls (feather-wind style) -->
+    <path d="M5 11.5h11.5a2.7 2.7 0 1 0-2.7-2.7" stroke="#f07820" stroke-width="2.3"/>
+    <path d="M5 20.5h15a2.7 2.7 0 1 1-2.7 2.7" stroke="#f07820" stroke-width="2.3"/>
+    <path d="M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3" stroke="#5a7a96" stroke-width="2.1"/>
+  </g>
+</svg>
