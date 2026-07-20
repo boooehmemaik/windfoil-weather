@@ -1,5 +1,17 @@
 # WindFoil — Version History
 
+## v3.8.12 (2026-07-20)
+**Vasiliki/Lefkada: „Eric"-Thermik-Regime + METAR-Ground-Truth (Aktion/Preveza)**
+- `index.html`: neue `isVasilikiSpot()`-Box (Süd-Lefkada) → `thermalRegime()` liefert für Vasiliki jetzt **„Eric (WNW)" mit `dir:300`, Peak 15 h** statt der generischen 250°-Meeresbrise. Vasilikis Cross-Shore-Thermik fällt um Kap Doukato aus WNW ein, nicht W-SW — die Ausrichtungs-/Alignment-Ziele des Charts stimmen damit für den Spot
+- `proxy-server.js`: neuer `MEASURED_STATIONS`-Typ **`metar`** + `fetchMeasuredDayMetar()` zieht Flughafen-Beobachtungen von aviationweather.gov (JSON, `obsTime`/`wspd`/`wgst`/`wdir`; kn→m/s auf die Forecast-Einheit; „VRB"→null). Registriert: **Aktion/Preveza (LGPZ)**, die nächste echte Station für Vasiliki (~34 km N, offene Lage → **Regional-Gradient-Proxy, kein Bucht-Wert**; Distanz steht ehrlich in der Caption via per-Request-`km`). Radius 40 km deckt die Süd-Lefkada-Ecke ab
+- Hintergrund (Recherche 20.07.): am „Thermik viel / Wind wenig"-Tag zeigt unser Open-Meteo-best_match ~6.5 kt W-SW-Peak bei hoher CAPE (570–1360), Aktion-METAR maß W→WNW 250–280° / 11 kt nachmittags → schwacher-„Eric"-Tag (CAPE ≠ Wind; „Eric" braucht den synoptischen NW-Gradienten). Keine öffentliche Live-Station direkt in der Vasiliki-Bucht
+
+## v3.8.11 (2026-06-29)
+**Benutzerverwaltung: Benutzer endgültig löschen (Admin)**
+- Neu in `proxy-server.js`: `POST /api/admin/users/delete` (admin-token-geschützt) entfernt einen Benutzer samt aller eigenen Daten. Alle user-eigenen Tabellen (`account`, `session`, `spots`, `rider_profiles`, `equipment`, `sessions`, `entitlements`, `spot_calibration`, `user_locations`, `user_prefs`) hängen per `ON DELETE CASCADE` am `user`-Datensatz
+- Reihenfolge-Fix: die App-Tabelle `sessions` hält eine `RESTRICT`-FK auf `spots` (ebenfalls Kind von `user`) — ein einzelnes Cascade könnte je nach Löschreihenfolge auflaufen. Daher werden in einer Transaktion zuerst die `sessions`-Zeilen des Users gelöscht, dann der `user` (cascadet den Rest)
+- Frontend (`index.html`): „Löschen"-Button im Tab „Benutzer" der Admin-Verwaltung mit `window.confirm`-Sicherheitsabfrage; nach Erfolg wird die Liste neu geladen
+
 ## v3.8.6 (2026-06-24)
 **Pelèr-Boost: richtungs-/tageszeit-abhängige Korrektur des kanalisierten Nordwinds (Gardasee)**
 - Neu in `index.html`: `applyPelerBoost(fc,lat,lon)` hebt am Gardasee die vom Modell systematisch unterschätzten Pelèr-Stunden an (Wind ×1.40, Böe ×1.35). Gegate auf Garda-Spots (`isGardaSpot`, aus `thermalRegime` extrahiert) × Vormittag (≤12:00) × **nicht** Süd-Ora-Sektor (`angDiff(dir,195°)>70°`)

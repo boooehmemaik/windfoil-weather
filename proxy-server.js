@@ -384,6 +384,11 @@ const MEASURED_STATIONS = [
   // (m/s, full hourly series, NO gusts). Covers the whole Ulcinj riviera (town
   // ~3 km, Velika Plaža/Ada Bojana further SE) → wider radius.
   { type: "neverin", station: "ulcinj", tz: "Europe/Podgorica", lat: 41.9166, lon: 19.25293, radiusKm: 12, label: "Ulcinj (ZHMS)" },
+  // type "metar": aviationweather.gov airport observation. Aktion/Preveza (LGPZ)
+  // is the nearest real feed for Vasiliki/Lefkada (~34 km N, open exposure) —
+  // a regional-gradient proxy for the "Eric" bay, not an in-bay reading. Wide
+  // radius so the whole south-Lefkada corner matches; the caption shows the km.
+  { type: "metar", icao: "LGPZ", tz: "Europe/Athens", lat: 38.9254, lon: 20.7653, radiusKm: 40, label: "Aktion/Preveza (LGPZ, ~34 km)" },
 ];
 const KN_PER_MS = 1.94384; // feed is in knots; we return m/s to match the forecast contract
 
@@ -483,6 +488,43 @@ async function fetchMeasuredDayNeverin(st, dateStr) {
   };
 }
 
+// aviationweather.gov METAR → nearest airport observations. Aviation METARs are
+// hard ground-truth but coarse for a thermal bay: airports sit in open/exposed
+// terrain and (here) ~30 km from Vasiliki, so this is a regional gradient proxy,
+// NOT an in-bay reading — the per-request `km` in the caption makes that honest.
+// The API's `hours` window returns recent obs only (fine for the current day);
+// wind is knots, gusts (`wgst`) often absent, dir "VRB" for variable → skipped.
+async function fetchMeasuredDayMetar(st, dateStr) {
+  const url = `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(st.icao)}&format=json&hours=27`;
+  const r = await fetch(url);
+  if (!r.ok) return { ok: false, error: `upstream_${r.status}` };
+  const arr = await r.json();
+  if (!Array.isArray(arr) || !arr.length) return { ok: false, error: "no_metar" };
+
+  const wind = Array(24).fill(null), gust = Array(24).fill(null), dir = Array(24).fill(null);
+  const seen = Array(24).fill(-Infinity); // latest obsTime kept per local hour
+  let n = 0, latestHour = -1;
+  for (const ob of arr) {
+    const ep = parseFloat(ob && ob.obsTime);
+    if (!Number.isFinite(ep)) continue;
+    const { date, hour } = localPartsTZ(ep, st.tz);
+    if (date !== dateStr || ep <= seen[hour]) continue;
+    seen[hour] = ep;
+    const w = parseFloat(ob.wspd), g = parseFloat(ob.wgst), dd = parseFloat(ob.wdir);
+    wind[hour] = Number.isFinite(w) ? Math.round(w / KN_PER_MS * 100) / 100 : null;
+    gust[hour] = Number.isFinite(g) ? Math.round(g / KN_PER_MS * 100) / 100 : null;
+    dir[hour]  = Number.isFinite(dd) ? Math.round(dd) : null; // "VRB" → NaN → null
+    n++; if (hour > latestHour) latestHour = hour;
+  }
+  if (!n) return { ok: false, error: "no_metar_today" };
+  return {
+    ok: true, wc: st.icao, label: st.label, unit: "ms",
+    source: `METAR ${st.icao} / aviationweather.gov (${st.label})`,
+    date: dateStr, hourly: { wind, gust, dir },
+    samples: n, latest: latestHour >= 0 ? `${String(latestHour).padStart(2, "0")}:00` : null,
+  };
+}
+
 // ── Endpoint: real measured day (ground-truth overlay) ────────────────────────
 // GET /api/station/measured?lat=..&lon=..&date=YYYY-MM-DD
 // No-ops (ok:false) for spots without a known measured station, so the frontend
@@ -495,7 +537,7 @@ app.get("/api/station/measured", async (req, res) => {
   const st = findMeasuredStation(la, lo);
   if (!st) return res.json({ ok: false, error: "no_measured_station" });
 
-  const ck = `measured:${st.wc || st.station}:${dateStr}`;
+  const ck = `measured:${st.wc || st.station || st.icao}:${dateStr}`;
   // Distance from the queried point to the station is computed PER REQUEST (not
   // cached): one cache entry serves many nearby spots (e.g. the whole Ulcinj
   // riviera), each at a different distance from the town station.
@@ -505,8 +547,8 @@ app.get("/api/station/measured", async (req, res) => {
   const hit = cacheGet(ck);
   if (hit) return res.json(withKm({ ...hit, cached: true }));
   try {
-    const out = st.type === "neverin"
-      ? await fetchMeasuredDayNeverin(st, dateStr)
+    const out = st.type === "neverin" ? await fetchMeasuredDayNeverin(st, dateStr)
+      : st.type === "metar" ? await fetchMeasuredDayMetar(st, dateStr)
       : await fetchMeasuredDay(st, dateStr);
     if (out.ok) cacheSet(ck, out, CACHE_TTL.current);
     res.json(withKm(out));
@@ -869,6 +911,31 @@ app.post("/api/admin/users/reset-password", async (req, res) => {
     db.prepare("UPDATE account SET password = ?, updatedAt = ? WHERE id = ?").run(hash, now, acct.id);
     db.prepare("DELETE FROM session WHERE userId = ?").run(id);
     res.json({ ok: true, id });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Permanently delete a user and everything they own. All user-owned tables
+// (account, session, spots, rider_profiles, equipment, sessions, entitlements,
+// spot_calibration, user_locations, user_prefs) cascade from `user` — but the
+// app `sessions` table holds a RESTRICT FK to `spots` (also a child of `user`),
+// so a single cascade could trip on delete order. We therefore clear the user's
+// `sessions` rows first, then delete the user, inside one transaction.
+app.post("/api/admin/users/delete", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const id = req.body && req.body.id;
+  if (!id) return res.status(400).json({ ok: false, error: "User-ID fehlt." });
+  try {
+    const db = getAdminDb();
+    const u = db.prepare("SELECT email FROM user WHERE id = ?").get(id);
+    if (!u) return res.status(404).json({ ok: false, error: "User nicht gefunden." });
+    const tx = db.transaction((uid) => {
+      db.prepare("DELETE FROM sessions WHERE user_id = ?").run(uid); // clears RESTRICT on spots
+      db.prepare("DELETE FROM user WHERE id = ?").run(uid);          // cascades the rest
+    });
+    tx(id);
+    res.json({ ok: true, id, email: u.email });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
