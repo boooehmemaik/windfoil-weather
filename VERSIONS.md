@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.8.14 (2026-07-20)
+**Wind-Logo im Header (vor „WINDFOIL")**
+- `index.html`: das alte `⟁`-Glyph im Header durch dasselbe Wind-Streamline-SVG wie das Favicon ersetzt. Als Inline-JSX-SVG mit `C.signal`/`C.muted` → theme-adaptiv (Dark/Light), ohne Tile-Hintergrund
+
 ## v3.8.13 (2026-07-20)
 **Wind-Favicon (Browser-Tab-Logo)**
 - Neu: `favicon.svg` — wind-themed SVG im App-Palette-Look (Tile `#0a0e14`, Wind-Streamlines Orange `#f07820` + Blau-Akzent `#5a7a96`), gut lesbar bei 16 px
