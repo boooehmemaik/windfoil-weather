@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.8.15 (2026-07-20)
+**Header-Wind-Logo vergrößert**
+- `index.html`: Header-Logo-SVG von 28×28 auf 38×38 px vergrößert
+
 ## v3.8.14 (2026-07-20)
 **Wind-Logo im Header (vor „WINDFOIL")**
 - `index.html`: das alte `⟁`-Glyph im Header durch dasselbe Wind-Streamline-SVG wie das Favicon ersetzt. Als Inline-JSX-SVG mit `C.signal`/`C.muted` → theme-adaptiv (Dark/Light), ohne Tile-Hintergrund

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.8.14 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.8.15 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.8.14
+// WindFoil Weather Intelligence v3.8.15
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -1495,14 +1495,14 @@ function App() {
       {/* HEADER */}
       <header style={S.hdr}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" style={{display:"block",flexShrink:0}} aria-label="WindFoil">
+          <svg width="38" height="38" viewBox="0 0 32 32" fill="none" style={{display:"block",flexShrink:0}} aria-label="WindFoil">
             <path d="M5 11.5h11.5a2.7 2.7 0 1 0-2.7-2.7" stroke={C.signal} strokeWidth="2.6" strokeLinecap="round"/>
             <path d="M5 20.5h15a2.7 2.7 0 1 1-2.7 2.7" stroke={C.signal} strokeWidth="2.6" strokeLinecap="round"/>
             <path d="M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3" stroke={C.muted} strokeWidth="2.4" strokeLinecap="round"/>
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.14</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.15</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2188,7 +2188,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.8.14</span>
+        <span>WindFoil Weather Intelligence v3.8.15</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
