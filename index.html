@@ -2082,14 +2082,6 @@ function App() {
               <button onClick={()=>setShowLoc(false)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
             </div>
             <div style={{padding:16}}>
-              <div style={{display:"flex",gap:6,marginBottom:14}}>
-                {["preset","custom"].map(tab=>(
-                  <button key={tab} onClick={()=>setLocTab(tab)} style={{background:locTab===tab?C.signal:"none",border:`1px solid ${locTab===tab?C.signal:C.border2}`,color:locTab===tab?"#fff":C.muted,borderRadius:4,padding:"4px 10px",fontSize:12,cursor:"pointer"}}>
-                    {tab==="preset"?"Voreinstellungen":"Maps-Link"}
-                  </button>
-                ))}
-              </div>
-
               {/* Mein Standort (GPS) */}
               <button onClick={useMyLocation} disabled={geoStatus==="loading"}
                 style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8,
@@ -2124,66 +2116,11 @@ function App() {
                   </div>
                 </div>
               )}
-              <div style={{fontSize:9,color:C.dim,textAlign:"center",marginBottom:12,letterSpacing:"0.05em"}}>
-                — oder manuell wählen —
-              </div>
-              {locTab==="preset"&&(
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {PRESETS.map((p,i)=>(
-                    <button key={i} onClick={()=>setSelPreset(i)} style={{background:C.bg,border:`1px solid ${selPreset===i?C.signal:C.border2}`,borderRadius:4,color:C.text,textAlign:"left",padding:"8px 12px",cursor:"pointer"}}>
-                      <b style={{display:"block",fontSize:13}}>{p.name}</b>
-                      <span style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{p.lat}°N {p.lon}°E</span>
-                    </button>
-                  ))}
+              {recent.length===0 && (
+                <div style={{fontSize:11,color:C.dim,textAlign:"center",lineHeight:1.5,marginTop:4}}>
+                  Noch keine Orte gespeichert — oben „Meinen aktuellen Standort verwenden".
                 </div>
               )}
-              {locTab==="custom"&&(()=>{
-                const parsed = parseLocationInput(custom.link);
-                const ok = parsed && !parsed.error;
-                return (
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                  <div>
-                    <label style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"block",marginBottom:4}}>Google Maps Link oder Koordinaten</label>
-                    <textarea value={custom.link} rows={3}
-                      onChange={e=>{setCustom(c=>({...c,link:e.target.value}));setLinkError("");}}
-                      placeholder="https://www.google.com/maps/@36.9833,21.6667,14z&#10;oder: 36.9833, 21.6667"
-                      style={{...S.inp,width:"100%",resize:"vertical",lineHeight:1.4}} />
-                  </div>
-                  <div>
-                    <label style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"block",marginBottom:4}}>Ortsname (optional)</label>
-                    <input value={custom.name} onChange={e=>setCustom(c=>({...c,name:e.target.value}))}
-                      placeholder={parsePlaceName(custom.link)||"z.B. Mein Spot"}
-                      style={{...S.inp,width:"100%"}} />
-                  </div>
-                  {custom.link && ok && (
-                    <div style={{fontSize:11,color:C.go,fontFamily:"monospace",background:"rgba(61,220,132,0.08)",border:`1px solid ${C.go}`,borderRadius:4,padding:"6px 10px"}}>
-                      ✅ Erkannt: {parsed.lat.toFixed(4)}°N, {parsed.lon.toFixed(4)}°E
-                    </div>
-                  )}
-                  {custom.link && parsed && parsed.error && (
-                    <div style={{fontSize:11,color:C.caution,lineHeight:1.5,background:"rgba(245,185,66,0.08)",border:`1px solid ${C.caution}`,borderRadius:4,padding:"6px 10px"}}>
-                      ⚠️ {parsed.error}
-                    </div>
-                  )}
-                  {linkError && (
-                    <div style={{fontSize:11,color:C.stop,fontFamily:"monospace"}}>{linkError}</div>
-                  )}
-                  <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
-                    💡 In Google Maps auf den Ort tippen/klicken → URL aus der Adresszeile kopieren. Der Link enthält die Koordinaten nach dem @-Zeichen.
-                  </div>
-                </div>
-                );
-              })()}
-              <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:14}}>
-                <button style={{...S.btn,background:"transparent",border:`1px solid ${C.border2}`,color:C.muted}} onClick={()=>{
-                  const nl = resolveLoc(); if(!nl) return;
-                  setLoc(nl); pushRecent(nl); setLinkError(""); setShowLoc(false);
-                }}>Nur übernehmen</button>
-                <button style={S.btn} onClick={()=>{
-                  const nl = resolveLoc(); if(!nl) return;
-                  setLoc(nl); pushRecent(nl,{active:true}); setLinkError(""); setShowLoc(false);
-                }}>Übernehmen & merken ★</button>
-              </div>
             </div>
           </div>
         </div>
