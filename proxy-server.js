@@ -377,6 +377,10 @@ async function openMeteoCurrentBatch(points) {
 // cross-origin. This is real measurement — the ground truth against which our
 // Open-Meteo/AROME forecast (the normal chart) can be validated.
 const ADDICTED_BASE = "https://en.addicted-sports.com";
+// Default match radius (km) for special-calculation spots without an explicit
+// radiusKm. A saved/entered coordinate within this distance of the spot centre
+// still triggers the spot-specific live/measured calculation.
+const SPECIAL_RADIUS_KM = 5;
 const MEASURED_STATIONS = [
   // type "addicted": addicted-sports getWeatherData.php (knots, CSRF — see below)
   { type: "addicted", wc: "torbole", path: "gardasee/torbole", lat: 45.869, lon: 10.873, label: "Torbole (Gardasee)" },
@@ -394,7 +398,7 @@ const KN_PER_MS = 1.94384; // feed is in knots; we return m/s to match the forec
 
 function findMeasuredStation(lat, lon) {
   for (const s of MEASURED_STATIONS) {
-    if (haversineKm(lat, lon, s.lat, s.lon) <= (s.radiusKm || 6)) return s;
+    if (haversineKm(lat, lon, s.lat, s.lon) <= (s.radiusKm || SPECIAL_RADIUS_KM)) return s;
   }
   return null;
 }
@@ -563,7 +567,7 @@ app.get("/api/station/measured", async (req, res) => {
 // these as a live "now" marker rather than a full Ist-vs-Forecast overlay.
 const LIVE_STATIONS = [
   {
-    key: "talamone", lat: 42.554, lon: 11.128, radiusKm: 6,
+    key: "talamone", lat: 42.554, lon: 11.128, radiusKm: SPECIAL_RADIUS_KM,
     label: "Talamone (Baia di Talamone)",
     source: "VTC Velapassion · Davis Vantage Vue",
     // WView/SteelSeries feed; hotlink-protected → needs the Referer of its page,
@@ -577,7 +581,7 @@ const UNIT_TO_MS = { kmh: 1 / 3.6, mph: 0.44704, kn: 1 / KN_PER_MS, ms: 1 };
 
 function findLiveStation(lat, lon) {
   for (const s of LIVE_STATIONS) {
-    if (haversineKm(lat, lon, s.lat, s.lon) <= (s.radiusKm || 6)) return s;
+    if (haversineKm(lat, lon, s.lat, s.lon) <= (s.radiusKm || SPECIAL_RADIUS_KM)) return s;
   }
   return null;
 }

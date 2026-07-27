@@ -236,7 +236,20 @@ const MODEL_LABELS = {
 // Gardasee's "Ora" funnels up the lake from the south; a coastal sea breeze
 // blows W-SW off the open sea), so the alignment target must be spot-specific
 // instead of the old hard-coded 250°.
-// Lago di Garda bounding box (Torbole/Riva north end down to the south basin).
+// Great-circle distance (Haversine, km) — used for the special-spot match radius.
+function haversineKm(lat1, lon1, lat2, lon2){
+  const R=6371, toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.min(1, Math.sqrt(a)));
+}
+// Match radius (km) for special-calculation spots: a saved/entered coordinate
+// within this distance of the spot centre still triggers the spot-specific
+// thermal-regime (and, on the backend, live-station) calculation.
+const SPECIAL_RADIUS_KM = 5;
+// Lago di Garda: a long lake, kept as a bounding box (Torbole/Riva north end
+// down to the south basin) rather than a single 5 km circle, which could not
+// cover the whole lake. The point spots below use the SPECIAL_RADIUS_KM circle.
 function isGardaSpot(lat, lon){
   return lat>=45.4 && lat<=45.95 && lon>=10.5 && lon<=11.0;
 }
@@ -245,7 +258,7 @@ function isGardaSpot(lat, lon){
 // the synoptic NW (Meltemi) gradient on top of the heating, hence its on/off
 // character. Box covers the south-Lefkada corner.
 function isVasilikiSpot(lat, lon){
-  return lat>=38.55 && lat<=38.72 && lon>=20.50 && lon<=20.75;
+  return haversineKm(lat, lon, 38.6297, 20.6103) <= SPECIAL_RADIUS_KM;
 }
 function thermalRegime(lat, lon){
   // Lago di Garda — afternoon "Ora" comes up the lake from the south.
