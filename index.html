@@ -991,9 +991,11 @@ function App() {
   const [pwInputs,setPwInputs]       = useState({}); // userId -> new password draft
 
   const PRESETS = [
-    {lat:48.0703,lon:11.1167,name:"Wörthsee / Pilsensee"},
-    {lat:41.8889,lon:19.3050,name:"Ulcinj / Velika Plaža (Kitebeach)"},
-    {lat:41.8510,lon:19.3490,name:"Ulcinj / Ada Bojana"},
+    {lat:48.0698,lon:11.1100,name:"Ammersee / Eching"},
+    {lat:38.6297,lon:20.6103,name:"Vasiliki (Lefkada)"},
+    {lat:39.0333,lon:20.7667,name:"Surf Park Bouka (Preveza)"},
+    {lat:48.2989,lon:11.6178,name:"Hollerner See (Eching)"},
+    {lat:41.8875,lon:19.2775,name:"Ulcinj"},
   ];
 
   useEffect(()=>{
@@ -1451,7 +1453,7 @@ function App() {
     const key = x => `${(+x.lat).toFixed(4)},${(+x.lon).toFixed(4)}`;
     const k = key(l);
     const entry = { lat:+l.lat, lon:+l.lon, name:l.name };
-    const next = [entry, ...recent.filter(r=>key(r)!==k)].slice(0,5);
+    const next = [entry, ...recent.filter(r=>key(r)!==k)].slice(0,8);
     setRecent(next); saveStored("wf_loc_recent", next);
     if(active) saveStored("wf_loc", l);
     fetch("/api/locations",{method:"POST",credentials:"include",

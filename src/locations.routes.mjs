@@ -13,7 +13,7 @@ import { db } from './db.mjs';
 
 export const locationRouter = Router();
 const nowIso = () => new Date().toISOString();
-const RECENT_LIMIT = 5;
+const RECENT_LIMIT = 8;
 
 // Match the frontend's historic dedupe granularity (toFixed(4), ~11 m).
 const round4 = n => Math.round(Number(n) * 1e4) / 1e4;
