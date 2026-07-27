@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.8.15 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.9.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.8.15
+// WindFoil Weather Intelligence v3.9.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -1504,7 +1504,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.8.15</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.9.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2116,18 +2116,46 @@ function App() {
                   </div>
                 </div>
               )}
-              {recent.length===0 && (
-                <div style={{fontSize:11,color:C.dim,textAlign:"center",lineHeight:1.5,marginTop:4}}>
-                  Noch keine Orte gespeichert — oben „Meinen aktuellen Standort verwenden".
+              {/* Ort hinzufügen (Google-Maps-Link oder Koordinaten) */}
+              <div style={{marginTop:14,borderTop:`1px solid ${C.border}`,paddingTop:14,display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{fontFamily:"monospace",fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em"}}>Ort hinzufügen</div>
+                <div>
+                  <label style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"block",marginBottom:4}}>Google-Maps-Link oder Koordinaten</label>
+                  <textarea value={custom.link} rows={3}
+                    onChange={e=>{setCustom(c=>({...c,link:e.target.value}));setLinkError("");}}
+                    placeholder="https://www.google.com/maps/@36.9833,21.6667,14z&#10;oder: 36.9833, 21.6667"
+                    style={{...S.inp,width:"100%",resize:"vertical",lineHeight:1.4}} />
                 </div>
-              )}
+                <div>
+                  <label style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"block",marginBottom:4}}>Ortsname (optional)</label>
+                  <input value={custom.name} onChange={e=>setCustom(c=>({...c,name:e.target.value}))}
+                    placeholder={parsePlaceName(custom.link)||"z.B. Mein Spot"}
+                    style={{...S.inp,width:"100%"}} />
+                </div>
+                {(()=>{ const parsed=parseLocationInput(custom.link);
+                  if(custom.link&&parsed&&!parsed.error) return (
+                    <div style={{fontSize:11,color:C.go,fontFamily:"monospace",background:"rgba(61,220,132,0.08)",border:`1px solid ${C.go}`,borderRadius:4,padding:"6px 10px"}}>✅ Erkannt: {parsed.lat.toFixed(4)}°N, {parsed.lon.toFixed(4)}°E</div>);
+                  if(custom.link&&parsed&&parsed.error) return (
+                    <div style={{fontSize:11,color:C.caution,lineHeight:1.5,background:"rgba(245,185,66,0.08)",border:`1px solid ${C.caution}`,borderRadius:4,padding:"6px 10px"}}>⚠️ {parsed.error}</div>);
+                  return null; })()}
+                {linkError && (<div style={{fontSize:11,color:C.stop,fontFamily:"monospace"}}>{linkError}</div>)}
+                <button style={S.btn} onClick={()=>{
+                  const parsed=parseLocationInput(custom.link);
+                  if(!parsed){ setLinkError("Bitte einen Link oder Koordinaten eingeben."); return; }
+                  if(parsed.error){ setLinkError(parsed.error); return; }
+                  const name=custom.name.trim()||parsePlaceName(custom.link)||`${parsed.lat.toFixed(3)}°N ${parsed.lon.toFixed(3)}°E`;
+                  const nl={lat:parsed.lat,lon:parsed.lon,name};
+                  setLoc(nl); pushRecent(nl,{active:true}); setCustom({link:"",name:""}); setLinkError(""); setShowLoc(false);
+                }}>Hinzufügen & wählen</button>
+                <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>💡 In Google Maps auf den Ort tippen → URL kopieren (Koordinaten stehen nach dem @). Oder direkt „lat, lon" eingeben.</div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.8.15</span>
+        <span>WindFoil Weather Intelligence v3.9.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
