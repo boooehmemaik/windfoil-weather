@@ -964,8 +964,6 @@ function App() {
   },[]);
   const [geoStatus,setGeoStatus]= useState(""); // "", "loading", "error"
   const [geoError,setGeoError] = useState("");
-  const [locTab,setLocTab]     = useState("preset");
-  const [selPreset,setSelPreset]= useState(0);
   // Last 5 manually entered / GPS locations, most-recent first (persisted).
   const [recent,setRecent]     = useState(()=>loadStored("wf_loc_recent",[]));
   const [custom,setCustom]     = useState({link:"",name:""});
@@ -989,14 +987,6 @@ function App() {
   const [users,setUsers]             = useState([]);
   const [usersMsg,setUsersMsg]       = useState("");
   const [pwInputs,setPwInputs]       = useState({}); // userId -> new password draft
-
-  const PRESETS = [
-    {lat:48.0698,lon:11.1100,name:"Ammersee / Eching"},
-    {lat:38.6297,lon:20.6103,name:"Vasiliki (Lefkada)"},
-    {lat:39.0333,lon:20.7667,name:"Surf Park Bouka (Preveza)"},
-    {lat:48.2989,lon:11.6178,name:"Hollerner See (Eching)"},
-    {lat:41.8875,lon:19.2775,name:"Ulcinj"},
-  ];
 
   useEffect(()=>{
     const t=setInterval(()=>setClock(new Date().toLocaleTimeString("de-DE")),1000);
@@ -1462,16 +1452,6 @@ function App() {
       .then(r=>r.ok?r.json():null)
       .then(d=>{ if(d&&Array.isArray(d.recent)){ setRecent(d.recent); saveStored("wf_loc_recent",d.recent); } })
       .catch(()=>{});
-  }
-
-  // Resolve the chosen location from the active modal tab (preset or link)
-  function resolveLoc() {
-    if(locTab==="preset") return PRESETS[selPreset];
-    const parsed = parseLocationInput(custom.link);
-    if(!parsed){ setLinkError("Bitte einen Link oder Koordinaten eingeben."); return null; }
-    if(parsed.error){ setLinkError(parsed.error); return null; }
-    const name = custom.name.trim() || parsePlaceName(custom.link) || `${parsed.lat.toFixed(3)}°N ${parsed.lon.toFixed(3)}°E`;
-    return { lat:parsed.lat, lon:parsed.lon, name };
   }
 
   const S={
