@@ -1,5 +1,23 @@
 # WindFoil — Version History
 
+## v3.10.0 (2026-08-02)
+**Harlem-Pace-Blend-Integration: Hersteller-Windrange trifft Physikmodell**
+- `index.html` v3.9.0 → v3.10.0
+- Neu: Datenstruktur `WING_BRANDS` (erweiterbar per Marke/Modell) mit Harlem-Pace-Tabelle
+  (3–6 m², Referenzgewicht 78 kg); Fahrergewicht skaliert die Tabellenränder via √-Gesetz
+- Neu: `wingTableWindow()` — interpoliert Herstellerangaben zwischen Stufen, reskaliert auf
+  tatsächliches Fahrergewicht; meldet `outOfRange` für Wings außerhalb 3–6 m² ohne stille
+  Extrapolation
+- Neu: `wingWindow()` — kanonische Scoring-Quelle; blended Physikmodell (`calcWindow`) mit
+  Herstellertabelle (`TABLE_BLEND = 0.5`); bei kalibrierter Planing-Schwelle oder Wing
+  außerhalb Tabelle: automatischer Fallback auf reine Physik
+- Call-Sites: `calcWindow()` → `wingWindow()` an drei Stellen (`pickBestSetup`, Tages-Score,
+  7-Tage-Scores); `calcWindow` bleibt als internes Helferlein unverändert
+- Sentinel-Kommentare `// <<wing-scoring>>` / `// <</wing-scoring>>` umrahmen den
+  Scoring-Cluster für vm-basierte Testbarkeit
+- Neu: `wing-scoring.test.mjs` — 13 Tests (Node `node:test`), alle grün; deckt Monotonie,
+  √-Skalierung, Interpolation, Randverhalten, Blend-Bypass und E2E-Szenarien ab
+
 ## v3.8.15 (2026-07-20)
 **Header-Wind-Logo vergrößert**
 - `index.html`: Header-Logo-SVG von 28×28 auf 38×38 px vergrößert

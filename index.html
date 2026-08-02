@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.9.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.10.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.9.0
+// WindFoil Weather Intelligence v3.10.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -434,6 +434,7 @@ function seaBreeze(windDir, hour, month, regime) {
   return{active:align>0.3,boost:Math.round(boost*10)/10,align};
 }
 
+// <<wing-scoring>>
 // ── FoilScore ─────────────────────────────────────────────────────────────────
 function calcWindow(weight,wingM2,foilCm2,skill,knownPlaneMs) {
   const sMin = {beginner:1.50,intermediate:1.25,advanced:1.00,pro:0.85}[skill]??1.15;
@@ -450,6 +451,75 @@ function calcWindow(weight,wingM2,foilCm2,skill,knownPlaneMs) {
           optMin: Math.round(minW*1.2*10)/10,
           optMax: Math.round(minW*sOpt*10)/10,
           maxWind:Math.round(minW*sMax*10)/10 };
+}
+// ── Wing manufacturer windrange tables (extensible) ──────────────────────────
+// Per Marke/Modell: Hersteller-Windrange (kn) + Wing-Masse (kg) je Größe (m²).
+// Die Ranges gelten für ein Referenzgewicht; das echte Gewicht skaliert sie
+// (√-Gesetz). Aktuell wird die Default-Tabelle global angewandt (noch kein
+// Per-User-Marken-Matching — Datenstruktur ist dafür vorbereitet).
+const WING_BRANDS = {
+  "Harlem Pace": {
+    refWeightKg: 78,
+    sizes: {
+      3: { rangeKn: [20, 32], wingKg: 1.76 },
+      4: { rangeKn: [16, 28], wingKg: 2.12 },
+      5: { rangeKn: [14, 26], wingKg: 2.32 },
+      6: { rangeKn: [10, 22], wingKg: 2.77 },
+    },
+  },
+};
+const DEFAULT_WING_BRAND = "Harlem Pace";
+const TABLE_BLEND = 0.5;   // Gewicht der Tabelle vs. Physikmodell im Blend
+// Hersteller-Windfenster für eine Wing-Größe: linear zwischen den Tabellenstufen
+// interpoliert und aufs Fahrergewicht reskaliert (√-Gesetz: wind ∝ √(gewicht/ref)).
+// Gibt {outOfRange:true, reason} zurück, wenn die Größe außerhalb der Tabelle
+// liegt — KEINE stille Extrapolation über 3–6 m² hinaus.
+function wingTableWindow(weight, wingM2, brandKey = DEFAULT_WING_BRAND) {
+  const brand = WING_BRANDS[brandKey];
+  if (!brand) return null;
+  const stops = Object.keys(brand.sizes).map(Number).sort((a,b)=>a-b);
+  const lo = stops[0], hi = stops[stops.length-1];
+  if (wingM2 < lo || wingM2 > hi) {
+    return { outOfRange: true,
+             reason: `Wing ${wingM2} m² außerhalb Herstellerangabe (${lo}–${hi} m²)` };
+  }
+  let a = lo, b = hi;
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (wingM2 >= stops[i] && wingM2 <= stops[i+1]) { a = stops[i]; b = stops[i+1]; break; }
+  }
+  const ra = brand.sizes[a].rangeKn, rb = brand.sizes[b].rangeKn;
+  const t = (a === b) ? 0 : (wingM2 - a) / (b - a);
+  const minKn = ra[0] + (rb[0] - ra[0]) * t;
+  const maxKn = ra[1] + (rb[1] - ra[1]) * t;
+  const f = Math.sqrt(weight / brand.refWeightKg);
+  const minMs = knToMs(minKn * f), maxMs = knToMs(maxKn * f);
+  // Hersteller nennt nur die Außenränge; das Optimalband wird in die obere Mitte
+  // gelegt (Foil-Wings tragen mittig-oben am besten). Heuristik, dokumentiert.
+  return {
+    minWind: Math.round(minMs * 10) / 10,
+    optMin:  Math.round((minMs + 0.25 * (maxMs - minMs)) * 10) / 10,
+    optMax:  Math.round((minMs + 0.75 * (maxMs - minMs)) * 10) / 10,
+    maxWind: Math.round(maxMs * 10) / 10,
+    outOfRange: false,
+  };
+}
+// EINZIGE kanonische Scoring-Quelle: Physikmodell, geblendet mit der
+// Herstellertabelle, wenn die Wing-Größe abgedeckt ist. Überall konsumiert
+// (Chart, Tages-Scores, pickBestSetup).
+function wingWindow(weight, wingM2, foilCm2, skill, knownPlaneMs,
+                    brandKey = DEFAULT_WING_BRAND) {
+  const phys = calcWindow(weight, wingM2, foilCm2, skill, knownPlaneMs);
+  // Fahrer-kalibrierte Planing-Schwelle = Ground Truth → nie verwässern.
+  if (knownPlaneMs && knownPlaneMs > 0) return phys;
+  const tab = wingTableWindow(weight, wingM2, brandKey);
+  if (!tab || tab.outOfRange) return phys;   // keine Tabellendaten → reine Physik
+  const b = TABLE_BLEND, p = 1 - b;
+  return {
+    minWind: Math.round((p*phys.minWind + b*tab.minWind) * 10) / 10,
+    optMin:  Math.round((p*phys.optMin  + b*tab.optMin ) * 10) / 10,
+    optMax:  Math.round((p*phys.optMax  + b*tab.optMax ) * 10) / 10,
+    maxWind: Math.round((p*phys.maxWind + b*tab.maxWind) * 10) / 10,
+  };
 }
 function scoreHour(w,win) {
   if(w<win.minWind) return Math.max(0,Math.round((w/win.minWind)*45));
@@ -485,7 +555,7 @@ function pickBestSetup(gearList, weight, skill, windMs) {
   let best = null;
   for(const g of gearList){
     const plane = g.planeKn ? (parseFloat(g.planeKn)/1.94384) : null;
-    const win = calcWindow(weight, parseFloat(g.wing), parseFloat(g.foil), skill, plane);
+    const win = wingWindow(weight, parseFloat(g.wing), parseFloat(g.foil), skill, plane);
     const sc = scoreHour(windMs, win);
     // centeredness: how close wind is to the middle of the optimal band
     const mid = (win.optMin + win.optMax) / 2;
@@ -497,6 +567,7 @@ function pickBestSetup(gearList, weight, skill, windMs) {
   }
   return best;
 }
+// <</wing-scoring>>
 
 // localStorage helpers (safe — no crash if storage unavailable, e.g. in preview)
 function loadStored(key, fallback) {
@@ -1254,7 +1325,7 @@ function App() {
       if(best){ win = best.win; pickedGear = best.gear; }
     }
     if(!win){
-      win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs);
+      win=wingWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs);
     }
     const scores=wins.map(w=>scoreHour(w,win));
     const avgW=wins.reduce((a,b)=>a+b,0)/wins.length;
@@ -1277,7 +1348,7 @@ function App() {
       const best = pickBestSetup(gear, rider.weight, rider.skill, dayMidW);
       if(best) win = best.win;
     }
-    if(!win) win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs);
+    if(!win) win=wingWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs);
     return scoreDay(forecast.hourly.windspeed_10m,win,start);
   }) : [];
 
@@ -1497,7 +1568,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.9.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.10.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2148,7 +2219,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.9.0</span>
+        <span>WindFoil Weather Intelligence v3.10.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
