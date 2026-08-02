@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Database layer (better-sqlite3)
-// File version: 1.0.1 (ESM .mjs)  |  App target: v3.8.1
+// File version: 1.1.0 (ESM .mjs)  |  App target: v3.11.0
 // ----------------------------------------------------------------------------
 // Production note: requires `npm i better-sqlite3`. (The test harness uses the
 // experimental built-in node:sqlite instead; this file is the real runtime.)
@@ -124,4 +124,39 @@ export function getSpotCalibration(userId, spotId) {
   return row
     ? { spotId, rolling: row.rolling, samples: row.samples, scope: 'spot' }
     : { spotId, rolling: null, samples: 0, scope: 'spot' };
+}
+
+// Rolling per (user, spot, wing_m2) aus sessions neu berechnen.
+export function recalibrateSpotWingRange(userId, spotId) {
+  const rows = db.prepare(`
+    SELECT wing_m2,
+           AVG(range_low_kt)  AS lo,
+           AVG(range_high_kt) AS hi,
+           COUNT(*)           AS samples
+    FROM sessions
+    WHERE user_id=? AND spot_id=? AND wing_m2 IS NOT NULL
+      AND (range_low_kt IS NOT NULL OR range_high_kt IS NOT NULL)
+    GROUP BY wing_m2`).all(userId, spotId);
+  const up = db.prepare(`INSERT INTO spot_wing_calibration
+      (user_id,spot_id,wing_m2,range_low_kt,range_high_kt,samples,updated_at)
+      VALUES (?,?,?,?,?,?,?)
+      ON CONFLICT(user_id,spot_id,wing_m2) DO UPDATE SET
+        range_low_kt=excluded.range_low_kt, range_high_kt=excluded.range_high_kt,
+        samples=excluded.samples, updated_at=excluded.updated_at`);
+  const now = new Date().toISOString();
+  const tx = db.transaction(() => {
+    for (const r of rows)
+      up.run(userId, spotId, r.wing_m2,
+             r.lo==null?null:Math.round(r.lo*10)/10,
+             r.hi==null?null:Math.round(r.hi*10)/10, r.samples, now);
+  });
+  tx();
+  return getSpotWingCalibration(userId, spotId);
+}
+
+// Alle Wing-Ranges eines Spots als Array [{wingM2,minKn,maxKn,samples}].
+export function getSpotWingCalibration(userId, spotId) {
+  return db.prepare(`
+    SELECT wing_m2 AS wingM2, range_low_kt AS minKn, range_high_kt AS maxKn, samples
+    FROM spot_wing_calibration WHERE user_id=? AND spot_id=?`).all(userId, spotId);
 }

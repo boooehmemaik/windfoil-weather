@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.10.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.11.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.10.0
+// WindFoil Weather Intelligence v3.11.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -469,7 +469,9 @@ const WING_BRANDS = {
   },
 };
 const DEFAULT_WING_BRAND = "Harlem Pace";
-const TABLE_BLEND = 0.5;   // Gewicht der Tabelle vs. Physikmodell im Blend
+const TABLE_BLEND = 0.5;        // Gewicht der Tabelle vs. Physikmodell im Blend
+const FEEDBACK_BLEND = 0.5;     // Gewicht der Spot/Wing-Range-Kalibrierung
+const FEEDBACK_MIN_SAMPLES = 1; // ab so vielen Samples greift die Kalibrierung
 // Hersteller-Windfenster für eine Wing-Größe: linear zwischen den Tabellenstufen
 // interpoliert und aufs Fahrergewicht reskaliert (√-Gesetz: wind ∝ √(gewicht/ref)).
 // Gibt {outOfRange:true, reason} zurück, wenn die Größe außerhalb der Tabelle
@@ -503,23 +505,38 @@ function wingTableWindow(weight, wingM2, brandKey = DEFAULT_WING_BRAND) {
     outOfRange: false,
   };
 }
+// Fenster {min,opt,opt,max} aus einer erlebten kn-Range (opt-Band 25/75 wie Tabelle).
+function rangeToWindow(minKn, maxKn) {
+  const lo=knToMs(minKn), hi=knToMs(maxKn);
+  return { minWind:Math.round(lo*10)/10,
+           optMin:Math.round((lo+0.25*(hi-lo))*10)/10,
+           optMax:Math.round((lo+0.75*(hi-lo))*10)/10,
+           maxWind:Math.round(hi*10)/10 };
+}
+function blendWindows(a, b, w) {   // kantenweise, p=1-w
+  const p=1-w;
+  return { minWind:Math.round((p*a.minWind+w*b.minWind)*10)/10,
+           optMin :Math.round((p*a.optMin +w*b.optMin )*10)/10,
+           optMax :Math.round((p*a.optMax +w*b.optMax )*10)/10,
+           maxWind:Math.round((p*a.maxWind+w*b.maxWind)*10)/10 };
+}
 // EINZIGE kanonische Scoring-Quelle: Physikmodell, geblendet mit der
 // Herstellertabelle, wenn die Wing-Größe abgedeckt ist. Überall konsumiert
 // (Chart, Tages-Scores, pickBestSetup).
 function wingWindow(weight, wingM2, foilCm2, skill, knownPlaneMs,
-                    brandKey = DEFAULT_WING_BRAND) {
+                    brandKey = DEFAULT_WING_BRAND, spotWingRange = null) {
   const phys = calcWindow(weight, wingM2, foilCm2, skill, knownPlaneMs);
   // Fahrer-kalibrierte Planing-Schwelle = Ground Truth → nie verwässern.
   if (knownPlaneMs && knownPlaneMs > 0) return phys;
   const tab = wingTableWindow(weight, wingM2, brandKey);
-  if (!tab || tab.outOfRange) return phys;   // keine Tabellendaten → reine Physik
-  const b = TABLE_BLEND, p = 1 - b;
-  return {
-    minWind: Math.round((p*phys.minWind + b*tab.minWind) * 10) / 10,
-    optMin:  Math.round((p*phys.optMin  + b*tab.optMin ) * 10) / 10,
-    optMax:  Math.round((p*phys.optMax  + b*tab.optMax ) * 10) / 10,
-    maxWind: Math.round((p*phys.maxWind + b*tab.maxWind) * 10) / 10,
-  };
+  let base = (!tab || tab.outOfRange) ? phys : blendWindows(phys, tab, TABLE_BLEND);
+  // NEU: Feedback-Layer — nur wenn genug Samples UND beide Range-Enden vorhanden.
+  if (spotWingRange && spotWingRange.samples >= FEEDBACK_MIN_SAMPLES
+      && spotWingRange.minKn != null && spotWingRange.maxKn != null) {
+    const fb = rangeToWindow(spotWingRange.minKn, spotWingRange.maxKn);
+    return blendWindows(base, fb, FEEDBACK_BLEND);
+  }
+  return base;
 }
 function scoreHour(w,win) {
   if(w<win.minWind) return Math.max(0,Math.round((w/win.minWind)*45));
@@ -550,12 +567,13 @@ function bestSession(winds,win,start=0) {
 // Given the rider's gear list and the day's representative wind (m/s),
 // pick the BEST setup: the one whose window scores highest for that wind.
 // Tie-break: prefer the setup whose optimal range is most centered on the wind.
-function pickBestSetup(gearList, weight, skill, windMs) {
+function pickBestSetup(gearList, weight, skill, windMs, wingRanges=null) {
   if(!gearList || !gearList.length) return null;
   let best = null;
   for(const g of gearList){
     const plane = g.planeKn ? (parseFloat(g.planeKn)/1.94384) : null;
-    const win = wingWindow(weight, parseFloat(g.wing), parseFloat(g.foil), skill, plane);
+    const swr = wingRanges ? wingRanges[String(parseFloat(g.wing))] : null;
+    const win = wingWindow(weight, parseFloat(g.wing), parseFloat(g.foil), skill, plane, DEFAULT_WING_BRAND, swr);
     const sc = scoreHour(windMs, win);
     // centeredness: how close wind is to the middle of the optimal band
     const mid = (win.optMin + win.optMax) / 2;
@@ -813,18 +831,28 @@ function AuthGate({children}){
 // Wires the frontend to the existing /api/feedback backend. Resolves the current
 // location to a spot first (/api/feedback/spot), then submits the debrief. The
 // backend only accepts feedback for the spot-local "today".
-function FeedbackModal({ loc, forecast, onClose, onCalibrated }) {
-  const [planed,setPlaned] = useState(null);   // null | true | false
-  const [windKt,setWindKt] = useState(12);
-  const [rating,setRating] = useState(0);
-  const [match,setMatch]   = useState(0);
-  const [notes,setNotes]   = useState("");
-  const [busy,setBusy]     = useState(false);
-  const [err,setErr]       = useState("");
-  const [done,setDone]     = useState(null);   // calibration result
+function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
+  const [planed,setPlaned]     = useState(null);   // null | true | false
+  const [windKt,setWindKt]     = useState(12);
+  const [windTopKt,setWindTopKt] = useState(null); // oberes Ende, optional
+  const [wingM2,setWingM2]     = useState(null);   // geflogene Wing-Größe (m²)
+  const [rating,setRating]     = useState(0);
+  const [match,setMatch]       = useState(0);
+  const [notes,setNotes]       = useState("");
+  const [busy,setBusy]         = useState(false);
+  const [err,setErr]           = useState("");
+  const [done,setDone]         = useState(null);   // calibration result
+
+  // distinct wing sizes from gear list for the select
+  const wingOptions = (() => {
+    if(!gear || !gear.length) return [];
+    const seen = new Set();
+    return gear.map(g=>parseFloat(g.wing)).filter(s=>!isNaN(s)&&seen.size<seen.add(s).size||!seen.has(s)&&!seen.add(s)).sort((a,b)=>a-b);
+  })();
 
   const tz = (()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }catch{ return "UTC"; } })();
-  const step = d => setWindKt(w => Math.min(35, Math.max(5, Math.round((w+d)*2)/2)));
+  const step    = d => setWindKt(w => Math.min(35, Math.max(5, Math.round((w+d)*2)/2)));
+  const stepTop = d => setWindTopKt(w => Math.min(60, Math.max(windKt, Math.round(((w||windKt)+d)*2)/2)));
 
   async function submit() {
     if(planed===null){ setErr("Bitte zuerst angeben, ob du aufs Foil gekommen bist."); return; }
@@ -838,6 +866,9 @@ function FeedbackModal({ loc, forecast, onClose, onCalibrated }) {
       const r = await fetch("/api/feedback",{method:"POST",credentials:"include",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({spotId:spot.id,planed,planingWindKt:planed?windKt:null,
+          wingM2:wingM2||null,
+          rangeLowKt:planed?windKt:null,
+          rangeHighKt:planed&&windTopKt?windTopKt:null,
           rating:rating||null,conditionsMatched:match||null,notes:notes.trim()||null,
           forecast:forecast||undefined})});
       const d = await r.json();
@@ -845,7 +876,11 @@ function FeedbackModal({ loc, forecast, onClose, onCalibrated }) {
         setErr(d.error==="feedback_locked"
           ? "Feedback ist nur am Tag der Session möglich."
           : (d.error || "Speichern fehlgeschlagen."));
-      } else { const cal=d.calibration||{}; setDone(cal); if(onCalibrated) onCalibrated(cal); }
+      } else {
+        const cal=d.calibration||{};
+        setDone({...cal, wingCalibration: d.wingCalibration||[], _wingM2: wingM2});
+        if(onCalibrated) onCalibrated(cal);
+      }
     }catch{ setErr("Server nicht erreichbar."); }
     finally{ setBusy(false); }
   }
@@ -894,6 +929,18 @@ function FeedbackModal({ loc, forecast, onClose, onCalibrated }) {
                   <span>Für diesen Spot kalibriert: dein Abhebe-Schwellenwert hier liegt bei <b style={{color:C.go,fontFamily:"monospace"}}>{done.rolling} kn</b> (aus {done.samples} {done.samples===1?"Session":"Sessions"}). Gilt nur für {loc.name} — deine anderen Spots bleiben unberührt.</span>
                 </div>
               )}
+              {(() => {
+                const wc = done.wingCalibration;
+                const wm = done._wingM2;
+                if(!wm || !Array.isArray(wc)) return null;
+                const entry = wc.find(r=>r.wingM2===wm);
+                if(!entry || entry.minKn==null || entry.maxKn==null) return null;
+                return (
+                  <div style={{marginTop:10,padding:12,borderRadius:8,background:C.bg,border:`1px solid ${C.border2}`,textAlign:"left",fontSize:13,color:C.text}}>
+                    <span>Range für <b style={{fontFamily:"monospace"}}>{wm} m²</b> an {loc.name} kalibriert: <b style={{color:C.signal,fontFamily:"monospace"}}>{entry.minKn}–{entry.maxKn} kn</b> (aus {entry.samples} {entry.samples===1?"Session":"Sessions"}).</span>
+                  </div>
+                );
+              })()}
               <button onClick={onClose} style={{marginTop:16,width:"100%",padding:12,border:"none",borderRadius:6,cursor:"pointer",background:C.signal,color:"#fff",fontWeight:700,fontSize:14}}>Schließen</button>
             </div>
           ) : (
@@ -928,6 +975,42 @@ function FeedbackModal({ loc, forecast, onClose, onCalibrated }) {
                     </div>
                   </div>
                   <p style={{fontSize:11,color:C.muted,marginTop:10}}>Der Wind, als dein Board zuerst hochkam — das kalibriert deinen Abhebe-Schwellenwert.</p>
+
+                  <div style={{marginTop:12,borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+                    <span style={{fontFamily:"monospace",fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em"}}>Wing-Größe (geflogene m²)</span>
+                    <div style={{marginTop:6}}>
+                      {wingOptions.length > 0 ? (
+                        <select value={wingM2||""} onChange={e=>setWingM2(e.target.value?parseFloat(e.target.value):null)}
+                          style={{width:"100%",background:C.bg,color:C.text,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px",fontSize:14}}>
+                          <option value="">— nicht angeben —</option>
+                          {wingOptions.map(s=><option key={s} value={s}>{s} m²</option>)}
+                        </select>
+                      ) : (
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <span style={{fontFamily:"monospace",fontSize:22,fontWeight:700,color:C.text}}>{wingM2!=null?`${wingM2} m²`:"—"}</span>
+                          <div style={{display:"flex",gap:6}}>
+                            <button type="button" onClick={()=>setWingM2(w=>w!=null?Math.max(1,Math.round((w-0.5)*2)/2):null)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>−</button>
+                            <button type="button" onClick={()=>setWingM2(w=>w!=null?Math.min(20,Math.round((w+0.5)*2)/2):3.0)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>+</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{marginTop:12,borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+                    <span style={{fontFamily:"monospace",fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em"}}>Oberes Ende (überpowert ab) — optional</span>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,marginTop:6}}>
+                      <div>
+                        <span style={{fontFamily:"monospace",fontSize:24,fontWeight:700,color:windTopKt?C.caution:C.muted,lineHeight:1}}>{windTopKt!=null?`${windTopKt.toFixed(1)} kn`:"—"}</span>
+                      </div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button type="button" onClick={()=>setWindTopKt(null)} style={{height:36,padding:"0 10px",borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.muted,fontSize:11}}>✕</button>
+                        <button type="button" onClick={()=>stepTop(-0.5)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>−</button>
+                        <button type="button" onClick={()=>stepTop(0.5)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>+</button>
+                      </div>
+                    </div>
+                    <p style={{fontSize:11,color:C.muted,marginTop:6}}>Ab wann war es zu viel Wing — kalibriert das obere Range-Ende.</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -996,17 +1079,23 @@ function App() {
   const [showLoc,setShowLoc]   = useState(false);
   const [showFeedback,setShowFeedback] = useState(false);
   // Per-location calibrated planing threshold (from this spot's feedback only).
-  const [spotCal,setSpotCal]   = useState(null); // {rolling,samples} | null
+  const [spotCal,setSpotCal]   = useState(null); // {rolling,samples,wingRanges?} | null
 
-  // Pull the calibrated planing threshold for the CURRENT location (if the rider
-  // has logged feedback there). Read-only — never creates a spot. Falls back to
-  // null (=> formula / manual override) when signed out or no local feedback.
+  // Pull the calibrated planing threshold + wing ranges for the CURRENT location
+  // (if the rider has logged feedback there). Read-only — never creates a spot.
+  // Falls back to null (=> formula / manual override) when signed out or no local feedback.
   useEffect(()=>{
     let cancelled=false;
     if(loc&&loc.lat!=null&&loc.lon!=null){
       fetch(`/api/feedback/spot-calibration?lat=${loc.lat}&lon=${loc.lon}`,{credentials:"include"})
         .then(r=>r.ok?r.json():null)
-        .then(d=>{ if(!cancelled) setSpotCal(d&&d.calibration&&d.calibration.rolling!=null?d.calibration:null); })
+        .then(d=>{
+          if(!cancelled) {
+            const cal = d&&d.calibration&&d.calibration.rolling!=null ? d.calibration : null;
+            const wr = d&&Array.isArray(d.wingRanges) ? d.wingRanges : [];
+            setSpotCal(cal ? {...cal, wingRanges: wr} : (wr.length ? {rolling:null,samples:0,wingRanges:wr} : null));
+          }
+        })
         .catch(()=>{ if(!cancelled) setSpotCal(null); });
     }
     return ()=>{ cancelled=true; };
@@ -1295,6 +1384,16 @@ function App() {
   const effPlaneMs = (spotCal && spotCal.rolling!=null) ? knToMs(spotCal.rolling)
                    : (rider.planeKn ? knToMs(parseFloat(rider.planeKn)) : null);
 
+  // Wing-range map for the active spot: { [String(wingM2)]: {minKn,maxKn,samples} }
+  // Built from the wingRanges array in spotCal (populated by /spot-calibration response).
+  const spotWingMap = (() => {
+    const wr = spotCal && spotCal.wingRanges;
+    if(!Array.isArray(wr) || !wr.length) return null;
+    const m = {};
+    for(const r of wr) m[String(r.wingM2)] = r;
+    return m;
+  })();
+
   // ── Derived day data ────────────────────────────────────────────────────────
   const dayData = (() => {
     if(!forecast) return null;
@@ -1321,11 +1420,11 @@ function App() {
     // Choose window: use midW (not effW) — consistent with dayScores tabs.
     let win, pickedGear=null;
     if(useGear && gear.length){
-      const best = pickBestSetup(gear, rider.weight, rider.skill, midW);
+      const best = pickBestSetup(gear, rider.weight, rider.skill, midW, spotWingMap);
       if(best){ win = best.win; pickedGear = best.gear; }
     }
     if(!win){
-      win=wingWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs);
+      win=wingWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs, DEFAULT_WING_BRAND, spotWingMap?.[String(rider.wingSize)]);
     }
     const scores=wins.map(w=>scoreHour(w,win));
     const avgW=wins.reduce((a,b)=>a+b,0)/wins.length;
@@ -1345,10 +1444,10 @@ function App() {
     const dayMidW = dw.length ? dw.reduce((a,b)=>a+b,0)/dw.length : (forecast.hourly.windspeed_10m[start+13]||0);
     let win;
     if(useGear && gear.length){
-      const best = pickBestSetup(gear, rider.weight, rider.skill, dayMidW);
+      const best = pickBestSetup(gear, rider.weight, rider.skill, dayMidW, spotWingMap);
       if(best) win = best.win;
     }
-    if(!win) win=wingWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs);
+    if(!win) win=wingWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs, DEFAULT_WING_BRAND, spotWingMap?.[String(rider.wingSize)]);
     return scoreDay(forecast.hourly.windspeed_10m,win,start);
   }) : [];
 
@@ -1568,7 +1667,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.10.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.11.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2130,7 +2229,7 @@ function App() {
 
       {/* FEEDBACK MODAL */}
       {showFeedback&&(
-        <FeedbackModal loc={loc} onClose={()=>setShowFeedback(false)}
+        <FeedbackModal loc={loc} gear={gear} onClose={()=>setShowFeedback(false)}
           onCalibrated={cal=>setSpotCal(cal&&cal.rolling!=null?cal:null)}
           forecast={forecast ? {source:"foil-score",
             predictedScore:(activeDay===0&&dayData)?dayData.dayScore:null,
@@ -2219,7 +2318,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.10.0</span>
+        <span>WindFoil Weather Intelligence v3.11.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

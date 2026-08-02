@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Feedback API routes (Express)
-// File version: 1.0.1 (ESM .mjs)  |  App target: v3.8.1
+// File version: 1.1.0 (ESM .mjs)  |  App target: v3.11.0
 // ----------------------------------------------------------------------------
 // Mount:  app.use('/api/feedback', requireAuth, feedbackRouter)
 // Assumes Better Auth middleware has populated req.user = { id, ... }.
@@ -9,7 +9,8 @@
 // ============================================================================
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import { db, localDay, recalibrateSpotPlaningThreshold, getSpotCalibration, hasEntitlement } from './db.mjs';
+import { db, localDay, recalibrateSpotPlaningThreshold, getSpotCalibration, hasEntitlement,
+         recalibrateSpotWingRange, getSpotWingCalibration } from './db.mjs';
 
 export const feedbackRouter = Router();
 const nowIso = () => new Date().toISOString();
@@ -53,7 +54,8 @@ feedbackRouter.post('/spot', (req, res) => {
       .run(id, req.user.id, name, rlat, rlon, tz, nowIso());
     spot = db.prepare('SELECT * FROM spots WHERE id = ?').get(id);
   }
-  res.json({ spot, calibration: getSpotCalibration(req.user.id, spot.id) });
+  res.json({ spot, calibration: getSpotCalibration(req.user.id, spot.id),
+             wingRanges: getSpotWingCalibration(req.user.id, spot.id) });
 });
 
 // --- GET /api/feedback/spot-calibration?lat=&lon= ----------------------------
@@ -72,8 +74,9 @@ feedbackRouter.get('/spot-calibration', (req, res) => {
       AND ABS(latitude - ?) < 0.01 AND ABS(longitude - ?) < 0.01
     ORDER BY (user_id IS NULL) ASC
     LIMIT 1`).get(req.user.id, rlat, rlon);
-  if (!spot) return res.json({ spotId: null, calibration: { rolling: null, samples: 0, scope: 'spot' } });
-  res.json({ spotId: spot.id, calibration: getSpotCalibration(req.user.id, spot.id) });
+  if (!spot) return res.json({ spotId: null, calibration: { rolling: null, samples: 0, scope: 'spot' }, wingRanges: [] });
+  res.json({ spotId: spot.id, calibration: getSpotCalibration(req.user.id, spot.id),
+             wingRanges: getSpotWingCalibration(req.user.id, spot.id) });
 });
 
 // --- GET /api/feedback/today?spot=<id> ---------------------------------------
@@ -118,6 +121,19 @@ feedbackRouter.post('/', (req, res) => {
   if (b.planed != null && ![0, 1, true, false].includes(b.planed))
     return res.status(400).json({ error: 'invalid_planed' });
 
+  // --- wing range validation ---
+  if (b.wingM2 != null && (typeof b.wingM2 !== 'number' || b.wingM2 <= 0 || b.wingM2 > 20))
+    return res.status(400).json({ error: 'invalid_wing_m2' });
+  if (b.rangeLowKt != null && (typeof b.rangeLowKt !== 'number' || b.rangeLowKt < 1 || b.rangeLowKt > 60))
+    return res.status(400).json({ error: 'invalid_range_low' });
+  if (b.rangeHighKt != null && (typeof b.rangeHighKt !== 'number' || b.rangeHighKt < 1 || b.rangeHighKt > 60))
+    return res.status(400).json({ error: 'invalid_range_high' });
+  if (b.rangeLowKt != null && b.rangeHighKt != null && b.rangeLowKt > b.rangeHighKt)
+    return res.status(400).json({ error: 'invalid_range' });
+
+  // Default-Mapping: wenn rangeLowKt fehlt aber planingWindKt gesetzt → range_low = planingWindKt
+  const rangeLowKt = b.rangeLowKt ?? (b.planingWindKt != null ? b.planingWindKt : null);
+
   const planed = b.planed == null ? null : (b.planed ? 1 : 0);
 
   const tx = db.transaction(() => {
@@ -132,22 +148,27 @@ feedbackRouter.post('/', (req, res) => {
           planed=?, planing_wind_kt=?, rating=?, conditions_matched=?, notes=?,
           wing_id=COALESCE(?,wing_id), foil_id=COALESCE(?,foil_id),
           started_at=COALESCE(?,started_at), ended_at=COALESCE(?,ended_at),
+          wing_m2=COALESCE(?,wing_m2), range_low_kt=?, range_high_kt=?,
           updated_at=?
         WHERE id=?`)
         .run(planed, b.planingWindKt ?? null, b.rating ?? null,
              b.conditionsMatched ?? null, b.notes ?? null,
              b.wingId ?? null, b.foilId ?? null, b.startedAt ?? null, b.endedAt ?? null,
+             b.wingM2 ?? null, rangeLowKt, b.rangeHighKt ?? null,
              nowIso(), sessionId);
     } else {
       sessionId = randomUUID();
       db.prepare(`INSERT INTO sessions
           (id,user_id,spot_id,session_date,started_at,ended_at,wing_id,foil_id,
-           planed,planing_wind_kt,rating,conditions_matched,notes,created_at,updated_at)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+           planed,planing_wind_kt,rating,conditions_matched,notes,
+           wing_m2,range_low_kt,range_high_kt,created_at,updated_at)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
         .run(sessionId, req.user.id, b.spotId, today, b.startedAt ?? null,
              b.endedAt ?? null, b.wingId ?? null, b.foilId ?? null,
              planed, b.planingWindKt ?? null, b.rating ?? null,
-             b.conditionsMatched ?? null, b.notes ?? null, nowIso(), nowIso());
+             b.conditionsMatched ?? null, b.notes ?? null,
+             b.wingM2 ?? null, rangeLowKt, b.rangeHighKt ?? null,
+             nowIso(), nowIso());
     }
 
     // Capture the forecast that was on screen, for later score-drift analysis.
@@ -170,8 +191,10 @@ feedbackRouter.post('/', (req, res) => {
   // Close the loop PER SPOT: refresh only this spot's rolling threshold so the
   // local wind assessment shapes the local score, not the rider's global profile.
   const calibration = recalibrateSpotPlaningThreshold(req.user.id, b.spotId);
+  // Refresh wing-range calibration for this (user, spot).
+  const wingCalibration = recalibrateSpotWingRange(req.user.id, b.spotId);
 
-  res.json({ ok: true, sessionId, calibration });
+  res.json({ ok: true, sessionId, calibration, wingCalibration });
 });
 
 // --- GET /api/feedback/forecast?spot=<id>&days=N -----------------------------

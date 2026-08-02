@@ -1,5 +1,21 @@
 # WindFoil — Version History
 
+## v3.11.0 (2026-08-02)
+**Wing-Range-Feedback: per-Spot/-User Range-Kalibrierung pro Wing-Größe**
+- `db/migrations/005_spot_wing_calibration.sql` (neu): additive Migration — `ALTER TABLE sessions ADD COLUMN wing_m2/range_low_kt/range_high_kt`; neue Tabelle `spot_wing_calibration(user_id, spot_id, wing_m2)` mit Rolling-AVG der erlebten Wind-Range
+- `src/db.mjs` 1.0.1 → 1.1.0: `recalibrateSpotWingRange()` + `getSpotWingCalibration()` (Muster von `recalibrateSpotPlaningThreshold`)
+- `src/feedback.routes.mjs` 1.0.1 → 1.1.0: POST `/api/feedback` nimmt `wingM2`, `rangeLowKt`, `rangeHighKt` entgegen (mit Validierung); schreibt neue Spalten in `sessions`; ruft `recalibrateSpotWingRange` auf und gibt `wingCalibration` in der Response zurück. GET `/spot-calibration` + POST `/spot` liefern zusätzlich `wingRanges`
+- `index.html` v3.10.0 → v3.11.0:
+  - Neue Konstanten `FEEDBACK_BLEND=0.5`, `FEEDBACK_MIN_SAMPLES=1`
+  - Neue Helfer `rangeToWindow()` + `blendWindows()` (innerhalb der `// <<wing-scoring>>`-Sentinels)
+  - `wingWindow()` um 7. Parameter `spotWingRange` erweitert — legt Feedback-Layer über den phys/tab-Blend (50/50); Bypass bei `knownPlaneMs>0` oder fehlenden Samples/Range-Enden unverändert (rückwärtskompatibel)
+  - `pickBestSetup()` nimmt `wingRanges`-Map entgegen und reicht je Gear den passenden `spotWingRange`-Eintrag durch
+  - `spotCal`-State speichert jetzt auch `wingRanges`; `spotWingMap` wird daraus aufgebaut und an alle drei Call-Sites (`dayData`, `dayScores`, Fallback-`wingWindow`) übergeben
+  - `FeedbackModal` erweitert: Wing-Größen-Auswahl (aus Gear-Liste) + Stepper für oberes Range-Ende; Success-View zeigt kalibrierte Range wenn vorhanden
+- Vollständig rückwärtskompatibel: ohne Feedback-Einträge identisches Scoring wie v3.10.0
+- Neu: `feedback-wing-range.test.mjs` — Backend-Tests (node:test, better-sqlite3 :memory:)
+- `wing-scoring.test.mjs` um Fälle 6a-1..6 (Feedback-Blend, Samples-Gate, Bypass-Vorrang) erweitert
+
 ## v3.10.0 (2026-08-02)
 **Harlem-Pace-Blend-Integration: Hersteller-Windrange trifft Physikmodell**
 - `index.html` v3.9.0 → v3.10.0

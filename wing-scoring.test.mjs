@@ -42,12 +42,16 @@ const {
   calcWindow,
   wingTableWindow,
   wingWindow,
+  rangeToWindow,
+  blendWindows,
   scoreHour,
   scoreDay,
   bestSession,
   WING_BRANDS,
   DEFAULT_WING_BRAND,
   TABLE_BLEND,
+  FEEDBACK_BLEND,
+  FEEDBACK_MIN_SAMPLES,
 } = ctx;
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -245,4 +249,97 @@ test('Fall 7 — Alle Szenarien: kein NaN, kein Exception', () => {
     assert(!Number.isNaN(s), `scoreDay @ ${kn}kn darf nicht NaN sein`);
     assert(s >= 0 && s <= 100, `scoreDay @ ${kn}kn muss in [0,100] sein, got ${s}`);
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fälle 6a-1..6 — Wing-Range-Feedback-Blend (v3.11.0)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 6a-1: Kein Feedback (spotWingRange=null) → deep-equal zu v3.10.0 (Regression)
+test('Fall 6a-1 — spotWingRange=null → wingWindow identisch zu phys/tab-Blend', () => {
+  // wingWindow mit und ohne null spotWingRange muss identisch sein
+  const wNull  = wingWindow(93, 4, 1800, 'intermediate', null, 'Harlem Pace', null);
+  const wUndef = wingWindow(93, 4, 1800, 'intermediate', null);
+  assert.deepEqual(wNull, wUndef, 'null und weggelassener spotWingRange müssen identisch sein');
+  // Ergebnis muss base (phys/tab-blend) entsprechen — TABLE_BLEND=0.5 (const, nicht per vm extrahierbar)
+  const phys = calcWindow(93, 4, 1800, 'intermediate', null);
+  const tab  = wingTableWindow(93, 4);
+  const base = blendWindows(phys, tab, 0.5); // TABLE_BLEND=0.5
+  assert.deepEqual(wNull, base, 'Ohne Feedback: wingWindow muss phys/tab-Blend sein');
+});
+
+// 6a-2: Feedback-Blend 4m²/Talamone — numerisch prüfen
+test('Fall 6a-2 — Feedback-Blend 4m²: minWind höher als ohne Feedback, Richtung 25kn', () => {
+  const spotWingRange = { minKn: 25, maxKn: 30, samples: 1 };
+  const withFb    = wingWindow(93, 4, 1800, 'intermediate', null, 'Harlem Pace', spotWingRange);
+  const withoutFb = wingWindow(93, 4, 1800, 'intermediate', null);
+
+  // minWind muss höher sein (Feedback zieht Richtung 25kn = knToMs(25) ≈ 12.86 m/s)
+  assert(withFb.minWind > withoutFb.minWind,
+    `minWind mit Feedback (${withFb.minWind}) muss > ohne Feedback (${withoutFb.minWind})`);
+
+  // Numerische Verifikation: blendWindows(base, rangeToWindow(25,30), 0.5)
+  // TABLE_BLEND und FEEDBACK_BLEND sind const in vm, daher als Literal 0.5
+  const phys = calcWindow(93, 4, 1800, 'intermediate', null);
+  const tab  = wingTableWindow(93, 4);
+  const base = blendWindows(phys, tab, 0.5); // TABLE_BLEND=0.5
+  const fb   = rangeToWindow(25, 30);
+  const expected = blendWindows(base, fb, 0.5); // FEEDBACK_BLEND=0.5
+  assert.deepEqual(withFb, expected, 'Feedback-Blend muss exakt blendWindows(base,fb,0.5) entsprechen');
+
+  // Plausibilität: Ergebnis liegt zwischen base und fb
+  assert(withFb.minWind >= Math.min(base.minWind, fb.minWind) - 0.1,
+    `minWind muss zwischen base (${base.minWind}) und fb (${fb.minWind}) liegen`);
+});
+
+// 6a-3: Samples-Gate: samples=0 → kein Blend; samples=1 → Blend aktiv
+test('Fall 6a-3 — Samples-Gate: samples=0 kein Blend, samples=1 Blend aktiv', () => {
+  const swr0 = { minKn: 20, maxKn: 28, samples: 0 };
+  const swr1 = { minKn: 20, maxKn: 28, samples: 1 };
+  const base = wingWindow(80, 4, 1800, 'intermediate', null);
+  const with0 = wingWindow(80, 4, 1800, 'intermediate', null, 'Harlem Pace', swr0);
+  const with1 = wingWindow(80, 4, 1800, 'intermediate', null, 'Harlem Pace', swr1);
+
+  assert.deepEqual(with0, base, 'samples=0: kein Feedback-Blend (== base)');
+  assert.notDeepEqual(with1, base, 'samples=1: Blend muss aktiv sein (≠ base)');
+});
+
+// 6a-4: Nur eine Grenze vorhanden (maxKn=null) → kein Range-Blend (Guard greift)
+test('Fall 6a-4 — Nur maxKn=null: kein Feedback-Blend', () => {
+  const swrNoMax  = { minKn: 20, maxKn: null,  samples: 3 };
+  const swrNoMin  = { minKn: null, maxKn: 28,  samples: 3 };
+  const base = wingWindow(80, 4, 1800, 'intermediate', null);
+  const withNoMax = wingWindow(80, 4, 1800, 'intermediate', null, 'Harlem Pace', swrNoMax);
+  const withNoMin = wingWindow(80, 4, 1800, 'intermediate', null, 'Harlem Pace', swrNoMin);
+
+  assert.deepEqual(withNoMax, base, 'maxKn=null: kein Feedback-Blend');
+  assert.deepEqual(withNoMin, base, 'minKn=null: kein Feedback-Blend');
+});
+
+// 6a-5: Bypass-Vorrang: knownPlaneMs>0 → Feedback-Layer ignoriert (deep-equal calcWindow)
+test('Fall 6a-5 — Bypass: knownPlaneMs>0 → Feedback ignoriert', () => {
+  const spotWingRange = { minKn: 25, maxKn: 30, samples: 5 };
+  const planeMs = knToMs(18);
+  const withBypass  = wingWindow(80, 4, 1800, 'intermediate', planeMs, 'Harlem Pace', spotWingRange);
+  const physExpected = calcWindow(80, 4, 1800, 'intermediate', planeMs);
+
+  assert.deepEqual(withBypass, physExpected,
+    'knownPlaneMs>0: Bypass muss greifen; Feedback-Layer muss ignoriert werden');
+});
+
+// 6a-6: rangeToWindow/blendWindows Einheiten (kn→m/s), opt-Band 25/75
+test('Fall 6a-6 — rangeToWindow: kn→m/s korrekt, opt-Band 25/75', () => {
+  const minKn = 20, maxKn = 30;
+  const w = rangeToWindow(minKn, maxKn);
+
+  const loMs = knToMs(minKn);
+  const hiMs = knToMs(maxKn);
+  approx(w.minWind, Math.round(loMs*10)/10, 0.01, 'rangeToWindow minWind');
+  approx(w.maxWind, Math.round(hiMs*10)/10, 0.01, 'rangeToWindow maxWind');
+  approx(w.optMin,  Math.round((loMs + 0.25*(hiMs-loMs))*10)/10, 0.01, 'rangeToWindow optMin 25%');
+  approx(w.optMax,  Math.round((loMs + 0.75*(hiMs-loMs))*10)/10, 0.01, 'rangeToWindow optMax 75%');
+
+  // blendWindows kantenweise: 50/50 zweier identischer Fenster = selbiges Fenster
+  const same = blendWindows(w, w, 0.5);
+  assert.deepEqual(same, w, 'blendWindows(a, a, 0.5) muss a zurückgeben');
 });
