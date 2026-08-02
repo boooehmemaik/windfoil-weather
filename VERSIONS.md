@@ -1,5 +1,17 @@
 # WindFoil — Version History
 
+## v3.13.0 (2026-08-02)
+**Measured-Station-Korrektur: stündliche Beobachtungsreihe korrigiert den Tages-Score (Raise-only)**
+- `index.html` v3.12.0 → v3.13.0: Frontend-only, kein Backend-/DB-Change
+- Neue Funktion `applyMeasuredStationCorrection(wins, gust, measured, activeDateStr)` (eigener `// <<measured-correction>>`-Sentinel-Block, direkt nach `// <</live-boost>>`): distanzgewichtete, Raise-only Pro-Stunden-Korrektur gegen reale Messreihe; nahe Station (Torbole ~0 km) = starkes Gewicht (0.8), ferne (LGPZ ~35 km) = schwächerer Nudge; non-mutating (`.slice()`); nur beobachtete Stunden (`null`-Messstunden unberührt); keine Vorwärts-Extrapolation
+- Neue Hilfsfunktion `measuredWeight(km)`: lineares Distanzgewicht 0→0.8, 50→0, darüber 0
+- Konstanten: `STATION_TRUST_AT_SPOT=0.8`, `STATION_MAX_KM=50`
+- `dayData`-Memo: `activeDateStr` aus `h.time[s]`; Korrektur verkettet nach Live-Boost (`mc = applyMeasuredStationCorrection(lb.wins, lb.gust, measured, activeDateStr)`); `winsEff`/`gustEff` kommen jetzt aus `mc`; `measuredCorr: mc` neu im Rückgabeobjekt
+- `dayScores`-Loop: für `d===activeDay` denselben Measured-Korrekturdurchlauf anwenden (Pill und Detail konsistent); bestehender `d===0`-Live-Boost-Zweig unberührt; beide Korrekturen wirken sequenziell (Live-Boost zuerst, dann measured)
+- UI-Badge: bei `dayData.measuredCorr?.applied` informativer Hinweis `↑ an Station … (~X km) angepasst` in `C.signal` (nur bei km≥2 Distanzangabe); `applyConfidence` unberührt
+- Spots ohne measured-Station oder ohne Messreihe für den aktiven Tag: No-Op (`applied:false`), identisches Verhalten wie zuvor
+- Neu: Tests für `applyMeasuredStationCorrection` und `measuredWeight` in `wing-scoring.test.mjs` (Fälle 1–8)
+
 ## v3.12.0 (2026-08-02)
 **Live-Station-Nowcast-Boost: reale Stationsmessung fließt in den Tages-Score ein**
 - `index.html` v3.11.0 → v3.12.0: Frontend-only, kein Backend-/DB-Change

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.12.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.13.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.12.0
+// WindFoil Weather Intelligence v3.13.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -366,6 +366,41 @@ function applyLiveStationBoost(wins, gust, live, isToday) {
            station: live.label || live.key || "Live-Station" };
 }
 // <</live-boost>>
+
+// <<measured-correction>>
+// Distanzgewichtete, RAISE-ONLY Pro-Stunde-Korrektur des Tages-Winds an der
+// echten Messreihe (measured-Station). Nahe Station = starkes Gewicht, ferne =
+// schwach (Proxy). Non-mutating; nur wo die Station mehr misst als das Modell.
+const STATION_TRUST_AT_SPOT = 0.8;   // Blend-Gewicht bei ~0 km Entfernung
+const STATION_MAX_KM        = 50;    // ab hier kein Vertrauen mehr (Gewicht 0)
+function measuredWeight(km) {
+  if (km == null) return STATION_TRUST_AT_SPOT;
+  return Math.max(0, STATION_TRUST_AT_SPOT * (1 - Math.min(km, STATION_MAX_KM) / STATION_MAX_KM));
+}
+// wins/gust: 24h-Slices (m/s) des ANGEZEIGTEN Tages. measured: State-Objekt vom
+// /api/station/measured-Feed. activeDateStr: 'YYYY-MM-DD' des angezeigten Tages.
+function applyMeasuredStationCorrection(wins, gust, measured, activeDateStr) {
+  const none = { wins, gust, applied: false, station: null, km: null, weight: 0 };
+  if (!measured || !measured.ok || !measured.hourly || measured.date !== activeDateStr) return none;
+  const mw = measured.hourly.wind || [], mg = measured.hourly.gust || [];
+  const w = measuredWeight(measured.km);
+  if (w <= 0) return none;
+  const bw = wins.slice(), bg = gust ? gust.slice() : gust;
+  let applied = false;
+  for (let h = 0; h < bw.length; h++) {
+    if (mw[h] != null && bw[h] != null && mw[h] > bw[h]) {
+      bw[h] = Math.round((bw[h] + (mw[h] - bw[h]) * w) * 100) / 100; applied = true;
+    }
+    if (bg && mg[h] != null && bg[h] != null && mg[h] > bg[h]) {
+      bg[h] = Math.round((bg[h] + (mg[h] - bg[h]) * w) * 100) / 100;
+    }
+  }
+  return applied
+    ? { wins: bw, gust: bg, applied: true, station: measured.label || measured.source || "Station",
+        km: measured.km ?? null, weight: Math.round(w * 100) / 100 }
+    : none;
+}
+// <</measured-correction>>
 
 async function tryFetchForecast(lat, lon) {
   const base = {
@@ -1445,8 +1480,10 @@ function App() {
     });
     const regime=thermalRegime(loc.lat,loc.lon);
     const thermik=Array.from({length:24},(_,i)=>computeThermik(h,s+i,regime));
+    const activeDateStr = h.time[s] ? h.time[s].slice(0,10) : null;
     const lb = applyLiveStationBoost(wins, gust, live, activeDay===0);
-    const winsEff = lb.wins, gustEff = lb.gust;
+    const mc = applyMeasuredStationCorrection(lb.wins, lb.gust, measured, activeDateStr);
+    const winsEff = mc.wins, gustEff = mc.gust;
     const slice=(arr,a,b)=>arr.slice(a,b).filter(Boolean);
     const midW=slice(winsEff,12,16).reduce((a,b)=>a+b,0)/4||winsEff[12]||0;
     const midG=slice(gustEff,12,16).reduce((a,b)=>a+b,0)/4||gustEff[12]||0;
@@ -1470,7 +1507,7 @@ function App() {
     const dayScore=scoreDay(winsEff,win);
     const session=bestSession(winsEff,win); // {score,startHour,endHour}
     const thInfo=classifyThermik(maxTh);
-    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,dayScore,thInfo,pickedGear,session,liveBoost:lb};
+    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,dayScore,thInfo,pickedGear,session,liveBoost:lb,measuredCorr:mc};
   })();
 
   const dayScores = forecast ? Array.from({length:7},(_,d)=>{
@@ -1484,13 +1521,12 @@ function App() {
       if(best) win = best.win;
     }
     if(!win) win=wingWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs, DEFAULT_WING_BRAND, spotWingMap?.[String(rider.wingSize)]);
-    if (d === 0) {
-      const slice = forecast.hourly.windspeed_10m.slice(start, start+24);
-      const gslice= forecast.hourly.windgusts_10m.slice(start, start+24);
-      const lb = applyLiveStationBoost(slice, gslice, live, true);
-      return scoreDay(lb.wins, win, 0);
-    }
-    return scoreDay(forecast.hourly.windspeed_10m,win,start);
+    const dstr = forecast.hourly.time[start] ? forecast.hourly.time[start].slice(0,10) : null;
+    let slice = forecast.hourly.windspeed_10m.slice(start, start+24);
+    let gslice= forecast.hourly.windgusts_10m.slice(start, start+24);
+    if (d === 0) { const lb=applyLiveStationBoost(slice,gslice,live,true); slice=lb.wins; gslice=lb.gust; }
+    if (d === activeDay) { const mc=applyMeasuredStationCorrection(slice,gslice,measured,dstr); slice=mc.wins; gslice=mc.gust; }
+    return scoreDay(slice, win, 0);
   }) : [];
 
   const dayNames = forecast ? (() => {
@@ -1709,7 +1745,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.12.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.13.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1944,6 +1980,11 @@ function App() {
                     {dayData.liveBoost?.applied && (
                       <div style={{marginTop:6,fontSize:10,color:C.signal,fontFamily:"monospace"}}>
                         ↑ an Live-Station {dayData.liveBoost.station} angepasst (×{dayData.liveBoost.k})
+                      </div>
+                    )}
+                    {dayData.measuredCorr?.applied && (
+                      <div style={{marginTop:6,fontSize:10,color:C.signal,fontFamily:"monospace"}}>
+                        ↑ an Station {dayData.measuredCorr.station}{dayData.measuredCorr.km >= 2 ? ` (~${dayData.measuredCorr.km} km)` : ""} angepasst
                       </div>
                     )}
                   </div>
@@ -2365,7 +2406,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.12.0</span>
+        <span>WindFoil Weather Intelligence v3.13.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

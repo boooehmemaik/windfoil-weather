@@ -541,3 +541,233 @@ test('Live-Boost Fall 9 — Score-Wirkung: Boost-Score > Roh-Score (Talamone-Fal
   assert(scoreBoosted > scoreRoh,
     `Boost-Score (${scoreBoosted}) muss > Roh-Score (${scoreRoh}) sein`);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Measured-Station-Korrektur (v3.13.0) — Fälle 1–8
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Setup: extract measured-correction block from index.html ─────────────────
+const mcStartMarker = '// <<measured-correction>>';
+const mcEndMarker   = '// <</measured-correction>>';
+const mcStartIdx = html.indexOf(mcStartMarker);
+const mcEndIdx   = html.indexOf(mcEndMarker);
+assert(mcStartIdx !== -1, 'Sentinel <<measured-correction>> nicht gefunden in index.html');
+assert(mcEndIdx   !== -1, 'Sentinel <</measured-correction>> nicht gefunden in index.html');
+assert(mcStartIdx < mcEndIdx, 'measured-correction Sentinels in falscher Reihenfolge');
+
+const mcBlock = html.slice(mcStartIdx + mcStartMarker.length, mcEndIdx);
+
+const mcCtx = vm.createContext({ Math, console });
+vm.runInContext(mcBlock, mcCtx);
+
+const { applyMeasuredStationCorrection, measuredWeight } = mcCtx;
+
+// Helper: 24h flat wind array (m/s)
+const makeMWins24 = (speedMs) => Array.from({ length: 24 }, () => speedMs);
+const makeMGust24 = (speedMs) => Array.from({ length: 24 }, () => speedMs * 1.3);
+
+const TODAY = '2026-08-02';
+
+// Fall 1 — Kein/ungültig: null, ok:false, kein hourly → applied:false, Arrays identisch
+test('Measured-Correction Fall 1a — measured=null → applied:false, Arrays identisch', () => {
+  const wins = makeMWins24(knToMs(10));
+  const gust = makeMGust24(knToMs(10));
+  const r = applyMeasuredStationCorrection(wins, gust, null, TODAY);
+  assert.equal(r.applied, false, 'applied muss false sein');
+  assert.equal(r.wins, wins, 'wins-Referenz muss identisch sein');
+  assert.equal(r.gust, gust, 'gust-Referenz muss identisch sein');
+});
+
+test('Measured-Correction Fall 1b — measured.ok=false → applied:false', () => {
+  const wins = makeMWins24(knToMs(10));
+  const gust = makeMGust24(knToMs(10));
+  const measured = { ok: false, hourly: { wind: makeMWins24(knToMs(15)) }, date: TODAY, km: 0 };
+  const r = applyMeasuredStationCorrection(wins, gust, measured, TODAY);
+  assert.equal(r.applied, false, 'applied muss false sein bei ok:false');
+  assert.equal(r.wins, wins, 'wins-Referenz muss identisch sein');
+});
+
+test('Measured-Correction Fall 1c — kein hourly → applied:false', () => {
+  const wins = makeMWins24(knToMs(10));
+  const measured = { ok: true, date: TODAY, km: 0 };
+  const r = applyMeasuredStationCorrection(wins, null, measured, TODAY);
+  assert.equal(r.applied, false, 'applied muss false sein ohne hourly');
+  assert.equal(r.wins, wins, 'wins-Referenz muss identisch sein');
+});
+
+// Fall 2 — Datum-Mismatch → unverändert
+test('Measured-Correction Fall 2 — Datum-Mismatch → applied:false, unverändert', () => {
+  const wins = makeMWins24(knToMs(10));
+  const gust = makeMGust24(knToMs(10));
+  const measured = {
+    ok: true, hourly: { wind: makeMWins24(knToMs(15)), gust: makeMGust24(knToMs(15)) },
+    date: '2026-08-01', km: 0, label: 'Torbole'
+  };
+  const r = applyMeasuredStationCorrection(wins, gust, measured, TODAY);
+  assert.equal(r.applied, false, 'Datum-Mismatch: applied muss false sein');
+  assert.equal(r.wins, wins, 'wins-Referenz muss identisch sein');
+  assert.equal(r.gust, gust, 'gust-Referenz muss identisch sein');
+});
+
+// Fall 3 — Nahe Station (km:0 → w=0.8): Anhebung wo mw>model; Stunden mit mw<=model unverändert; null-Messstunden unverändert
+test('Measured-Correction Fall 3 — Nahe Station km:0: Anhebung korrekt, raise-only, null-Stunden unverändert', () => {
+  // w = 0.8 * (1 - 0/50) = 0.8
+  const w = 0.8;
+  const modelLow  = knToMs(8);   // Station misst mehr → Anhebung
+  const modelHigh = knToMs(15);  // Station misst weniger → unverändert
+  const stationLow  = knToMs(12);
+  const stationHigh = knToMs(10);
+
+  const wins = Array.from({ length: 24 }, (_, h) => {
+    if (h === 5) return null;        // null-Modellstunde
+    if (h % 2 === 0) return modelLow;
+    return modelHigh;
+  });
+  const mwind = Array.from({ length: 24 }, (_, h) => {
+    if (h === 3) return null;        // null-Messstunde
+    if (h % 2 === 0) return stationLow;
+    return stationHigh;
+  });
+  const measured = { ok: true, hourly: { wind: mwind, gust: [] }, date: TODAY, km: 0, label: 'Torbole' };
+  const r = applyMeasuredStationCorrection(wins, null, measured, TODAY);
+
+  assert.equal(r.applied, true, 'applied muss true sein');
+
+  // Stunden wo mw>model: gerade Stunden (außer 3=null-Messung, 5=null-Modell)
+  for (let h = 0; h < 24; h++) {
+    if (h === 5) {
+      // null-Modellstunde: unverändert (null)
+      assert.equal(r.wins[h], null, `wins[${h}] (null-Modell) muss null bleiben`);
+    } else if (h === 3) {
+      // null-Messstunde: mw[3]=null → keine Korrektur → bleibt modelHigh (h=3 ist ungerade → modelHigh)
+      assert(Math.abs(r.wins[h] - modelHigh) < 0.001, `wins[${h}] (null-Messung) muss unverändert sein`);
+    } else if (h % 2 === 0) {
+      // stationLow > modelLow → Anhebung
+      const expected = Math.round((modelLow + (stationLow - modelLow) * w) * 100) / 100;
+      assert(Math.abs(r.wins[h] - expected) < 0.001,
+        `wins[${h}] soll angehoben sein: erwartet ${expected}, got ${r.wins[h]}`);
+    } else {
+      // stationHigh < modelHigh → raise-only → unverändert
+      assert(Math.abs(r.wins[h] - modelHigh) < 0.001,
+        `wins[${h}] (Station < Modell) muss unverändert sein, got ${r.wins[h]}`);
+    }
+  }
+});
+
+// Fall 4 — Ferne Station (km:35): w=0.8*(1-35/50)=0.24; Anhebung schwächer
+test('Measured-Correction Fall 4 — Ferne Station km:35: w=0.24, Anhebung schwächer', () => {
+  const km = 35;
+  const w = 0.8 * (1 - 35 / 50); // = 0.24
+  const model = knToMs(10);
+  const station = knToMs(14);     // Station mehr als Modell
+
+  const wins = makeMWins24(model);
+  const mwind = makeMWins24(station);
+  const measured = { ok: true, hourly: { wind: mwind, gust: [] }, date: TODAY, km, label: 'LGPZ' };
+  const r = applyMeasuredStationCorrection(wins, null, measured, TODAY);
+
+  assert.equal(r.applied, true, 'applied muss true sein');
+  const expected = Math.round((model + (station - model) * w) * 100) / 100;
+  // Verify a sample hour
+  assert(Math.abs(r.wins[12] - expected) < 0.001,
+    `wins[12] ferne Station: erwartet ${expected} (w=${w}), got ${r.wins[12]}`);
+
+  // Anhebung schwächer als nahe Station (km:0)
+  const measuredNear = { ok: true, hourly: { wind: mwind, gust: [] }, date: TODAY, km: 0, label: 'Near' };
+  const rNear = applyMeasuredStationCorrection(wins, null, measuredNear, TODAY);
+  assert(rNear.wins[12] > r.wins[12],
+    `Nahe Station (${rNear.wins[12]}) muss stärker anheben als ferne (${r.wins[12]})`);
+});
+
+// Fall 5 — Raise-only: überall mw<model → applied:false, unverändert
+test('Measured-Correction Fall 5 — Raise-only: mw<model überall → applied:false', () => {
+  const model = knToMs(15);
+  const station = knToMs(10);  // Station misst WENIGER als Modell
+  const wins = makeMWins24(model);
+  const mwind = makeMWins24(station);
+  const measured = { ok: true, hourly: { wind: mwind, gust: [] }, date: TODAY, km: 0, label: 'Torbole' };
+  const r = applyMeasuredStationCorrection(wins, null, measured, TODAY);
+
+  assert.equal(r.applied, false, 'Raise-only: applied muss false sein wenn Station überall niedrigerer misst');
+  assert.equal(r.wins, wins, 'wins muss identisch (Referenz) sein');
+});
+
+// Fall 6 — Gust wird korrigiert; gust=null bricht nicht
+test('Measured-Correction Fall 6a — Gust wird korrigiert', () => {
+  const model   = knToMs(8);
+  const station = knToMs(12);
+  const wins = makeMWins24(model);
+  const gust = makeMGust24(model);
+  const km = 0;
+  const w  = 0.8;
+  const mwind = makeMWins24(station);
+  const mgust = makeMGust24(station);
+  const measured = { ok: true, hourly: { wind: mwind, gust: mgust }, date: TODAY, km, label: 'Torbole' };
+  const r = applyMeasuredStationCorrection(wins, gust, measured, TODAY);
+
+  assert.equal(r.applied, true, 'applied muss true sein');
+  // gust-Korrektur: mg[h] > bg[h] → anheben
+  const modelG  = gust[10];
+  const stationG= mgust[10];
+  if (stationG > modelG) {
+    const expectedG = Math.round((modelG + (stationG - modelG) * w) * 100) / 100;
+    assert(Math.abs(r.gust[10] - expectedG) < 0.001,
+      `gust[10] soll korrigiert sein: erwartet ${expectedG}, got ${r.gust[10]}`);
+  }
+});
+
+test('Measured-Correction Fall 6b — gust=null bricht nicht', () => {
+  const wins = makeMWins24(knToMs(8));
+  const mwind = makeMWins24(knToMs(12));
+  const measured = { ok: true, hourly: { wind: mwind, gust: [] }, date: TODAY, km: 0, label: 'Torbole' };
+  let r;
+  assert.doesNotThrow(() => {
+    r = applyMeasuredStationCorrection(wins, null, measured, TODAY);
+  }, 'gust=null darf keinen Fehler werfen');
+  assert.equal(r.applied, true, 'muss auch ohne gust korrigieren');
+  assert.equal(r.gust, null, 'gust soll null bleiben wenn Eingabe null');
+});
+
+// Fall 7 — measuredWeight-Ränder: 0→0.8, 50→0, 60→0, null→0.8
+test('Measured-Correction Fall 7 — measuredWeight Ränder', () => {
+  const approxMW = (actual, expected, msg) =>
+    assert(Math.abs(actual - expected) < 0.0001, `${msg}: erwartet ${expected}, got ${actual}`);
+
+  approxMW(measuredWeight(0),    0.8, 'km=0 → 0.8');
+  approxMW(measuredWeight(50),   0,   'km=50 → 0');
+  approxMW(measuredWeight(60),   0,   'km=60 → 0 (geclampt)');
+  approxMW(measuredWeight(null), 0.8, 'km=null → 0.8');
+
+  // km=25 → 0.8*(1-25/50) = 0.4
+  approxMW(measuredWeight(25), 0.4, 'km=25 → 0.4');
+  // km=35 → 0.8*(1-35/50) = 0.24
+  approxMW(measuredWeight(35), 0.24, 'km=35 → 0.24');
+});
+
+// Fall 8 — Score-Wirkung: Vasiliki-artig (km=35, model 12–16h niedrig, Station höher)
+test('Measured-Correction Fall 8 — Score-Wirkung: korrigierter Score >= Roh-Score; non-mutating', () => {
+  // Vasiliki-artig: Modell in Stunden 12–16 schwach, LGPZ Station etwas höher, km=35
+  const modelW   = knToMs(10);  // Modell 10kn
+  const stationW = knToMs(13);  // Station 13kn
+  const km = 35;
+
+  const wins = makeMWins24(modelW);
+  const winsOriginal = wins.slice(); // Kopie zum Vergleich
+  const mwind = makeMWins24(stationW);
+  const measured = { ok: true, hourly: { wind: mwind, gust: [] }, date: TODAY, km, label: 'LGPZ' };
+
+  const r = applyMeasuredStationCorrection(wins, null, measured, TODAY);
+
+  // non-mutating: Original unverändert
+  assert.deepEqual(wins, winsOriginal, 'Original-wins darf nicht verändert sein (non-mutating)');
+
+  // Score-Wirkung: scoreDay(korr) >= scoreDay(roh)
+  const win = ctx.wingWindow(93, 5, 1500, 'intermediate', null);
+  const scoreRoh  = ctx.scoreDay(wins, win, 0);
+  const scoreCorr = ctx.scoreDay(r.wins, win, 0);
+
+  assert(!Number.isNaN(scoreRoh),  `scoreDay(roh) darf nicht NaN sein`);
+  assert(!Number.isNaN(scoreCorr), `scoreDay(korr) darf nicht NaN sein`);
+  assert(scoreCorr >= scoreRoh,
+    `Korrigierter Score (${scoreCorr}) muss >= Roh-Score (${scoreRoh}) sein`);
+});
