@@ -343,3 +343,201 @@ test('Fall 6a-6 — rangeToWindow: kn→m/s korrekt, opt-Band 25/75', () => {
   const same = blendWindows(w, w, 0.5);
   assert.deepEqual(same, w, 'blendWindows(a, a, 0.5) muss a zurückgeben');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live-Station-Nowcast-Boost (v3.12.0) — Fälle 1–9
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Setup: extract live-boost block from index.html ──────────────────────────
+const lbStartMarker = '// <<live-boost>>';
+const lbEndMarker   = '// <</live-boost>>';
+const lbStartIdx = html.indexOf(lbStartMarker);
+const lbEndIdx   = html.indexOf(lbEndMarker);
+assert(lbStartIdx !== -1, 'Sentinel <<live-boost>> nicht gefunden in index.html');
+assert(lbEndIdx   !== -1, 'Sentinel <</live-boost>> nicht gefunden in index.html');
+assert(lbStartIdx < lbEndIdx, 'live-boost Sentinels in falscher Reihenfolge');
+
+const lbBlock = html.slice(lbStartIdx + lbStartMarker.length, lbEndIdx);
+
+// Reuse the same sandbox (knToMs/msToKn/Math already present; add Date)
+const lbCtx = vm.createContext({ knToMs, msToKn, Math, Date, console });
+vm.runInContext(lbBlock, lbCtx);
+
+const { applyLiveStationBoost } = lbCtx;
+
+// Helper: build a 24h flat wind array (m/s)
+const makeWins24 = (speedMs) => Array.from({ length: 24 }, () => speedMs);
+const makeGust24 = (speedMs) => Array.from({ length: 24 }, () => speedMs * 1.3);
+
+// Fall 1 — Kein/ungültiger Live: null, ok:false, sensorOk:false, wind:null → applied:false, Arrays identisch
+test('Live-Boost Fall 1a — live=null → applied:false, wins identisch', () => {
+  const wins = makeWins24(knToMs(8));
+  const gust = makeGust24(knToMs(8));
+  const r = applyLiveStationBoost(wins, gust, null, true);
+  assert.equal(r.applied, false, 'applied muss false sein');
+  assert.equal(r.wins, wins, 'wins-Referenz muss identisch sein');
+  assert.equal(r.gust, gust, 'gust-Referenz muss identisch sein');
+});
+
+test('Live-Boost Fall 1b — live.ok=false → applied:false', () => {
+  const wins = makeWins24(knToMs(8));
+  const gust = makeGust24(knToMs(8));
+  const live = { ok: false, wind: knToMs(15), time: '14:00', sensorOk: true };
+  const r = applyLiveStationBoost(wins, gust, live, true);
+  assert.equal(r.applied, false, 'applied muss false sein bei ok:false');
+  assert.equal(r.wins, wins, 'wins-Referenz muss identisch sein');
+});
+
+test('Live-Boost Fall 1c — live.sensorOk=false → applied:false', () => {
+  const wins = makeWins24(knToMs(8));
+  const gust = makeGust24(knToMs(8));
+  const live = { ok: true, wind: knToMs(15), time: '14:00', sensorOk: false };
+  const r = applyLiveStationBoost(wins, gust, live, true);
+  assert.equal(r.applied, false, 'applied muss false sein bei sensorOk:false');
+});
+
+test('Live-Boost Fall 1d — live.wind=null → applied:false', () => {
+  const wins = makeWins24(knToMs(8));
+  const gust = makeGust24(knToMs(8));
+  const live = { ok: true, wind: null, time: '14:00', sensorOk: true };
+  const r = applyLiveStationBoost(wins, gust, live, true);
+  assert.equal(r.applied, false, 'applied muss false sein bei wind:null');
+});
+
+// Fall 2 — Nicht heute (isToday=false) → unverändert
+test('Live-Boost Fall 2 — isToday=false → applied:false, Referenzgleichheit', () => {
+  const wins = makeWins24(knToMs(8));
+  const gust = makeGust24(knToMs(8));
+  const live = { ok: true, wind: knToMs(18), time: '14:00', sensorOk: true };
+  const r = applyLiveStationBoost(wins, gust, live, false);
+  assert.equal(r.applied, false, 'applied muss false sein wenn isToday=false');
+  assert.equal(r.wins, wins, 'wins muss identisch (Referenz) sein');
+  assert.equal(r.gust, gust, 'gust muss identisch (Referenz) sein');
+});
+
+// Fall 3 — Station ≤ Ratio-Schwelle (Live/Modell < 1.2) → unverändert
+test('Live-Boost Fall 3 — Live/Modell < 1.2 → applied:false', () => {
+  const modelW = knToMs(10);
+  const wins = makeWins24(modelW);
+  // Station nur 10% über Modell → k=1.1 < 1.2
+  const live = { ok: true, wind: modelW * 1.1, time: '14:00', sensorOk: true };
+  const r = applyLiveStationBoost(wins, null, live, true);
+  assert.equal(r.applied, false, 'k < 1.2: kein Boost (applied:false)');
+  assert.equal(r.wins, wins, 'wins muss unverändert sein');
+});
+
+// Fall 4 — Talamone-Fall: wins[15]=knToMs(7.6), live.wind=knToMs(15), time:"15:56"
+test('Live-Boost Fall 4 — Talamone: k≈1.97, Fenster 11–19 skaliert, außen unverändert', () => {
+  const modelW = knToMs(7.6);
+  const wins = makeWins24(modelW);
+  const gust = makeGust24(modelW);
+  const live = { ok: true, wind: knToMs(15), time: '15:56', sensorOk: true, label: 'Talamone' };
+  const r = applyLiveStationBoost(wins, gust, live, true);
+
+  assert.equal(r.applied, true, 'Talamone-Fall: applied muss true sein');
+  // k = knToMs(15)/knToMs(7.6) ≈ 1.9737 → gerundetes r.k = 1.97
+  assert(r.k >= 1.97 && r.k <= 2.0, `k (${r.k}) muss zwischen 1.97 und 2.0 liegen`);
+
+  // wins[15] muss deutlich größer als Originalwert sein (≈knToMs(15), Toleranz 5%)
+  const boosted15 = r.wins[15];
+  assert(boosted15 > modelW * 1.9, `wins[15] (${boosted15}) muss deutlich über Modellwind skaliert sein`);
+  assert(boosted15 < modelW * 2.01, `wins[15] (${boosted15}) darf nicht über k=2.0× Modellwind liegen`);
+  // Alle geboosteten Stunden müssen konsistent skaliert sein (gleicher Faktor, gerundetem Ergebnis)
+  for (let h = 11; h <= 19; h++) {
+    assert(r.wins[h] > modelW * 1.9,
+      `wins[${h}] (${r.wins[h]}) soll skaliert sein (> 1.9× Modell)`);
+    assert(r.wins[h] <= modelW * 2.01,
+      `wins[${h}] (${r.wins[h]}) soll nicht über 2.01× Modell liegen`);
+  }
+  // Stunden außerhalb (9 und 20) unverändert
+  assert(Math.abs(r.wins[9] - modelW) < 0.001,
+    `wins[9] darf nicht verändert sein, got ${r.wins[9]}`);
+  assert(Math.abs(r.wins[20] - modelW) < 0.001,
+    `wins[20] darf nicht verändert sein (außerhalb Fenster), got ${r.wins[20]}`);
+
+  assert.equal(r.station, 'Talamone', 'station muss "Talamone" sein');
+});
+
+// Fall 5 — Clamp: Live/Modell=3.0 → k===2.0
+test('Live-Boost Fall 5 — Clamp: k>2.0 wird auf 2.0 geclampt', () => {
+  const modelW = knToMs(5);
+  const wins = makeWins24(modelW);
+  // Station 3× Modell → k würde 3.0 werden
+  const live = { ok: true, wind: modelW * 3.0, time: '14:00', sensorOk: true };
+  const r = applyLiveStationBoost(wins, null, live, true);
+  assert.equal(r.applied, true, 'Clamp-Fall: muss trotzdem boosten');
+  assert.equal(r.k, 2.0, `k muss auf 2.0 geclampt sein, got ${r.k}`);
+  const expectedW = Math.round(modelW * 2.0 * 100) / 100;
+  assert(Math.abs(r.wins[14] - expectedW) < 0.001,
+    `wins[14] soll auf 2.0× Modell skaliert sein: ${r.wins[14]}`);
+});
+
+// Fall 6 — Div-Guard: modelNow < 3kn → kein Boost (kein Infinity/NaN)
+test('Live-Boost Fall 6 — Div-Guard: Modellwind < 3kn → applied:false, kein NaN', () => {
+  const modelW = knToMs(1.5);  // << 3 kn Schwelle
+  const wins = makeWins24(modelW);
+  const live = { ok: true, wind: knToMs(10), time: '14:00', sensorOk: true };
+  const r = applyLiveStationBoost(wins, null, live, true);
+  assert.equal(r.applied, false, 'Modell < 3kn: kein Boost');
+  assert(!Number.isNaN(r.k), 'k darf nicht NaN sein');
+  for (const w of r.wins) assert(!Number.isNaN(w), 'wins darf kein NaN enthalten');
+});
+
+// Fall 7 — Aktivzeit-Gate: time:"22:30" (nowH=22 > 20) → unverändert
+test('Live-Boost Fall 7 — Aktivzeit-Gate: time:22:30 (nowH>20) → applied:false', () => {
+  const modelW = knToMs(8);
+  const wins = makeWins24(modelW);
+  const live = { ok: true, wind: knToMs(20), time: '22:30', sensorOk: true };
+  const r = applyLiveStationBoost(wins, null, live, true);
+  assert.equal(r.applied, false, 'nowH=22 außerhalb Aktivzeit → kein Boost');
+  assert.equal(r.wins, wins, 'wins-Referenz muss identisch sein');
+});
+
+// Fall 8 — Gust skaliert mit demselben k; gust=null bricht nicht
+test('Live-Boost Fall 8a — Gust wird mit k skaliert', () => {
+  const modelW = knToMs(7.6);
+  const wins = makeWins24(modelW);
+  const gust = makeGust24(modelW);
+  const live = { ok: true, wind: knToMs(15), time: '14:00', sensorOk: true };
+  const r = applyLiveStationBoost(wins, gust, live, true);
+  assert.equal(r.applied, true, 'Gust-Test: muss boosten');
+  // k_raw = live.wind / modelW ≈ 1.9737, gust[14] skaliert mit k_raw
+  const k_raw = live.wind / modelW;
+  const expectedG = Math.round(gust[14] * k_raw * 100) / 100;
+  assert(Math.abs(r.gust[14] - expectedG) < 0.001,
+    `gust[14] soll skaliert sein: erwartet ${expectedG}, got ${r.gust[14]}`);
+  // Außerhalb des Fensters unverändert
+  assert(Math.abs(r.gust[9] - gust[9]) < 0.001,
+    `gust[9] soll unverändert sein, got ${r.gust[9]}`);
+});
+
+test('Live-Boost Fall 8b — gust=null bricht nicht', () => {
+  const wins = makeWins24(knToMs(7.6));
+  const live = { ok: true, wind: knToMs(15), time: '14:00', sensorOk: true };
+  let r;
+  assert.doesNotThrow(() => {
+    r = applyLiveStationBoost(wins, null, live, true);
+  }, 'gust=null darf keinen Fehler werfen');
+  assert.equal(r.applied, true, 'muss auch ohne gust boosten');
+  assert.equal(r.gust, null, 'gust soll null bleiben wenn Eingabe null');
+});
+
+// Fall 9 — Score-Wirkung: scoreDay(boosted) > scoreDay(roh) für Talamone-Fall
+test('Live-Boost Fall 9 — Score-Wirkung: Boost-Score > Roh-Score (Talamone-Fall)', () => {
+  // Talamone: Modell 7.6kn, Station 15kn — Rider 93kg, 5m², 1500cm², intermediate
+  const modelW = knToMs(7.6);
+  const wins = makeWins24(modelW);
+  const gust = makeGust24(modelW);
+  const live = { ok: true, wind: knToMs(15), time: '15:56', sensorOk: true };
+  const lb = applyLiveStationBoost(wins, gust, live, true);
+  assert.equal(lb.applied, true, 'Boost muss für diesen Fall aktiv sein');
+
+  const win = ctx.wingWindow(93, 5, 1500, 'intermediate', null);
+  const scoreRoh    = ctx.scoreDay(wins, win, 0);
+  const scoreBoosted = ctx.scoreDay(lb.wins, win, 0);
+
+  assert(!Number.isNaN(scoreRoh),    `scoreDay(roh) darf nicht NaN sein, got ${scoreRoh}`);
+  assert(!Number.isNaN(scoreBoosted), `scoreDay(boosted) darf nicht NaN sein, got ${scoreBoosted}`);
+  assert(scoreBoosted > scoreRoh,
+    `Boost-Score (${scoreBoosted}) muss > Roh-Score (${scoreRoh}) sein`);
+});

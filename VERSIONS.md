@@ -1,5 +1,16 @@
 # WindFoil — Version History
 
+## v3.12.0 (2026-08-02)
+**Live-Station-Nowcast-Boost: reale Stationsmessung fließt in den Tages-Score ein**
+- `index.html` v3.11.0 → v3.12.0: Frontend-only, kein Backend-/DB-Change
+- Neue Funktion `applyLiveStationBoost(wins, gust, live, isToday)` (eigener `// <<live-boost>>`-Sentinel-Block, direkt nach `applyPelerBoost`): datengetriebener Boost-Faktor aus Live/Modell-Verhältnis zur Messstunde, geclamped auf 2.0×, angewandt auf Nachmittagsfenster 11–19 Uhr; non-mutating (`.slice()`); nur heute, nur wenn Station real ≥20% über Modell liegt
+- Konstanten: `LIVE_BOOST_MIN_RATIO=1.2`, `LIVE_BOOST_KMAX=2.0`, `LIVE_BOOST_MIN_MODEL=3kn`, Fenster 11–19h, Aktivzeit 11–20h
+- `dayData`-Memo: Boost wird auf heute angewandt (`lb = applyLiveStationBoost(wins,gust,live,activeDay===0)`); alle Bewertungskennzahlen (`midW`, `midG`, `scores`, `avgW`, `maxG`, `dayScore`, `session`) nutzen `winsEff`/`gustEff`; Rohverlauf (`wins`/`gust`) bleibt im Rückgabeobjekt fürs Chart erhalten; `liveBoost: lb` neu im Rückgabeobjekt
+- `dayScores`-Loop: für `d===0` denselben Boost anwenden (Pill und Detail zeigen konsistenten Score)
+- UI-Badge: bei `dayData.liveBoost?.applied` kleiner Hinweis `↑ an Live-Station … angepasst (×…)` in `C.signal` nahe dem Foil-Score
+- Spots ohne Live-Station oder mit schwächerem Modellwind als Station: No-Op (`applied:false`), keine Änderung am bisherigen Verhalten
+- Neu: Tests für `applyLiveStationBoost` in `wing-scoring.test.mjs` (Fälle 1–9)
+
 ## v3.11.0 (2026-08-02)
 **Wing-Range-Feedback: per-Spot/-User Range-Kalibrierung pro Wing-Größe**
 - `db/migrations/005_spot_wing_calibration.sql` (neu): additive Migration — `ALTER TABLE sessions ADD COLUMN wing_m2/range_low_kt/range_high_kt`; neue Tabelle `spot_wing_calibration(user_id, spot_id, wing_m2)` mit Rolling-AVG der erlebten Wind-Range
