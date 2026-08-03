@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.13.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.14.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.13.0
+// WindFoil Weather Intelligence v3.14.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -505,21 +505,22 @@ function seaBreeze(windDir, hour, month, regime) {
 
 // <<wing-scoring>>
 // ── FoilScore ─────────────────────────────────────────────────────────────────
-function calcWindow(weight,wingM2,foilCm2,skill,knownPlaneMs) {
+const REF_FOIL_TERM = 0.8;   // = altes foilF*0.8 bei Referenz-Foil 1800 cm²
+function calcWindow(weight, wingM2, skill, knownPlaneMs) {   // foilCm2 ENTFERNT
   const sMin = {beginner:1.50,intermediate:1.25,advanced:1.00,pro:0.85}[skill]??1.15;
   const sOpt = {beginner:1.60,intermediate:2.00,advanced:2.60,pro:3.20}[skill]??2.00;
   const sMax = {beginner:2.00,intermediate:2.60,advanced:3.50,pro:4.50}[skill]??2.60;
   let minW;
-  if(knownPlaneMs && knownPlaneMs>0){
+  if (knownPlaneMs && knownPlaneMs > 0) {
     minW = knownPlaneMs;
   } else {
-    const load=weight/wingM2, foilF=1800/foilCm2;
-    minW=Math.max(2.5,(3.5+load*0.15+foilF*0.8)*sMin*0.85);
+    const load = weight / wingM2;
+    minW = Math.max(2.5, (3.5 + load*0.15 + REF_FOIL_TERM) * sMin * 0.85);
   }
-  return{ minWind:Math.round(minW*10)/10,
-          optMin: Math.round(minW*1.2*10)/10,
-          optMax: Math.round(minW*sOpt*10)/10,
-          maxWind:Math.round(minW*sMax*10)/10 };
+  return { minWind:Math.round(minW*10)/10,
+           optMin: Math.round(minW*1.2*10)/10,
+           optMax: Math.round(minW*sOpt*10)/10,
+           maxWind:Math.round(minW*sMax*10)/10 };
 }
 // ── Wing manufacturer windrange tables (extensible) ──────────────────────────
 // Per Marke/Modell: Hersteller-Windrange (kn) + Wing-Masse (kg) je Größe (m²).
@@ -592,9 +593,9 @@ function blendWindows(a, b, w) {   // kantenweise, p=1-w
 // EINZIGE kanonische Scoring-Quelle: Physikmodell, geblendet mit der
 // Herstellertabelle, wenn die Wing-Größe abgedeckt ist. Überall konsumiert
 // (Chart, Tages-Scores, pickBestSetup).
-function wingWindow(weight, wingM2, foilCm2, skill, knownPlaneMs,
+function wingWindow(weight, wingM2, skill, knownPlaneMs,
                     brandKey = DEFAULT_WING_BRAND, spotWingRange = null) {
-  const phys = calcWindow(weight, wingM2, foilCm2, skill, knownPlaneMs);
+  const phys = calcWindow(weight, wingM2, skill, knownPlaneMs);   // kein foil mehr
   // Fahrer-kalibrierte Planing-Schwelle = Ground Truth → nie verwässern.
   if (knownPlaneMs && knownPlaneMs > 0) return phys;
   const tab = wingTableWindow(weight, wingM2, brandKey);
@@ -642,7 +643,7 @@ function pickBestSetup(gearList, weight, skill, windMs, wingRanges=null) {
   for(const g of gearList){
     const plane = g.planeKn ? (parseFloat(g.planeKn)/1.94384) : null;
     const swr = wingRanges ? wingRanges[String(parseFloat(g.wing))] : null;
-    const win = wingWindow(weight, parseFloat(g.wing), parseFloat(g.foil), skill, plane, DEFAULT_WING_BRAND, swr);
+    const win = wingWindow(weight, parseFloat(g.wing), skill, plane, DEFAULT_WING_BRAND, swr); // foil raus
     const sc = scoreHour(windMs, win);
     // centeredness: how close wind is to the middle of the optimal band
     const mid = (win.optMin + win.optMax) / 2;
@@ -1116,13 +1117,13 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
   const [loc,setLoc]           = useState(()=>loadStored("wf_loc",{lat:48.0703,lon:11.1167,name:"Wörthsee / Pilsensee"}));
-  const [rider,setRider]       = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,foilFront:1800,skill:"intermediate",planeKn:""}));
-  const [ri,setRi]             = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,foilFront:1800,skill:"intermediate",planeKn:""}));
-  const [gear,setGear]         = useState(()=>loadStored("wf_gear",[])); // [{id,name,wing,foil,planeKn}]
+  const [rider,setRider]       = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,skill:"intermediate",planeKn:""}));
+  const [ri,setRi]             = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,skill:"intermediate",planeKn:""}));
+  const [gear,setGear]         = useState(()=>loadStored("wf_gear",[])); // [{id,name,wing,planeKn}]
   const [useGear,setUseGear]   = useState(()=>loadStored("wf_usegear",false));
   const [profileSaved,setProfileSaved] = useState(false);
   const [locSaved,setLocSaved] = useState(false);
-  const [newGear,setNewGear]   = useState({name:"",wing:"5.0",foil:"1800",planeKn:""});
+  const [newGear,setNewGear]   = useState({name:"",wing:"5.0",planeKn:""});
   const [forecast,setForecast] = useState(null);
   const [historical,setHist]   = useState(null);
   const [loading,setLoading]   = useState(true);
@@ -1497,7 +1498,7 @@ function App() {
       if(best){ win = best.win; pickedGear = best.gear; }
     }
     if(!win){
-      win=wingWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs, DEFAULT_WING_BRAND, spotWingMap?.[String(rider.wingSize)]);
+      win=wingWindow(rider.weight,rider.wingSize,rider.skill, effPlaneMs, DEFAULT_WING_BRAND, spotWingMap?.[String(rider.wingSize)]);
     }
     const scores=winsEff.map(w=>scoreHour(w,win));
     const avgW=winsEff.reduce((a,b)=>a+b,0)/winsEff.length;
@@ -1520,7 +1521,7 @@ function App() {
       const best = pickBestSetup(gear, rider.weight, rider.skill, dayMidW, spotWingMap);
       if(best) win = best.win;
     }
-    if(!win) win=wingWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, effPlaneMs, DEFAULT_WING_BRAND, spotWingMap?.[String(rider.wingSize)]);
+    if(!win) win=wingWindow(rider.weight,rider.wingSize,rider.skill, effPlaneMs, DEFAULT_WING_BRAND, spotWingMap?.[String(rider.wingSize)]);
     const dstr = forecast.hourly.time[start] ? forecast.hourly.time[start].slice(0,10) : null;
     let slice = forecast.hourly.windspeed_10m.slice(start, start+24);
     let gslice= forecast.hourly.windgusts_10m.slice(start, start+24);
@@ -1566,18 +1567,18 @@ function App() {
   const rec = (() => {
     if(!dayData) return "";
     const{effW,midG,win,pickedGear}=dayData;
-    const{weight,wingSize,foilFront,skill}=rider;
+    const{weight,wingSize,skill}=rider;
     const lines=[];
     if(pickedGear){
       const gname = pickedGear.name ? `<b>${pickedGear.name}</b>` : "Setup";
-      lines.push(`🎒 <b>Empfohlenes Setup aus deinem Material:</b> ${gname} — Wing ${pickedGear.wing} m² · Foil ${pickedGear.foil} cm²${pickedGear.planeKn?` · ab ${pickedGear.planeKn} kn`:""}`);
+      lines.push(`🎒 <b>Empfohlenes Setup aus deinem Material:</b> ${gname} — Wing ${pickedGear.wing} m²${pickedGear.planeKn?` · ab ${pickedGear.planeKn} kn`:""}`);
     }
     if(effW<win.minWind){
       lines.push(`⚠️ <b>Zu wenig Wind</b> — ${fmtW(effW,windUnit)}, benötigt ≥${fmtW(win.minWind,windUnit)}`);
       lines.push(`💡 Größeren Wing wählen oder auf Nachmittags-Thermik warten.`);
     } else if(effW<=win.optMax){
       lines.push(`✅ <b>Optimale Bedingungen</b> — ${fmtW(effW,windUnit)} im Fenster (${fmtW(win.optMin,windUnit)}–${fmtW(win.optMax,windUnit)})`);
-      if(!pickedGear) lines.push(`🏄 Wing ${wingSize} m² · Foil ${foilFront} cm² — ideal für ${weight} kg · ${skill}`);
+      if(!pickedGear) lines.push(`🏄 Wing ${wingSize} m² — ideal für ${weight} kg · ${skill}`);
     } else if(effW<=win.maxWind){
       lines.push(`⚠️ <b>Overpowered-Zone</b> — ${fmtW(effW,windUnit)} an der Obergrenze`);
       lines.push(`💡 Kleineren Wing: ${(wingSize-0.5).toFixed(1)} m² erwägen`);
@@ -1745,7 +1746,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.13.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.14.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1804,7 +1805,6 @@ function App() {
           {[
             {l:"Gewicht (kg)",k:"weight",step:1,min:40,max:150},
             {l:"Wing (m²)",k:"wingSize",step:.5,min:2,max:12},
-            {l:"Foil Front (cm²)",k:"foilFront",step:50,min:600,max:3000},
           ].map(f=>(
             <div key={f.k}>
               <label style={S.fl}>{f.l}</label>
@@ -1853,7 +1853,7 @@ function App() {
               {gear.map(g=>(
                 <div key={g.id} style={{display:"flex",alignItems:"center",gap:6,background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"5px 8px",fontSize:11}}>
                   <span style={{color:C.text}}>{g.name||`${g.wing}m²`}</span>
-                  <span style={{color:C.muted,fontFamily:"monospace",fontSize:10}}>{g.wing}m² · {g.foil}cm²{g.planeKn?` · ab ${g.planeKn}kn`:""}</span>
+                  <span style={{color:C.muted,fontFamily:"monospace",fontSize:10}}>{g.wing}m²{g.planeKn?` · ab ${g.planeKn}kn`:""}</span>
                   <button onClick={()=>{const ng=gear.filter(x=>x.id!==g.id); setGear(ng); savePref("wf_gear",ng); setActiveDay(0);}}
                     style={{background:"none",border:"none",color:C.stop,cursor:"pointer",fontSize:13,padding:0,lineHeight:1}}>×</button>
                 </div>
@@ -1872,10 +1872,6 @@ function App() {
               <input type="number" step={0.5} value={newGear.wing} onChange={e=>setNewGear(g=>({...g,wing:e.target.value}))} style={{...S.fi,height:38}} />
             </div>
             <div>
-              <label style={S.fl}>Foil (cm²)</label>
-              <input type="number" step={50} value={newGear.foil} onChange={e=>setNewGear(g=>({...g,foil:e.target.value}))} style={{...S.fi,height:38}} />
-            </div>
-            <div>
               <label style={S.fl}>ab (kn)</label>
               <input type="number" step={0.5} value={newGear.planeKn} placeholder="opt." onChange={e=>setNewGear(g=>({...g,planeKn:e.target.value}))} style={{...S.fi,height:38}} />
             </div>
@@ -1883,11 +1879,11 @@ function App() {
               <label style={S.fl}>&nbsp;</label>
               <button style={{...S.btn,width:"100%",height:38,fontSize:11,padding:0,touchAction:"manipulation"}}
                 onClick={()=>{
-                  if(!newGear.wing||!newGear.foil) return;
+                  if(!newGear.wing) return;
                   const entry={...newGear,id:Date.now()};
                   const ng=[...gear,entry];
                   setGear(ng); savePref("wf_gear",ng);
-                  setNewGear({name:"",wing:"5.0",foil:"1800",planeKn:""});
+                  setNewGear({name:"",wing:"5.0",planeKn:""});
                   setActiveDay(0);
                 }}>+ Hinzufügen</button>
             </div>
@@ -1971,8 +1967,8 @@ function App() {
                     )}
                     <div style={{fontSize:11,color:C.muted}}>
                       {dayData.pickedGear
-                        ? `${rider.weight}kg · ${dayData.pickedGear.name||dayData.pickedGear.wing+"m²"} (${dayData.pickedGear.wing}m²·${dayData.pickedGear.foil}cm²)`
-                        : `${rider.weight}kg · ${rider.wingSize}m² · ${rider.foilFront}cm²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}
+                        ? `${rider.weight}kg · ${dayData.pickedGear.name||dayData.pickedGear.wing+"m²"} (${dayData.pickedGear.wing}m²)`
+                        : `${rider.weight}kg · ${rider.wingSize}m²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}
                     </div>
                     {conf!=null && (
                       <div style={{marginTop:6,fontSize:11,color:cc.color}}>{cc.icon} {cc.label} ({conf}%)</div>
@@ -2406,7 +2402,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.13.0</span>
+        <span>WindFoil Weather Intelligence v3.14.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

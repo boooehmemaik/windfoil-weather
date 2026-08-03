@@ -1,5 +1,15 @@
 # WindFoil — Version History
 
+## v3.14.0 (2026-08-03)
+**Foil aus Bewertung & Equipment entfernt — Fenster hängt nur noch an Wing-Größe, Fahrergewicht und Skill**
+- `index.html` v3.13.0 → v3.14.0: Frontend-only, kein Backend-/DB-Change
+- Scoring: `foilCm2`-Parameter aus `calcWindow` und `wingWindow` entfernt; neues `const REF_FOIL_TERM = 0.8` ersetzt den alten foilF-Beitrag bei Referenz-Foil 1800 cm² — Fenster numerisch identisch zu bisherigem 1800 cm²-Wert
+- `pickBestSetup`: kein `g.foil` mehr in der wingWindow-Berechnung
+- Fallback-Call-Sites (dayData-Memo + dayScores-Loop): `rider.foilFront` aus wingWindow-Aufrufen entfernt
+- Datenmodell: `rider`-Default ohne `foilFront`; `newGear`-Default ohne `foil`; Gear-Objekte nur noch `{id,name,wing,planeKn}`
+- UI: Rider-Profilfeld „Foil Front (cm²)" entfernt; Add-Gear-Foil-Input+Label entfernt; Validierung vereinfacht (`!newGear.wing`); Reset-Objekt ohne `foil`; Gear-Chip-Anzeige ohne `cm²`-Teil; Empfehlungs- und Summary-Texte foilfrei
+- Behalten: Produkt-Labels „Foil-Score" / „Foil-Fenster" (Bewertungsname, kein Equipment)
+
 ## v3.13.0 (2026-08-02)
 **Measured-Station-Korrektur: stündliche Beobachtungsreihe korrigiert den Tages-Score (Raise-only)**
 - `index.html` v3.12.0 → v3.13.0: Frontend-only, kein Backend-/DB-Change

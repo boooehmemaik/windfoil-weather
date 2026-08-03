@@ -125,9 +125,9 @@ test('Fall 2 — wingTableWindow(78, 4.5) = Mittel aus 4m² und 5m²', () => {
 // Fall 3 — Stufengrenzen-Wind: scoreHour monoton fallend jenseits optMax
 // ─────────────────────────────────────────────────────────────────────────────
 test('Fall 3 — scoreHour monoton fallend jenseits optMax bei 5m² und 4m²', () => {
-  // Test with wingWindow(78, size, 1800, "intermediate", null)
+  // Test with wingWindow(78, size, "intermediate", null)
   for (const size of [4, 5]) {
-    const win = wingWindow(78, size, 1800, 'intermediate', null);
+    const win = wingWindow(78, size, 'intermediate', null);
     // sample winds just past optMax and increasing
     const winds = [win.optMax + 0.5, win.optMax + 1.0, win.optMax + 2.0,
                    win.optMax + 3.0, win.optMax + 5.0, win.optMax + 7.0];
@@ -149,7 +149,7 @@ test('Fall 3 — scoreHour monoton fallend jenseits optMax bei 5m² und 4m²', (
 // Fall 4 — Außerhalb Gesamtrange: 5 kn und 40 kn → kein NaN, Score >= 0
 // ─────────────────────────────────────────────────────────────────────────────
 test('Fall 4 — scoreHour bei Wind 5 kn und 40 kn: kein NaN, kein Exception, >= 0', () => {
-  const win = wingWindow(78, 5, 1800, 'intermediate', null);
+  const win = wingWindow(78, 5, 'intermediate', null);
   const lowW  = knToMs(5);
   const highW = knToMs(40);
   const scoreLow  = scoreHour(lowW,  win);
@@ -173,16 +173,16 @@ test('Fall 5 — wingTableWindow(78, 2) und (78, 7): outOfRange:true mit reason'
 });
 
 test('Fall 5 — wingWindow(78, 2, ...) === calcWindow(78, 2, ...) (Blend-Bypass)', () => {
-  const foil = 1800, skill = 'intermediate';
-  const ww = wingWindow(78, 2, foil, skill, null);
-  const cw = calcWindow(78, 2, foil, skill, null);
+  const skill = 'intermediate';
+  const ww = wingWindow(78, 2, skill, null);
+  const cw = calcWindow(78, 2, skill, null);
   assert.deepEqual(ww, cw, 'Wing 2m²: wingWindow muss identisch zu calcWindow sein (Bypass)');
 });
 
 test('Fall 5 — wingWindow(78, 7, ...) === calcWindow(78, 7, ...) (Blend-Bypass)', () => {
-  const foil = 1800, skill = 'intermediate';
-  const ww = wingWindow(78, 7, foil, skill, null);
-  const cw = calcWindow(78, 7, foil, skill, null);
+  const skill = 'intermediate';
+  const ww = wingWindow(78, 7, skill, null);
+  const cw = calcWindow(78, 7, skill, null);
   assert.deepEqual(ww, cw, 'Wing 7m²: wingWindow muss identisch zu calcWindow sein (Bypass)');
 });
 
@@ -190,28 +190,36 @@ test('Fall 5 — wingWindow(78, 7, ...) === calcWindow(78, 7, ...) (Blend-Bypass
 // Fall 6 — Regression Foil/Kalibrierung
 // ─────────────────────────────────────────────────────────────────────────────
 test('Fall 6a — wingWindow mit knownPlaneMs=6.0 deep-equal calcWindow (Bypass)', () => {
-  const foil = 1800, skill = 'intermediate', planeMs = 6.0;
-  const ww = wingWindow(80, 5, foil, skill, planeMs);
-  const cw = calcWindow(80, 5, foil, skill, planeMs);
+  const skill = 'intermediate', planeMs = 6.0;
+  const ww = wingWindow(80, 5, skill, planeMs);
+  const cw = calcWindow(80, 5, skill, planeMs);
   assert.deepEqual(ww, cw, 'kalibrierte Planing-Schwelle: wingWindow muss == calcWindow sein');
 });
 
-test('Fall 6b — Foil-Variation verändert calcWindow-Ergebnis', () => {
-  const skill = 'intermediate';
-  const cw1 = calcWindow(80, 5, 1800, skill, null);
-  const cw2 = calcWindow(80, 5, 1200, skill, null);
-  // Kleinerer Foil (1200cm²) → höheres minWind (foilF = 1800/foilCm2 steigt)
-  assert(cw2.minWind > cw1.minWind,
-    `Foil 1200cm² (${cw2.minWind}) muss höheres minWind als 1800cm² (${cw1.minWind}) ergeben`);
-  assert(cw2.maxWind > cw1.maxWind,
-    `Foil 1200cm² (${cw2.maxWind}) muss höheres maxWind als 1800cm² (${cw1.maxWind}) ergeben`);
+test('Fall 6b — Foil-Unabhängigkeit: calcWindow(80,5,"intermediate",null) identisch zu altem foil=1800-Ergebnis', () => {
+  // REF_FOIL_TERM=0.8 entspricht foilF*0.8 bei 1800 cm² → Ergebnis numerisch gleich
+  const cw = calcWindow(80, 5, 'intermediate', null);
+  // Bekannter v3.13.0-Wert bei foil=1800: load=80/5=16, foilF=1, minW=max(2.5,(3.5+16*0.15+0.8)*1.25*0.85)
+  const load = 80 / 5;
+  const sMin = 1.25; // intermediate
+  const minW_raw = Math.max(2.5, (3.5 + load * 0.15 + 0.8) * sMin * 0.85);
+  const expectedMinWind = Math.round(minW_raw * 10) / 10;
+  assert.equal(cw.minWind, expectedMinWind,
+    `calcWindow ohne foil-Arg muss identisch zu altem foil=1800-Ergebnis sein (${expectedMinWind} m/s)`);
+});
+
+test('Fall 6b-2 — Skill wirkt weiter: beginner.maxWind < pro.maxWind', () => {
+  const maxBeginner = calcWindow(80, 5, 'beginner', null).maxWind;
+  const maxPro      = calcWindow(80, 5, 'pro', null).maxWind;
+  assert(maxBeginner < maxPro,
+    `beginner maxWind (${maxBeginner}) muss < pro maxWind (${maxPro}) sein`);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fall 7 — E2E-Sweep Gialova: Plausibilitäts-Szenarien
 // ─────────────────────────────────────────────────────────────────────────────
 test('Fall 7 — E2E-Sweep Gialova: schwach < ideal, stark < ideal, ideal nahe 100', () => {
-  const win = wingWindow(80, 5, 1800, 'intermediate', null);
+  const win = wingWindow(80, 5, 'intermediate', null);
 
   // Helpers to build a 24h wind series (hours 0..23) all at same speed
   const makeWinds = (speedMs) => Array.from({ length: 24 }, (_, h) => speedMs);
@@ -240,7 +248,7 @@ test('Fall 7 — E2E-Sweep Gialova: schwach < ideal, stark < ideal, ideal nahe 1
 });
 
 test('Fall 7 — Alle Szenarien: kein NaN, kein Exception', () => {
-  const win = wingWindow(80, 5, 1800, 'intermediate', null);
+  const win = wingWindow(80, 5, 'intermediate', null);
   const makeWinds = (speedMs) => Array.from({ length: 24 }, () => speedMs);
 
   for (const kn of [5, 8, 12, 16, 18, 22, 26, 30, 35, 40]) {
@@ -258,11 +266,11 @@ test('Fall 7 — Alle Szenarien: kein NaN, kein Exception', () => {
 // 6a-1: Kein Feedback (spotWingRange=null) → deep-equal zu v3.10.0 (Regression)
 test('Fall 6a-1 — spotWingRange=null → wingWindow identisch zu phys/tab-Blend', () => {
   // wingWindow mit und ohne null spotWingRange muss identisch sein
-  const wNull  = wingWindow(93, 4, 1800, 'intermediate', null, 'Harlem Pace', null);
-  const wUndef = wingWindow(93, 4, 1800, 'intermediate', null);
+  const wNull  = wingWindow(93, 4, 'intermediate', null, 'Harlem Pace', null);
+  const wUndef = wingWindow(93, 4, 'intermediate', null);
   assert.deepEqual(wNull, wUndef, 'null und weggelassener spotWingRange müssen identisch sein');
   // Ergebnis muss base (phys/tab-blend) entsprechen — TABLE_BLEND=0.5 (const, nicht per vm extrahierbar)
-  const phys = calcWindow(93, 4, 1800, 'intermediate', null);
+  const phys = calcWindow(93, 4, 'intermediate', null);
   const tab  = wingTableWindow(93, 4);
   const base = blendWindows(phys, tab, 0.5); // TABLE_BLEND=0.5
   assert.deepEqual(wNull, base, 'Ohne Feedback: wingWindow muss phys/tab-Blend sein');
@@ -271,8 +279,8 @@ test('Fall 6a-1 — spotWingRange=null → wingWindow identisch zu phys/tab-Blen
 // 6a-2: Feedback-Blend 4m²/Talamone — numerisch prüfen
 test('Fall 6a-2 — Feedback-Blend 4m²: minWind höher als ohne Feedback, Richtung 25kn', () => {
   const spotWingRange = { minKn: 25, maxKn: 30, samples: 1 };
-  const withFb    = wingWindow(93, 4, 1800, 'intermediate', null, 'Harlem Pace', spotWingRange);
-  const withoutFb = wingWindow(93, 4, 1800, 'intermediate', null);
+  const withFb    = wingWindow(93, 4, 'intermediate', null, 'Harlem Pace', spotWingRange);
+  const withoutFb = wingWindow(93, 4, 'intermediate', null);
 
   // minWind muss höher sein (Feedback zieht Richtung 25kn = knToMs(25) ≈ 12.86 m/s)
   assert(withFb.minWind > withoutFb.minWind,
@@ -280,7 +288,7 @@ test('Fall 6a-2 — Feedback-Blend 4m²: minWind höher als ohne Feedback, Richt
 
   // Numerische Verifikation: blendWindows(base, rangeToWindow(25,30), 0.5)
   // TABLE_BLEND und FEEDBACK_BLEND sind const in vm, daher als Literal 0.5
-  const phys = calcWindow(93, 4, 1800, 'intermediate', null);
+  const phys = calcWindow(93, 4, 'intermediate', null);
   const tab  = wingTableWindow(93, 4);
   const base = blendWindows(phys, tab, 0.5); // TABLE_BLEND=0.5
   const fb   = rangeToWindow(25, 30);
@@ -296,9 +304,9 @@ test('Fall 6a-2 — Feedback-Blend 4m²: minWind höher als ohne Feedback, Richt
 test('Fall 6a-3 — Samples-Gate: samples=0 kein Blend, samples=1 Blend aktiv', () => {
   const swr0 = { minKn: 20, maxKn: 28, samples: 0 };
   const swr1 = { minKn: 20, maxKn: 28, samples: 1 };
-  const base = wingWindow(80, 4, 1800, 'intermediate', null);
-  const with0 = wingWindow(80, 4, 1800, 'intermediate', null, 'Harlem Pace', swr0);
-  const with1 = wingWindow(80, 4, 1800, 'intermediate', null, 'Harlem Pace', swr1);
+  const base = wingWindow(80, 4, 'intermediate', null);
+  const with0 = wingWindow(80, 4, 'intermediate', null, 'Harlem Pace', swr0);
+  const with1 = wingWindow(80, 4, 'intermediate', null, 'Harlem Pace', swr1);
 
   assert.deepEqual(with0, base, 'samples=0: kein Feedback-Blend (== base)');
   assert.notDeepEqual(with1, base, 'samples=1: Blend muss aktiv sein (≠ base)');
@@ -308,9 +316,9 @@ test('Fall 6a-3 — Samples-Gate: samples=0 kein Blend, samples=1 Blend aktiv', 
 test('Fall 6a-4 — Nur maxKn=null: kein Feedback-Blend', () => {
   const swrNoMax  = { minKn: 20, maxKn: null,  samples: 3 };
   const swrNoMin  = { minKn: null, maxKn: 28,  samples: 3 };
-  const base = wingWindow(80, 4, 1800, 'intermediate', null);
-  const withNoMax = wingWindow(80, 4, 1800, 'intermediate', null, 'Harlem Pace', swrNoMax);
-  const withNoMin = wingWindow(80, 4, 1800, 'intermediate', null, 'Harlem Pace', swrNoMin);
+  const base = wingWindow(80, 4, 'intermediate', null);
+  const withNoMax = wingWindow(80, 4, 'intermediate', null, 'Harlem Pace', swrNoMax);
+  const withNoMin = wingWindow(80, 4, 'intermediate', null, 'Harlem Pace', swrNoMin);
 
   assert.deepEqual(withNoMax, base, 'maxKn=null: kein Feedback-Blend');
   assert.deepEqual(withNoMin, base, 'minKn=null: kein Feedback-Blend');
@@ -320,8 +328,8 @@ test('Fall 6a-4 — Nur maxKn=null: kein Feedback-Blend', () => {
 test('Fall 6a-5 — Bypass: knownPlaneMs>0 → Feedback ignoriert', () => {
   const spotWingRange = { minKn: 25, maxKn: 30, samples: 5 };
   const planeMs = knToMs(18);
-  const withBypass  = wingWindow(80, 4, 1800, 'intermediate', planeMs, 'Harlem Pace', spotWingRange);
-  const physExpected = calcWindow(80, 4, 1800, 'intermediate', planeMs);
+  const withBypass  = wingWindow(80, 4, 'intermediate', planeMs, 'Harlem Pace', spotWingRange);
+  const physExpected = calcWindow(80, 4, 'intermediate', planeMs);
 
   assert.deepEqual(withBypass, physExpected,
     'knownPlaneMs>0: Bypass muss greifen; Feedback-Layer muss ignoriert werden');
@@ -532,7 +540,7 @@ test('Live-Boost Fall 9 — Score-Wirkung: Boost-Score > Roh-Score (Talamone-Fal
   const lb = applyLiveStationBoost(wins, gust, live, true);
   assert.equal(lb.applied, true, 'Boost muss für diesen Fall aktiv sein');
 
-  const win = ctx.wingWindow(93, 5, 1500, 'intermediate', null);
+  const win = ctx.wingWindow(93, 5, 'intermediate', null);
   const scoreRoh    = ctx.scoreDay(wins, win, 0);
   const scoreBoosted = ctx.scoreDay(lb.wins, win, 0);
 
@@ -762,7 +770,7 @@ test('Measured-Correction Fall 8 — Score-Wirkung: korrigierter Score >= Roh-Sc
   assert.deepEqual(wins, winsOriginal, 'Original-wins darf nicht verändert sein (non-mutating)');
 
   // Score-Wirkung: scoreDay(korr) >= scoreDay(roh)
-  const win = ctx.wingWindow(93, 5, 1500, 'intermediate', null);
+  const win = ctx.wingWindow(93, 5, 'intermediate', null);
   const scoreRoh  = ctx.scoreDay(wins, win, 0);
   const scoreCorr = ctx.scoreDay(r.wins, win, 0);
 
@@ -770,4 +778,49 @@ test('Measured-Correction Fall 8 — Score-Wirkung: korrigierter Score >= Roh-Sc
   assert(!Number.isNaN(scoreCorr), `scoreDay(korr) darf nicht NaN sein`);
   assert(scoreCorr >= scoreRoh,
     `Korrigierter Score (${scoreCorr}) muss >= Roh-Score (${scoreRoh}) sein`);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// v3.14.0 — Foil-Entfernung: Regressions-Assertions (§6 DESIGN-remove-foil.md)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// §6-1: Foil-Unabhängigkeit — calcWindow ohne foil-Arg = alter foil=1800-Wert
+test('v3.14 §6-1 — Foil-Unabhängigkeit: calcWindow(80,5,"intermediate",null) = Referenz-Foil-Wert', () => {
+  const cw = calcWindow(80, 5, 'intermediate', null);
+  // REF_FOIL_TERM=0.8 = foilF*0.8 bei 1800 cm² (foilF=1800/1800=1)
+  // Erwarteter minW: max(2.5, (3.5 + (80/5)*0.15 + 0.8) * 1.25 * 0.85)
+  const load = 80 / 5;
+  const minW_raw = Math.max(2.5, (3.5 + load * 0.15 + 0.8) * 1.25 * 0.85);
+  const expectedMinWind = Math.round(minW_raw * 10) / 10;
+  assert.equal(cw.minWind, expectedMinWind,
+    `calcWindow ohne foil muss numerisch identisch zu altem foil=1800 sein: erwartet ${expectedMinWind}, got ${cw.minWind}`);
+  // Alle vier Felder müssen endliche Zahlen sein
+  for (const key of ['minWind', 'optMin', 'optMax', 'maxWind']) {
+    assert(Number.isFinite(cw[key]), `${key} muss endlich sein, got ${cw[key]}`);
+  }
+});
+
+// §6-2: Skill wirkt weiter
+test('v3.14 §6-2 — Skill wirkt weiter: calcWindow beginner.maxWind < pro.maxWind', () => {
+  const maxBeginner = calcWindow(80, 5, 'beginner', null).maxWind;
+  const maxPro      = calcWindow(80, 5, 'pro', null).maxWind;
+  assert(maxBeginner < maxPro,
+    `beginner maxWind (${maxBeginner}) muss < pro maxWind (${maxPro}) sein`);
+});
+
+// §6-3: Blend-Regression — wingWindow Feedback-Layer funktioniert wie zuvor (ein Arg weniger)
+test('v3.14 §6-3 — Blend-Regression: wingWindow mit Feedback liefert blendWindows(base,fb,0.5)', () => {
+  const spotWingRange = { minKn: 14, maxKn: 26, samples: 2 };
+  const withFb    = wingWindow(80, 5, 'intermediate', null, 'Harlem Pace', spotWingRange);
+  const withoutFb = wingWindow(80, 5, 'intermediate', null);
+
+  // phys/tab-Blend als Basis
+  const phys = calcWindow(80, 5, 'intermediate', null);
+  const tab  = wingTableWindow(80, 5);
+  const base = blendWindows(phys, tab, 0.5);
+  const fb   = rangeToWindow(14, 26);
+  const expected = blendWindows(base, fb, 0.5);
+
+  assert.deepEqual(withFb, expected, 'Blend-Regression: wingWindow+Feedback muss blendWindows(base,fb,0.5) entsprechen');
+  assert.notDeepEqual(withFb, withoutFb, 'Mit Feedback muss Ergebnis von ohne-Feedback abweichen');
 });
