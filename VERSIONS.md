@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.14.3 (2026-08-04)
+**Fix (iOS): Safe-Area unten auch auf normalen Seiten — Buttons am Seitenende nicht mehr verdeckt**
+- `index.html`: Login-/Startscreen (`if(!sess)`) von `100vh` auf `100dvh` + `env(safe-area-inset-*)`-Padding → Submit-Button („Anmelden/Account erstellen") liegt oberhalb der Safari-Leiste
+- Hauptseite: `S.main`-Bottom-Padding und Footer-Padding um `env(safe-area-inset-bottom)` erweitert → unterster Button + Footer clearen die iOS-Bottom-Bar/Home-Indicator
+
 ## v3.14.2 (2026-08-04)
 **Fix (iOS): Modals auf dynamischen Viewport + Safe-Area — Button nicht mehr von der Safari-Leiste verdeckt**
 - `index.html`: `90vh`/`inset:0` bei LOC- und Feedback-Modal reichten auf dem iPhone nicht — die einblendende Safari-Bottom-Bar überdeckte den unteren Rand (Speicher-/Loggen-Button). Umgestellt auf Overlay `height:100dvh` (dynamischer Viewport, exkl. Browser-UI) + `paddingBottom:max(16px, env(safe-area-inset-bottom))` + Karte `maxHeight:100%`. Button liegt jetzt im sichtbaren Bereich oberhalb der Toolbar
