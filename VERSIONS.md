@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.14.1 (2026-08-04)
+**Fix: „Standort konfigurieren"-Dialog auf dem iPhone scrollbar — Speicher-Button wieder erreichbar**
+- `index.html`: die LOC-MODAL-Karte („Ort ändern") hatte kein `maxHeight`/`overflow` → auf hohen Handy-Viewports (iPhone 16 Pro) wurde die zentrierte Karte oben/unten abgeschnitten, der „Hinzufügen & wählen"-Button lag unerreichbar unter dem sichtbaren Bereich. Jetzt `maxHeight:"90vh", overflow:"auto"` (wie beim FeedbackModal) → Dialog scrollt, Button erreichbar
+
 ## v3.14.0 (2026-08-03)
 **Foil aus Bewertung & Equipment entfernt — Fenster hängt nur noch an Wing-Größe, Fahrergewicht und Skill**
 - `index.html` v3.13.0 → v3.14.0: Frontend-only, kein Backend-/DB-Change
