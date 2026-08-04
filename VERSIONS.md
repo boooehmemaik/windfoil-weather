@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.14.2 (2026-08-04)
+**Fix (iOS): Modals auf dynamischen Viewport + Safe-Area — Button nicht mehr von der Safari-Leiste verdeckt**
+- `index.html`: `90vh`/`inset:0` bei LOC- und Feedback-Modal reichten auf dem iPhone nicht — die einblendende Safari-Bottom-Bar überdeckte den unteren Rand (Speicher-/Loggen-Button). Umgestellt auf Overlay `height:100dvh` (dynamischer Viewport, exkl. Browser-UI) + `paddingBottom:max(16px, env(safe-area-inset-bottom))` + Karte `maxHeight:100%`. Button liegt jetzt im sichtbaren Bereich oberhalb der Toolbar
+
 ## v3.14.1 (2026-08-04)
 **Fix: „Standort konfigurieren"-Dialog auf dem iPhone scrollbar — Speicher-Button wieder erreichbar**
 - `index.html`: die LOC-MODAL-Karte („Ort ändern") hatte kein `maxHeight`/`overflow` → auf hohen Handy-Viewports (iPhone 16 Pro) wurde die zentrierte Karte oben/unten abgeschnitten, der „Hinzufügen & wählen"-Button lag unerreichbar unter dem sichtbaren Bereich. Jetzt `maxHeight:"90vh", overflow:"auto"` (wie beim FeedbackModal) → Dialog scrollt, Button erreichbar
