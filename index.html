@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.14.3 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.14.4 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.14.3
+// WindFoil Weather Intelligence v3.14.4
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -1746,7 +1746,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.14.3</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.14.4</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1850,14 +1850,17 @@ function App() {
           {/* existing gear chips */}
           {gear.length>0 && (
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-              {gear.map(g=>(
-                <div key={g.id} style={{display:"flex",alignItems:"center",gap:6,background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"5px 8px",fontSize:11}}>
-                  <span style={{color:C.text}}>{g.name||`${g.wing}m²`}</span>
+              {gear.map(g=>{
+                const isRec = useGear && dayData?.pickedGear?.id===g.id;
+                return (
+                <div key={g.id} style={{display:"flex",alignItems:"center",gap:6,background:isRec?`${C.go}1e`:C.bg,border:`1px solid ${isRec?C.go:C.border2}`,borderRadius:6,padding:"5px 8px",fontSize:11}}>
+                  {isRec && <span title="heute empfohlen" style={{color:C.go,fontWeight:700}}>✓</span>}
+                  <span style={{color:isRec?C.go:C.text,fontWeight:isRec?700:400}}>{g.name||`${g.wing}m²`}</span>
                   <span style={{color:C.muted,fontFamily:"monospace",fontSize:10}}>{g.wing}m²{g.planeKn?` · ab ${g.planeKn}kn`:""}</span>
                   <button onClick={()=>{const ng=gear.filter(x=>x.id!==g.id); setGear(ng); savePref("wf_gear",ng); setActiveDay(0);}}
                     style={{background:"none",border:"none",color:C.stop,cursor:"pointer",fontSize:13,padding:0,lineHeight:1}}>×</button>
                 </div>
-              ))}
+                );})}
             </div>
           )}
 
@@ -1965,11 +1968,16 @@ function App() {
                         ⏱ Beste Zeit: {String(dayData.session.startHour).padStart(2,"0")}–{String(dayData.session.endHour).padStart(2,"0")} Uhr
                       </div>
                     )}
-                    <div style={{fontSize:11,color:C.muted}}>
-                      {dayData.pickedGear
-                        ? `${rider.weight}kg · ${dayData.pickedGear.name||dayData.pickedGear.wing+"m²"} (${dayData.pickedGear.wing}m²)`
-                        : `${rider.weight}kg · ${rider.wingSize}m²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}
-                    </div>
+                    {dayData.pickedGear ? (
+                      <div style={{display:"inline-flex",alignItems:"center",gap:8,flexWrap:"wrap",background:`${C.go}1e`,border:`1px solid ${C.go}`,borderRadius:8,padding:"7px 12px"}}>
+                        <span style={{fontSize:16}}>🎒</span>
+                        <span style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em"}}>Auto-Empfehlung</span>
+                        <b style={{fontSize:15,color:C.go,fontFamily:"monospace"}}>{dayData.pickedGear.name||`${dayData.pickedGear.wing} m²`}</b>
+                        <span style={{fontSize:11,color:C.muted}}>· {dayData.pickedGear.wing} m² · {rider.weight} kg</span>
+                      </div>
+                    ) : (
+                      <div style={{fontSize:11,color:C.muted}}>{`${rider.weight}kg · ${rider.wingSize}m²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}</div>
+                    )}
                     {conf!=null && (
                       <div style={{marginTop:6,fontSize:11,color:cc.color}}>{cc.icon} {cc.label} ({conf}%)</div>
                     )}
@@ -2402,7 +2410,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.14.3</span>
+        <span>WindFoil Weather Intelligence v3.14.4</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

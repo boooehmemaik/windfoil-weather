@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.14.4 (2026-08-05)
+**Auto-Setup-Wahl sichtbar gemacht — prominente Empfehlungs-Box + markiertes Gear-Chip**
+- `index.html`: Die automatische Equipment-Auswahl (`pickBestSetup`) funktionierte korrekt, war aber nur ein grauer Untertitel — leicht zu übersehen. Jetzt: (1) prominente grün umrandete **„Auto-Empfehlung"-Box** in der Foil-Score-Karte mit großem Wing-Namen; (2) das empfohlene **Gear-Chip** in der Equipment-Liste wird grün + ✓ markiert (`isRec` via `dayData.pickedGear.id`). Reine Anzeige, keine Logikänderung
+
 ## v3.14.3 (2026-08-04)
 **Fix (iOS): Safe-Area unten auch auf normalen Seiten — Buttons am Seitenende nicht mehr verdeckt**
 - `index.html`: Login-/Startscreen (`if(!sess)`) von `100vh` auf `100dvh` + `env(safe-area-inset-*)`-Padding → Submit-Button („Anmelden/Account erstellen") liegt oberhalb der Safari-Leiste
