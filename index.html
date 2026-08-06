@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.14.4 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.15.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.14.4
+// WindFoil Weather Intelligence v3.15.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -335,9 +335,9 @@ function applyPelerBoost(fc, lat, lon){
 
 // <<live-boost>>
 // Live-Station-Nowcast-Boost: hebt HEUTE den vom Modell unterschätzten Wind an
-// echten Live-Stationen (z. B. Talamone) an. Faktor = Live/Modell zur Messstunde,
-// geclamped; angewandt auf das Nachmittags-Thermikfenster. Non-mutating: liefert
-// eine neue Wind-Kopie. Nur heute, nur wenn die Station real höher misst.
+// echten Live-Stationen (z. B. Talamone) an. Nowcast-Anker für aktuelle + nächste
+// Stunde(n) direkt an Live verankert (raise-only, böen-bewusst); danach Fenster-Boost
+// mit multiplikativem Lift. Non-mutating: liefert eine neue Wind-Kopie.
 const LIVE_BOOST_MIN_RATIO   = 1.2;          // Station muss >=20% über Modell liegen
 const LIVE_BOOST_KMAX        = 2.0;          // Clamp des Boost-Faktors
 const LIVE_BOOST_MIN_MODEL   = 3 / 1.94384;  // Modell-Mindestwind (m/s) für stabiles Verhältnis
@@ -345,25 +345,50 @@ const LIVE_BOOST_WIN_START   = 11;           // Thermik-Fenster (lokale Stunde)
 const LIVE_BOOST_WIN_END     = 19;
 const LIVE_BOOST_ACTIVE_MIN  = 11;           // nur wenn "jetzt" innerhalb der Thermik-Aktivzeit
 const LIVE_BOOST_ACTIVE_MAX  = 20;
+const LIVE_GUST_BLEND        = 0.5;          // Anteil der Böe im "Jetzt"-Anker (0=nur Grundwind, 1=nur Böe)
+const LIVE_ANCHOR_HOURS      = 2;            // aktuelle + (N-1) Folgestunden direkt an Live verankern
 
-// wins/gusts: 24h-Slices (m/s) des Tages. Gibt { wins, gust, k, applied, station } zurück.
+// wins/gusts: 24h-Slices (m/s) des Tages. Gibt { wins, gust, k, applied, station, nowKn } zurück.
 function applyLiveStationBoost(wins, gust, live, isToday) {
-  const none = { wins, gust, k: 1, applied: false, station: null };
+  const none = { wins, gust, k: 1, applied: false, station: null, nowKn: null };
   if (!isToday || !live || !live.ok || live.sensorOk === false || live.wind == null) return none;
   const nowH = live.time ? parseInt(live.time.slice(0,2),10) : new Date().getHours();
   if (!(nowH >= LIVE_BOOST_ACTIVE_MIN && nowH <= LIVE_BOOST_ACTIVE_MAX)) return none;
   const modelNow = wins[nowH];
   if (modelNow == null || modelNow < LIVE_BOOST_MIN_MODEL) return none;
-  let k = live.wind / modelNow;
-  if (k < LIVE_BOOST_MIN_RATIO) return none;          // Station nicht nennenswert höher
-  k = Math.min(k, LIVE_BOOST_KMAX);
+
+  // Böen-bewusster "Jetzt"-Wind: Grundwind + Anteil Richtung jüngster Spitzenböe.
+  const gustMs  = (live.gustMax != null ? live.gustMax
+                 : live.gust != null ? live.gust : live.wind);
+  const effLive = live.wind + LIVE_GUST_BLEND * Math.max(0, gustMs - live.wind);
+
   const bw = wins.slice(), bg = gust ? gust.slice() : gust;
-  for (let h = LIVE_BOOST_WIN_START; h <= LIVE_BOOST_WIN_END; h++) {
-    if (bw[h] != null) bw[h] = Math.round(bw[h] * k * 100) / 100;
-    if (bg && bg[h] != null) bg[h] = Math.round(bg[h] * k * 100) / 100;
+  let applied = false;
+
+  // (1) Direkter Nowcast-Anker für aktuelle + nächste Stunde(n) — Realität gewinnt
+  //     jetzt, RAISE-ONLY (nie einen guten Forecast kappen), böen-bewusst.
+  for (let h = nowH; h < nowH + LIVE_ANCHOR_HOURS && h <= 23; h++) {
+    if (bw[h] != null && effLive > bw[h]) { bw[h] = Math.round(effLive * 100) / 100; applied = true; }
+    if (bg && gustMs != null && (bg[h] == null || gustMs > bg[h])) bg[h] = Math.round(gustMs * 100) / 100;
   }
-  return { wins: bw, gust: bg, k: Math.round(k*100)/100, applied: true,
-           station: live.label || live.key || "Live-Station" };
+
+  // (2) Fenster-weiter multiplikativer Lift für den Rest des Thermikfensters,
+  //     verankert am GRUNDWIND-Verhältnis (konservativ, keine Böen-Extrapolation).
+  let k = live.wind / modelNow;
+  if (k >= LIVE_BOOST_MIN_RATIO) {
+    k = Math.min(k, LIVE_BOOST_KMAX);
+    for (let h = LIVE_BOOST_WIN_START; h <= LIVE_BOOST_WIN_END; h++) {
+      if (h >= nowH && h < nowH + LIVE_ANCHOR_HOURS) continue; // schon verankert
+      if (bw[h] != null) { const v = Math.round(bw[h] * k * 100) / 100; if (v > bw[h]) { bw[h] = v; applied = true; } }
+      if (bg && bg[h] != null) { const v = Math.round(bg[h] * k * 100) / 100; if (v > bg[h]) bg[h] = v; }
+    }
+  } else { k = 1; }
+
+  return applied
+    ? { wins: bw, gust: bg, k: Math.round(k * 100) / 100, applied: true,
+        station: live.label || live.key || "Live-Station",
+        nowKn: Math.round(msToKn(effLive) * 10) / 10 }
+    : none;
 }
 // <</live-boost>>
 
@@ -1746,7 +1771,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.14.4</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.15.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -1983,7 +2008,9 @@ function App() {
                     )}
                     {dayData.liveBoost?.applied && (
                       <div style={{marginTop:6,fontSize:10,color:C.signal,fontFamily:"monospace"}}>
-                        ↑ an Live-Station {dayData.liveBoost.station} angepasst (×{dayData.liveBoost.k})
+                        {dayData.liveBoost.nowKn != null
+                          ? `↑ Live-Station ${dayData.liveBoost.station}: jetzt ~${dayData.liveBoost.nowKn} kn`
+                          : `↑ an Live-Station ${dayData.liveBoost.station} angepasst (×${dayData.liveBoost.k})`}
                       </div>
                     )}
                     {dayData.measuredCorr?.applied && (
@@ -2410,7 +2437,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.14.4</span>
+        <span>WindFoil Weather Intelligence v3.15.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

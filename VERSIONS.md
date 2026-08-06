@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.15.0 (2026-08-06)
+**Live-Nowcast-Anker + Böen-Fahrbarkeit: aktuelle Stunde direkt an der Live-Station verankert**
+- `index.html` v3.14.4 → v3.15.0: Frontend-only, kein Backend-/DB-Change
+- Neue Konstanten: `LIVE_GUST_BLEND=0.5` (Böen-Anteil im Jetzt-Anker) und `LIVE_ANCHOR_HOURS=2` (aktuelle + nächste Stunde direkt verankern)
+- `applyLiveStationBoost` erweitert: (1) Nowcast-Anker für `nowH` bis `nowH+LIVE_ANCHOR_HOURS`: effektiver Jetzt-Wind = Grundwind + 50 % Richtung Böenspitze (`effLive`), raise-only; Böen-Array an `gustMs` angehoben; (2) Fenster-Boost für Rest des Thermikfensters weiterhin multiplikativ am Grundwind-Verhältnis (keine Böen-Extrapolation in die Zukunft); verankerte Stunden im Boost-Loop übersprungen; Rückgabe jetzt inkl. `nowKn` (böen-bewusster Jetzt-Wert in Knoten)
+- UI-Badge: zeigt jetzt `↑ Live-Station {station}: jetzt ~{nowKn} kn` statt `×{k}`; Fallback auf altes Format wenn `nowKn` null
+- Verhalten bei 10,4 kn Grundwind / 17,4 kn Böe (Talamone 2026-08-06): `effLive ≈ 13,9 kn`, Stunden 13+14 direkt verankert, Rest des Fensters mit k=live.wind/modelNow skaliert
+
 ## v3.14.4 (2026-08-05)
 **Auto-Setup-Wahl sichtbar gemacht — prominente Empfehlungs-Box + markiertes Gear-Chip**
 - `index.html`: Die automatische Equipment-Auswahl (`pickBestSetup`) funktionierte korrekt, war aber nur ein grauer Untertitel — leicht zu übersehen. Jetzt: (1) prominente grün umrandete **„Auto-Empfehlung"-Box** in der Foil-Score-Karte mit großem Wing-Namen; (2) das empfohlene **Gear-Chip** in der Equipment-Liste wird grün + ✓ markiert (`isRec` via `dayData.pickedGear.id`). Reine Anzeige, keine Logikänderung

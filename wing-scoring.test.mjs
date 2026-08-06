@@ -353,7 +353,7 @@ test('Fall 6a-6 — rangeToWindow: kn→m/s korrekt, opt-Band 25/75', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Live-Station-Nowcast-Boost (v3.12.0) — Fälle 1–9
+// Live-Station-Nowcast-Boost (v3.15.0) — Fälle 1–9
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Setup: extract live-boost block from index.html ──────────────────────────
@@ -423,19 +423,34 @@ test('Live-Boost Fall 2 — isToday=false → applied:false, Referenzgleichheit'
   assert.equal(r.gust, gust, 'gust muss identisch (Referenz) sein');
 });
 
-// Fall 3 — Station ≤ Ratio-Schwelle (Live/Modell < 1.2) → unverändert
-test('Live-Boost Fall 3 — Live/Modell < 1.2 → applied:false', () => {
+// Fall 3 — Station-Ratio < 1.2: Fenster-Boost aus, aber Nowcast-Anker greift (v3.15.0)
+// effLive = live.wind (kein Gust) > bw[nowH]=modelW → Stunden 14+15 verankert, k===1
+test('Live-Boost Fall 3 — Live/Modell < 1.2 → Fenster-Boost aus, Anker greift, k===1', () => {
   const modelW = knToMs(10);
   const wins = makeWins24(modelW);
-  // Station nur 10% über Modell → k=1.1 < 1.2
-  const live = { ok: true, wind: modelW * 1.1, time: '14:00', sensorOk: true };
+  // Station 10% über Modell → k=1.1 < 1.2
+  const liveWind = modelW * 1.1;
+  const live = { ok: true, wind: liveWind, time: '14:00', sensorOk: true };
   const r = applyLiveStationBoost(wins, null, live, true);
-  assert.equal(r.applied, false, 'k < 1.2: kein Boost (applied:false)');
-  assert.equal(r.wins, wins, 'wins muss unverändert sein');
+
+  // Anker greift: effLive = liveWind (kein gust) > modelW → nowH=14 + 15 angehoben
+  // effLive = liveWind + 0.5 * max(0, liveWind - liveWind) = liveWind
+  const effLive = liveWind;
+  assert.equal(r.applied, true, 'Anker greift trotz k<1.2 (applied:true)');
+  assert.equal(r.k, 1, 'k muss 1 sein wenn Fenster-Boost nicht greift');
+  const expectedAnchor = Math.round(effLive * 100) / 100;
+  assert(Math.abs(r.wins[14] - expectedAnchor) < 0.001,
+    `wins[14] soll auf effLive=${expectedAnchor} verankert sein, got ${r.wins[14]}`);
+  assert(Math.abs(r.wins[15] - expectedAnchor) < 0.001,
+    `wins[15] (nowH+1) soll auf effLive=${expectedAnchor} verankert sein, got ${r.wins[15]}`);
+  // Fenster-Boost: Stunden außerhalb Anker (z.B. 11) sollen NICHT geliftet sein
+  assert(Math.abs(r.wins[11] - modelW) < 0.001,
+    `wins[11] (außerhalb Anker, kein Fenster-Boost) soll unverändert sein, got ${r.wins[11]}`);
 });
 
 // Fall 4 — Talamone-Fall: wins[15]=knToMs(7.6), live.wind=knToMs(15), time:"15:56"
-test('Live-Boost Fall 4 — Talamone: k≈1.97, Fenster 11–19 skaliert, außen unverändert', () => {
+// v3.15.0: nowH=15, Anker auf 15+16, Fenster-Boost für 11-14 und 17-19
+test('Live-Boost Fall 4 — Talamone: k≈1.97, Fenster 11–19 angehoben, außen unverändert', () => {
   const modelW = knToMs(7.6);
   const wins = makeWins24(modelW);
   const gust = makeGust24(modelW);
@@ -443,20 +458,28 @@ test('Live-Boost Fall 4 — Talamone: k≈1.97, Fenster 11–19 skaliert, außen
   const r = applyLiveStationBoost(wins, gust, live, true);
 
   assert.equal(r.applied, true, 'Talamone-Fall: applied muss true sein');
-  // k = knToMs(15)/knToMs(7.6) ≈ 1.9737 → gerundetes r.k = 1.97
+  // k = live.wind / modelNow = knToMs(15)/knToMs(7.6) ≈ 1.9737, geclampt
   assert(r.k >= 1.97 && r.k <= 2.0, `k (${r.k}) muss zwischen 1.97 und 2.0 liegen`);
 
-  // wins[15] muss deutlich größer als Originalwert sein (≈knToMs(15), Toleranz 5%)
-  const boosted15 = r.wins[15];
-  assert(boosted15 > modelW * 1.9, `wins[15] (${boosted15}) muss deutlich über Modellwind skaliert sein`);
-  assert(boosted15 < modelW * 2.01, `wins[15] (${boosted15}) darf nicht über k=2.0× Modellwind liegen`);
-  // Alle geboosteten Stunden müssen konsistent skaliert sein (gleicher Faktor, gerundetem Ergebnis)
+  // nowH=15: no gust, gustMs=live.wind=knToMs(15), effLive=live.wind=knToMs(15)
+  // Anker-Stunden 15+16: bw[h] = round(effLive*100)/100 ≈ round(knToMs(15)*100)/100
+  const effLive = knToMs(15); // live.wind + 0.5*max(0, live.wind-live.wind)
+  const anchoredW = Math.round(effLive * 100) / 100;
+  assert(Math.abs(r.wins[15] - anchoredW) < 0.001,
+    `wins[15] (Anker) soll ${anchoredW} sein, got ${r.wins[15]}`);
+  assert(Math.abs(r.wins[16] - anchoredW) < 0.001,
+    `wins[16] (Anker+1) soll ${anchoredW} sein, got ${r.wins[16]}`);
+
+  // Fenster-Boost-Stunden (11-14, 17-19): > 1.9× Modell
+  const k_raw = knToMs(15) / modelW; // ≈ 1.9737
   for (let h = 11; h <= 19; h++) {
     assert(r.wins[h] > modelW * 1.9,
-      `wins[${h}] (${r.wins[h]}) soll skaliert sein (> 1.9× Modell)`);
-    assert(r.wins[h] <= modelW * 2.01,
-      `wins[${h}] (${r.wins[h]}) soll nicht über 2.01× Modell liegen`);
+      `wins[${h}] (${r.wins[h]}) soll angehoben sein (> 1.9× Modell)`);
+    // kein Wert darf über 2.01× Modellwind liegen (Anker unbedeckelt, aber ratio<2.01)
+    assert(r.wins[h] <= modelW * 2.01 + 0.01,
+      `wins[${h}] (${r.wins[h]}) soll nicht weit über Modellwind liegen`);
   }
+
   // Stunden außerhalb (9 und 20) unverändert
   assert(Math.abs(r.wins[9] - modelW) < 0.001,
     `wins[9] darf nicht verändert sein, got ${r.wins[9]}`);
@@ -464,20 +487,33 @@ test('Live-Boost Fall 4 — Talamone: k≈1.97, Fenster 11–19 skaliert, außen
     `wins[20] darf nicht verändert sein (außerhalb Fenster), got ${r.wins[20]}`);
 
   assert.equal(r.station, 'Talamone', 'station muss "Talamone" sein');
+  // nowKn: msToKn(effLive) gerundet auf eine Dezimalstelle
+  const expectedNowKn = Math.round(msToKn(effLive) * 10) / 10;
+  assert(Math.abs(r.nowKn - expectedNowKn) < 0.05,
+    `nowKn (${r.nowKn}) soll ≈${expectedNowKn} sein`);
 });
 
-// Fall 5 — Clamp: Live/Modell=3.0 → k===2.0
-test('Live-Boost Fall 5 — Clamp: k>2.0 wird auf 2.0 geclampt', () => {
+// Fall 5 — Clamp: Live/Modell=3.0 → k===2.0 für Fenster-Boost; Anker unkapped
+// v3.15.0: Anker-Stunden (nowH=14,15) bekommen effLive (=3×modell, da kein gust), nicht geclampt
+test('Live-Boost Fall 5 — Clamp: Fenster-Boost auf k=2.0 geclampt, Anker unkapped', () => {
   const modelW = knToMs(5);
   const wins = makeWins24(modelW);
-  // Station 3× Modell → k würde 3.0 werden
+  // Station 3× Modell, kein Gust → effLive = 3×modelW
   const live = { ok: true, wind: modelW * 3.0, time: '14:00', sensorOk: true };
   const r = applyLiveStationBoost(wins, null, live, true);
   assert.equal(r.applied, true, 'Clamp-Fall: muss trotzdem boosten');
-  assert.equal(r.k, 2.0, `k muss auf 2.0 geclampt sein, got ${r.k}`);
-  const expectedW = Math.round(modelW * 2.0 * 100) / 100;
-  assert(Math.abs(r.wins[14] - expectedW) < 0.001,
-    `wins[14] soll auf 2.0× Modell skaliert sein: ${r.wins[14]}`);
+  assert.equal(r.k, 2.0, `k muss auf 2.0 geclampt sein (Fenster-Boost), got ${r.k}`);
+
+  // Anker-Stunden 14+15: effLive = 3×modelW (nicht geclampt)
+  const effLive = modelW * 3.0; // gustMs=live.wind=3×modelW, Blend 0.5*(3-3)=0
+  const expectedAnchor = Math.round(effLive * 100) / 100;
+  assert(Math.abs(r.wins[14] - expectedAnchor) < 0.001,
+    `wins[14] (Anker) soll effLive=${expectedAnchor} (=3×modell, unkapped), got ${r.wins[14]}`);
+
+  // Fenster-Boost-Stunden außerhalb Anker (z.B. 11): k=2.0 geclampt
+  const expectedBoosted = Math.round(modelW * 2.0 * 100) / 100;
+  assert(Math.abs(r.wins[11] - expectedBoosted) < 0.001,
+    `wins[11] (Fenster-Boost) soll 2.0×modell=${expectedBoosted}, got ${r.wins[11]}`);
 });
 
 // Fall 6 — Div-Guard: modelNow < 3kn → kein Boost (kein Infinity/NaN)
@@ -501,19 +537,29 @@ test('Live-Boost Fall 7 — Aktivzeit-Gate: time:22:30 (nowH>20) → applied:fal
   assert.equal(r.wins, wins, 'wins-Referenz muss identisch sein');
 });
 
-// Fall 8 — Gust skaliert mit demselben k; gust=null bricht nicht
-test('Live-Boost Fall 8a — Gust wird mit k skaliert', () => {
+// Fall 8 — Gust-Verhalten: v3.15.0 Anker-Stunden bekommen gustMs direkt; außerhalb Anker k-skaliert
+test('Live-Boost Fall 8a — Gust: Anker-Stunde bekommt gustMs direkt, Fenster-Stunden k-skaliert', () => {
   const modelW = knToMs(7.6);
   const wins = makeWins24(modelW);
-  const gust = makeGust24(modelW);
+  const gust = makeGust24(modelW);  // gust[h] = modelW * 1.3
   const live = { ok: true, wind: knToMs(15), time: '14:00', sensorOk: true };
+  // nowH=14, kein gustMax/gust → gustMs = live.wind = knToMs(15)
+  // effLive = live.wind + 0.5*max(0, gustMs - live.wind) = live.wind (da gleich)
+  const gustMs = knToMs(15);
   const r = applyLiveStationBoost(wins, gust, live, true);
   assert.equal(r.applied, true, 'Gust-Test: muss boosten');
-  // k_raw = live.wind / modelW ≈ 1.9737, gust[14] skaliert mit k_raw
-  const k_raw = live.wind / modelW;
-  const expectedG = Math.round(gust[14] * k_raw * 100) / 100;
-  assert(Math.abs(r.gust[14] - expectedG) < 0.001,
-    `gust[14] soll skaliert sein: erwartet ${expectedG}, got ${r.gust[14]}`);
+
+  // Anker-Stunden 14+15: gustMs > gust[14]? knToMs(15) ≈ 7.72 vs modelW*1.3 ≈ 5.08 → ja
+  const expectedAnchorGust = Math.round(gustMs * 100) / 100;
+  assert(Math.abs(r.gust[14] - expectedAnchorGust) < 0.001,
+    `gust[14] (Anker) soll gustMs=${expectedAnchorGust}, got ${r.gust[14]}`);
+
+  // Fenster-Boost-Stunden außerhalb Anker (z.B. 11): bg[11] = round(gust[11] * k * 100)/100
+  const k = Math.min(live.wind / modelW, 2.0);
+  const expectedBoostGust = Math.round(gust[11] * k * 100) / 100;
+  assert(Math.abs(r.gust[11] - expectedBoostGust) < 0.001,
+    `gust[11] (Fenster-Boost) soll ${expectedBoostGust}, got ${r.gust[11]}`);
+
   // Außerhalb des Fensters unverändert
   assert(Math.abs(r.gust[9] - gust[9]) < 0.001,
     `gust[9] soll unverändert sein, got ${r.gust[9]}`);
@@ -532,7 +578,7 @@ test('Live-Boost Fall 8b — gust=null bricht nicht', () => {
 
 // Fall 9 — Score-Wirkung: scoreDay(boosted) > scoreDay(roh) für Talamone-Fall
 test('Live-Boost Fall 9 — Score-Wirkung: Boost-Score > Roh-Score (Talamone-Fall)', () => {
-  // Talamone: Modell 7.6kn, Station 15kn — Rider 93kg, 5m², 1500cm², intermediate
+  // Talamone: Modell 7.6kn, Station 15kn — Rider 93kg, 5m², intermediate
   const modelW = knToMs(7.6);
   const wins = makeWins24(modelW);
   const gust = makeGust24(modelW);
@@ -548,6 +594,187 @@ test('Live-Boost Fall 9 — Score-Wirkung: Boost-Score > Roh-Score (Talamone-Fal
   assert(!Number.isNaN(scoreBoosted), `scoreDay(boosted) darf nicht NaN sein, got ${scoreBoosted}`);
   assert(scoreBoosted > scoreRoh,
     `Boost-Score (${scoreBoosted}) muss > Roh-Score (${scoreRoh}) sein`);
+});
+
+// ── Neue Fälle v3.15.0: Nowcast-Anker + Böen-Fahrbarkeit (TESTPLAN §Fälle 1–8) ──
+
+// Testplan Fall 1 — Nowcast-Anker: Talamone 10.4/17.4 kn, Modell[13]=8kn
+test('Live-Boost v3.15 Fall 1 — Nowcast-Anker: wins[13]+wins[14]=effLive, nowKn≈13.9', () => {
+  const liveWind  = knToMs(10.4);
+  const liveGustM = knToMs(17.4);
+  // effLive = liveWind + 0.5 * (liveGustM - liveWind)
+  const effLive = liveWind + 0.5 * Math.max(0, liveGustM - liveWind);
+  const expectedNowKn = Math.round(msToKn(effLive) * 10) / 10;
+
+  const modelNow = knToMs(8);
+  const wins = makeWins24(modelNow);
+  const live = { wind: liveWind, gustMax: liveGustM, time: '13:38', sensorOk: true, ok: true };
+  const r = applyLiveStationBoost(wins, null, live, true);
+
+  assert.equal(r.applied, true, 'applied muss true sein');
+  // wins[13] und wins[14] = round(effLive*100)/100
+  const expectedAnchor = Math.round(effLive * 100) / 100;
+  assert(Math.abs(r.wins[13] - expectedAnchor) < 0.001,
+    `wins[13] soll effLive=${expectedAnchor}, got ${r.wins[13]}`);
+  assert(Math.abs(r.wins[14] - expectedAnchor) < 0.001,
+    `wins[14] (nowH+1) soll effLive=${expectedAnchor}, got ${r.wins[14]}`);
+  // nowKn ≈ 13.9
+  assert(Math.abs(r.nowKn - expectedNowKn) < 0.05,
+    `nowKn (${r.nowKn}) soll ≈${expectedNowKn} kn sein`);
+  assert(r.nowKn >= 13.8 && r.nowKn <= 14.0,
+    `nowKn (${r.nowKn}) soll ≈13.9 kn sein`);
+});
+
+// Testplan Fall 2 — Raise-only Anker: Modell an nowH bereits > effLive → unverändert
+test('Live-Boost v3.15 Fall 2 — Raise-only Anker: Modell > effLive → nowH nicht gesenkt', () => {
+  const liveWind  = knToMs(10.4);
+  const liveGustM = knToMs(17.4);
+  const effLive = liveWind + 0.5 * Math.max(0, liveGustM - liveWind);
+  // Modell an nowH höher als effLive
+  const modelNow = effLive + 1.0;  // etwas höher
+  const wins = makeWins24(modelNow);
+  const live = { wind: liveWind, gustMax: liveGustM, time: '14:00', sensorOk: true, ok: true };
+  const r = applyLiveStationBoost(wins, null, live, true);
+
+  // Raise-only: wins[14] soll unverändert bleiben (Modell > effLive)
+  // Aber da k = liveWind/modelNow < 1.0 < 1.2, Fenster-Boost greift auch nicht
+  // Anker-Prüfung: effLive <= bw[14] → kein Update
+  assert(r.wins[14] >= modelNow - 0.001,
+    `wins[14] (${r.wins[14]}) darf nicht unter Modell abgesenkt sein (raise-only)`);
+});
+
+// Testplan Fall 3 — Fenster-Boost getrennt: h=17 (außerhalb Anker nowH=13) mit k=live.wind/modelNow
+test('Live-Boost v3.15 Fall 3 — Fenster-Boost: h=17 mit k (Grundwind, geclampt), nicht effLive', () => {
+  const liveWind  = knToMs(10.4);
+  const liveGustM = knToMs(17.4);
+  const modelNow  = knToMs(8);
+  const wins = makeWins24(modelNow);
+  const live = { wind: liveWind, gustMax: liveGustM, time: '13:38', sensorOk: true, ok: true };
+  const r = applyLiveStationBoost(wins, null, live, true);
+
+  // k = liveWind / modelNow = knToMs(10.4)/knToMs(8), geclampt auf 2.0
+  const k = Math.min(liveWind / modelNow, 2.0);
+  // h=17 ist außerhalb Anker (nowH=13, nowH+1=14), innerhalb Fenster 11-19
+  const expectedH17 = Math.round(modelNow * k * 100) / 100;
+  assert(Math.abs(r.wins[17] - expectedH17) < 0.001,
+    `wins[17] (Fenster-Boost) soll ${expectedH17} (k=${k.toFixed(4)}×modell), got ${r.wins[17]}`);
+  // wins[17] != effLive (sie sind verschieden, weil effLive > liveWind)
+  const effLive = liveWind + 0.5 * Math.max(0, liveGustM - liveWind);
+  assert(Math.abs(r.wins[17] - Math.round(effLive * 100) / 100) > 0.1,
+    `wins[17] soll NICHT effLive sein — Fenster-Boost ist grundwind-basiert`);
+});
+
+// Testplan Fall 4 — Böen-Array: gust[nowH]=gustMs; gust=null bricht nicht
+test('Live-Boost v3.15 Fall 4 — Böen-Array: gust[13]=gustMs, gust=null sicher', () => {
+  const liveWind  = knToMs(10.4);
+  const liveGustM = knToMs(17.4);
+  const modelNow  = knToMs(8);
+  const wins = makeWins24(modelNow);
+  const gust = makeGust24(modelNow);  // gust[h] = modelNow * 1.3
+  const live = { wind: liveWind, gustMax: liveGustM, time: '13:38', sensorOk: true, ok: true };
+  const r = applyLiveStationBoost(wins, gust, live, true);
+
+  // gustMs = live.gustMax = knToMs(17.4)
+  const gustMs = liveGustM;
+  const expectedGust = Math.round(gustMs * 100) / 100;
+  // gust[13] und gust[14] (Anker-Stunden): bg[h] = round(gustMs*100)/100 wenn gustMs > bg[h]
+  assert(r.gust[13] >= expectedGust - 0.001,
+    `gust[13] soll mindestens gustMs=${expectedGust}, got ${r.gust[13]}`);
+  assert(r.gust[14] >= expectedGust - 0.001,
+    `gust[14] (nowH+1) soll mindestens gustMs=${expectedGust}, got ${r.gust[14]}`);
+
+  // gust=null darf nicht werfen
+  assert.doesNotThrow(() => {
+    applyLiveStationBoost(wins, null, live, true);
+  }, 'gust=null darf keinen Fehler werfen');
+});
+
+// Testplan Fall 5 — k<Schwelle: Anker greift, Fenster-Boost nicht, k===1
+test('Live-Boost v3.15 Fall 5 — k<1.2: Anker greift, Fenster-Boost aus, k===1', () => {
+  const modelW   = knToMs(10);
+  const liveWind = modelW * 1.1;  // k=1.1 < 1.2
+  // effLive = liveWind (kein Gust)
+  const wins = makeWins24(modelW);
+  const live = { wind: liveWind, time: '14:00', sensorOk: true, ok: true };
+  const r = applyLiveStationBoost(wins, null, live, true);
+
+  // Anker: effLive = liveWind > modelW → applied:true
+  assert.equal(r.applied, true, 'Anker greift (applied:true)');
+  assert.equal(r.k, 1, 'k muss 1 sein (Fenster-Boost nicht aktiv)');
+  // nowH=14,15 verankert
+  const expectedAnchor = Math.round(liveWind * 100) / 100;
+  assert(Math.abs(r.wins[14] - expectedAnchor) < 0.001,
+    `wins[14] soll effLive=${expectedAnchor}, got ${r.wins[14]}`);
+  // h=11 (außerhalb Anker): kein Fenster-Boost → unverändert
+  assert(Math.abs(r.wins[11] - modelW) < 0.001,
+    `wins[11] soll unverändert=${modelW.toFixed(4)}, got ${r.wins[11]}`);
+});
+
+// Testplan Fall 6 — Gate/Bypass: nicht heute / kein Live / sensorOk:false / nowH außerhalb 11–20
+test('Live-Boost v3.15 Fall 6 — Gates: isToday=false/null/sensorOk=false/nowH<11 → unverändert', () => {
+  const modelW = knToMs(10);
+  const liveWind = knToMs(15);
+  const wins = makeWins24(modelW);
+
+  // isToday=false
+  let r = applyLiveStationBoost(wins, null, { wind: liveWind, time: '14:00', sensorOk: true, ok: true }, false);
+  assert.equal(r.applied, false, 'isToday=false → applied:false');
+  assert.equal(r.wins, wins, 'wins-Referenz identisch');
+
+  // live=null
+  r = applyLiveStationBoost(wins, null, null, true);
+  assert.equal(r.applied, false, 'live=null → applied:false');
+
+  // sensorOk=false
+  r = applyLiveStationBoost(wins, null, { wind: liveWind, time: '14:00', sensorOk: false, ok: true }, true);
+  assert.equal(r.applied, false, 'sensorOk:false → applied:false');
+
+  // nowH=9 < 11
+  r = applyLiveStationBoost(wins, null, { wind: liveWind, time: '09:30', sensorOk: true, ok: true }, true);
+  assert.equal(r.applied, false, 'nowH=9 < 11 → applied:false');
+  assert.equal(r.wins, wins, 'wins-Referenz identisch (Gate)');
+});
+
+// Testplan Fall 7 — Score-Wirkung: Talamone-Fall (93 kg, 6.0 m²), scoreHour(effLive) > scoreHour(modelNow)
+test('Live-Boost v3.15 Fall 7 — Score-Wirkung: effLive>modelNow ergibt höheren scoreHour', () => {
+  const modelNow = knToMs(8);
+  const liveWind = knToMs(10.4);
+  const liveGustM = knToMs(17.4);
+  const effLive = liveWind + 0.5 * Math.max(0, liveGustM - liveWind);
+
+  const win = ctx.wingWindow(93, 6, 'intermediate', null);
+  const scoreModel = ctx.scoreHour(modelNow, win);
+  const scoreEff   = ctx.scoreHour(effLive, win);
+
+  assert(!Number.isNaN(scoreModel), `scoreHour(modelNow) darf nicht NaN sein`);
+  assert(!Number.isNaN(scoreEff),   `scoreHour(effLive) darf nicht NaN sein`);
+  assert(scoreEff > scoreModel,
+    `scoreHour(effLive=${msToKn(effLive).toFixed(1)}kn)=${scoreEff} muss > scoreHour(modelNow=${msToKn(modelNow).toFixed(1)}kn)=${scoreModel}`);
+
+  // E2E: scoreDay mit lb.wins > scoreDay mit roh
+  const wins = makeWins24(modelNow);
+  const gust = makeGust24(modelNow);
+  const live = { wind: liveWind, gustMax: liveGustM, time: '13:38', sensorOk: true, ok: true };
+  const lb = applyLiveStationBoost(wins, gust, live, true);
+  assert.equal(lb.applied, true, 'Boost muss aktiv sein');
+  const scoreRoh    = ctx.scoreDay(wins, win, 0);
+  const scoreBoosted = ctx.scoreDay(lb.wins, win, 0);
+  assert(scoreBoosted > scoreRoh,
+    `scoreBoosted (${scoreBoosted}) muss > scoreRoh (${scoreRoh})`);
+});
+
+// Testplan Fall 8 — Regression: measured-correction + wing-scoring unberührt
+test('Live-Boost v3.15 Fall 8 — Regression: measured-correction und wing-scoring unberührt', () => {
+  // Wing-scoring unberührt: einfacher Smoke-Test
+  const win = ctx.wingWindow(78, 5, 'intermediate', null);
+  const s = ctx.scoreDay(Array.from({length:24},()=>knToMs(18)), win, 0);
+  assert(!Number.isNaN(s) && s >= 0 && s <= 100, `scoreDay unberührt: ${s}`);
+
+  // measured-correction: applyLiveStationBoost berührt keine measured-Felder
+  const wins = makeWins24(knToMs(10));
+  const live = { wind: knToMs(15), time: '14:00', sensorOk: true, ok: true };
+  const lb = applyLiveStationBoost(wins, null, live, true);
+  assert(!('measuredCorr' in lb), 'liveBoost-Return darf kein measuredCorr-Feld enthalten');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
