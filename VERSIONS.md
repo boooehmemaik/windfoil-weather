@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.17.0 (2026-08-06)
+**Obs-basiertes Feedback — Wing + Zeitfenster statt geschätzter Knoten**
+- `db/migrations/006_station_obs.sql` (neu): Tabelle `station_obs` (station_key, ts, wind_ms, gust_ms, lat, lon) + Index. Rolling-Log aller 10-Minuten-Polling-Werte.
+- `proxy-server.js` v2.6.2 → v2.7.0: Poller (`setInterval` 10 min + Sofortlauf) schreibt LIVE_STATIONS (Talamone) und MEASURED_STATIONS (Torbole, Ulcinj, LGPZ) als `INSERT OR IGNORE INTO station_obs`. Prune bei jedem Lauf: Einträge älter als 14 Tage werden gelöscht. Fehlerrobust: Exception pro Station fängt sich ab, kein Crash.
+- `src/db.mjs` 1.1.0 → 1.2.0: neue Funktion `getObservedWindRange(stationKey, startIso, endIso)` — low = min Grundwind, high = max Böe im Fenster (m/s → kn).
+- `src/feedback.routes.mjs` 1.1.0 → 1.2.0: POST `/api/feedback` nimmt jetzt `{spotId, wingM2, startedAt, endedAt, ...}` statt `planingWindKt/rangeLowKt/rangeHighKt`. Wind-Range wird serverseitig aus `station_obs` abgeleitet. Response-Flag `observed` zeigt an ob Stationsdaten vorhanden waren. Bei `observed:false` wird Session gespeichert, aber keine Kalibrierung durchgeführt.
+- `index.html` v3.16.0 → v3.17.0: `FeedbackModal` vereinfacht — kn-Stepper entfernt, stattdessen Wing-Auswahl + Zeitfenster (von/bis `<input type="time">`). Erfolgs-Ansicht zeigt entweder „Aus echten Stationswerten: X m² bei ~low–high kn kalibriert" oder Hinweis „keine Stationsdaten für dieses Fenster".
+
 ## v3.16.0 (2026-08-06)
 **Quelle-Badge am Foil-Score — Forecast-Modell + Station sichtbar**
 - `index.html`: kleine Zeile „📡 Quelle: {Modell-Label}{ + Live-Station/Messstation}" in der Foil-Score-Karte. Macht sichtbar, dass z. B. Talamone bereits `AROME-HD + Best (max/h)` **plus** die Live-Station nutzt (war bisher nur in der API-Statuszeile). Reine Anzeige, keine Logikänderung

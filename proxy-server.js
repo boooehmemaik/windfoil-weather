@@ -1,4 +1,4 @@
-// proxy-server.js v2.6.2
+// proxy-server.js v2.7.0
 // WindFoil Weather System — Secure backend proxy for real station data
 //
 // WHY THIS EXISTS
@@ -946,6 +946,102 @@ app.post("/api/admin/users/delete", (req, res) => {
 });
 
 
+
+// ── Station-Obs-Poller ────────────────────────────────────────────────────────
+// Logt alle 10 min die aktuellen Stationswerte (LIVE_STATIONS ∪ MEASURED_STATIONS)
+// in station_obs (Migration 006). Nutzt eine eigene better-sqlite3-Verbindung
+// auf dieselbe DB-Datei (WAL erlaubt parallele Writer). Blockiert den Serverstart
+// NICHT (setInterval), crasht NICHT bei Stationsfehlern (try/catch pro Station).
+const OBS_POLL_MS = 600_000; // 10 Minuten
+let obsDb = null;
+function getObsDb() {
+  if (!obsDb) {
+    obsDb = new Database(DB_PATH);
+    obsDb.pragma("journal_mode = WAL");
+    // Prepared Statements werden einmalig erstellt und wiederverwendet.
+    obsDb._insertObs = obsDb.prepare(
+      `INSERT OR IGNORE INTO station_obs (station_key, ts, wind_ms, gust_ms, lat, lon)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    );
+    obsDb._pruneObs = obsDb.prepare(
+      `DELETE FROM station_obs WHERE ts < ?`
+    );
+  }
+  return obsDb;
+}
+
+async function pollStationObs() {
+  const ts = new Date().toISOString();
+  const prune14d = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  console.log(`[obs-poller] polling ${LIVE_STATIONS.length} live + ${MEASURED_STATIONS.length} measured stations`);
+
+  // ── LIVE_STATIONS (snapshot feed, z.B. Talamone) ──────────────────────────
+  for (const st of LIVE_STATIONS) {
+    try {
+      const snap = await fetchLiveSnapshot(st);
+      if (!snap.ok || snap.sensorOk === false) {
+        console.log(`[obs-poller] ${st.key}: skip (ok=${snap.ok}, sensor=${snap.sensorOk})`);
+        continue;
+      }
+      if (snap.wind == null) {
+        console.log(`[obs-poller] ${st.key}: skip (no wind value)`);
+        continue;
+      }
+      getObsDb()._insertObs.run(st.key, ts, snap.wind, snap.gust ?? null, st.lat, st.lon);
+      console.log(`[obs-poller] ${st.key}: wind=${snap.wind} m/s gust=${snap.gust ?? "n/a"}`);
+    } catch (e) {
+      console.warn(`[obs-poller] ${st.key} error:`, e.message);
+    }
+  }
+
+  // ── MEASURED_STATIONS (tägliche Serien: Torbole/Ulcinj/LGPZ) ─────────────
+  // Wir holen die aktuelle Stunde aus der heutigen Tagesserie.
+  const todayZ = ts.slice(0, 10); // YYYY-MM-DD UTC
+  for (const st of MEASURED_STATIONS) {
+    const stKey = st.wc || st.icao || st.station;
+    try {
+      let dayResult;
+      if (st.type === "neverin") {
+        dayResult = await fetchMeasuredDayNeverin(st, todayZ);
+      } else if (st.type === "metar") {
+        dayResult = await fetchMeasuredDayMetar(st, todayZ);
+      } else {
+        dayResult = await fetchMeasuredDay(st, todayZ);
+      }
+      if (!dayResult.ok) {
+        console.log(`[obs-poller] ${stKey}: skip (${dayResult.error})`);
+        continue;
+      }
+      // Aktuelle Stunde (UTC) aus der Tagesserie nehmen
+      const nowHourUTC = new Date().getUTCHours();
+      const wind = dayResult.hourly.wind[nowHourUTC];
+      const gust = dayResult.hourly.gust ? dayResult.hourly.gust[nowHourUTC] : null;
+      if (wind == null) {
+        console.log(`[obs-poller] ${stKey}: skip (no wind for hour ${nowHourUTC})`);
+        continue;
+      }
+      getObsDb()._insertObs.run(stKey, ts, wind, gust ?? null, st.lat, st.lon);
+      console.log(`[obs-poller] ${stKey}: wind=${wind} m/s gust=${gust ?? "n/a"} (hour=${nowHourUTC})`);
+    } catch (e) {
+      console.warn(`[obs-poller] ${stKey} error:`, e.message);
+    }
+  }
+
+  // ── Prune: Einträge älter als 14 Tage löschen ─────────────────────────────
+  try {
+    const pruneResult = getObsDb()._pruneObs.run(prune14d);
+    if (pruneResult.changes > 0)
+      console.log(`[obs-poller] pruned ${pruneResult.changes} obs older than 14d`);
+  } catch (e) {
+    console.warn("[obs-poller] prune error:", e.message);
+  }
+}
+
+// Sofortlauf + Intervall. Fehler des ersten Laufs crashen NICHT den Server.
+pollStationObs().catch(e => console.warn("[obs-poller] initial poll error:", e.message));
+setInterval(() => {
+  pollStationObs().catch(e => console.warn("[obs-poller] poll error:", e.message));
+}, OBS_POLL_MS);
 
 app.listen(PORT, () => console.log(`WindFoil station proxy on :${PORT} (key ${KEY ? "set" : "MISSING"}, admin ${ADMIN_TOKEN && ADMIN_PASSWORD ? "ENABLED" : "disabled"})`));
 })().catch(err => { console.error("[windfoil] startup error:", err); process.exit(1); });

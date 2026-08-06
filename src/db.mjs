@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Database layer (better-sqlite3)
-// File version: 1.1.0 (ESM .mjs)  |  App target: v3.11.0
+// File version: 1.2.0 (ESM .mjs)  |  App target: v3.17.0
 // ----------------------------------------------------------------------------
 // Production note: requires `npm i better-sqlite3`. (The test harness uses the
 // experimental built-in node:sqlite instead; this file is the real runtime.)
@@ -152,6 +152,24 @@ export function recalibrateSpotWingRange(userId, spotId) {
   });
   tx();
   return getSpotWingCalibration(userId, spotId);
+}
+
+// Repräsentative Wind-Range aus geloggten Obs im Zeitfenster [startIso,endIso]
+// für die gegebene Station (station_key). low = min Grundwind, high = max Böe
+// (m/s → kn). Gibt null zurück wenn keine Obs vorhanden.
+export function getObservedWindRange(stationKey, startIso, endIso) {
+  const rows = db.prepare(`SELECT wind_ms, gust_ms FROM station_obs
+     WHERE station_key=? AND ts>=? AND ts<=?`).all(stationKey, startIso, endIso);
+  if (!rows.length) return null;
+  const winds = rows.map(r => r.wind_ms).filter(v => v != null);
+  const gusts = rows.map(r => r.gust_ms).filter(v => v != null);
+  if (!winds.length) return null;
+  const KN = 1.94384;
+  return {
+    lowKn:   Math.round(Math.min(...winds) * KN * 10) / 10,   // leichtester Grundwind
+    highKn:  Math.round(Math.max(...(gusts.length ? gusts : winds)) * KN * 10) / 10, // stärkste Böe
+    samples: rows.length,
+  };
 }
 
 // Alle Wing-Ranges eines Spots als Array [{wingM2,minKn,maxKn,samples}].

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.16.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.17.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.16.0
+// WindFoil Weather Intelligence v3.17.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
@@ -928,8 +928,6 @@ function AuthGate({children}){
 // backend only accepts feedback for the spot-local "today".
 function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
   const [planed,setPlaned]     = useState(null);   // null | true | false
-  const [windKt,setWindKt]     = useState(12);
-  const [windTopKt,setWindTopKt] = useState(null); // oberes Ende, optional
   const [wingM2,setWingM2]     = useState(null);   // geflogene Wing-Größe (m²)
   const [rating,setRating]     = useState(0);
   const [match,setMatch]       = useState(0);
@@ -937,6 +935,18 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
   const [busy,setBusy]         = useState(false);
   const [err,setErr]           = useState("");
   const [done,setDone]         = useState(null);   // calibration result
+
+  // Zeitfenster: von/bis als HH:MM strings (spot-lokal, Browser-Timezone).
+  // Default: von = jetzt − 2 h, bis = jetzt (gerundet auf Minute).
+  const defaultTimes = (() => {
+    const now = new Date();
+    const pad = n => String(n).padStart(2,"0");
+    const fmt = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const from = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    return { from: fmt(from), to: fmt(now) };
+  })();
+  const [startTime,setStartTime] = useState(defaultTimes.from);
+  const [endTime,setEndTime]     = useState(defaultTimes.to);
 
   // distinct wing sizes from gear list for the select
   const wingOptions = (() => {
@@ -946,11 +956,17 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
   })();
 
   const tz = (()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }catch{ return "UTC"; } })();
-  const step    = d => setWindKt(w => Math.min(35, Math.max(5, Math.round((w+d)*2)/2)));
-  const stepTop = d => setWindTopKt(w => Math.min(60, Math.max(windKt, Math.round(((w||windKt)+d)*2)/2)));
+
+  // HH:MM → ISO-8601 UTC (heute, spot-Browser-Timezone)
+  function timeToIso(hhmm) {
+    if(!hhmm) return null;
+    const [hh,mm] = hhmm.split(":").map(Number);
+    const d = new Date();
+    d.setHours(hh, mm, 0, 0);
+    return d.toISOString();
+  }
 
   async function submit() {
-    if(planed===null){ setErr("Bitte zuerst angeben, ob du aufs Foil gekommen bist."); return; }
     setBusy(true); setErr("");
     try{
       const sr = await fetch("/api/feedback/spot",{method:"POST",credentials:"include",
@@ -958,12 +974,13 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
         body:JSON.stringify({name:loc.name,lat:loc.lat,lon:loc.lon,timezone:tz})});
       if(!sr.ok) throw new Error("spot");
       const { spot } = await sr.json();
+      const startedAt = timeToIso(startTime);
+      const endedAt   = timeToIso(endTime);
       const r = await fetch("/api/feedback",{method:"POST",credentials:"include",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({spotId:spot.id,planed,planingWindKt:planed?windKt:null,
+        body:JSON.stringify({spotId:spot.id,planed,
           wingM2:wingM2||null,
-          rangeLowKt:planed?windKt:null,
-          rangeHighKt:planed&&windTopKt?windTopKt:null,
+          startedAt, endedAt,
           rating:rating||null,conditionsMatched:match||null,notes:notes.trim()||null,
           forecast:forecast||undefined})});
       const d = await r.json();
@@ -973,7 +990,12 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
           : (d.error || "Speichern fehlgeschlagen."));
       } else {
         const cal=d.calibration||{};
-        setDone({...cal, wingCalibration: d.wingCalibration||[], _wingM2: wingM2});
+        setDone({...cal,
+          wingCalibration: d.wingCalibration||[],
+          _wingM2: wingM2,
+          observed: d.observed,
+          obsRange: d.obsRange||null,
+        });
         if(onCalibrated) onCalibrated(cal);
       }
     }catch{ setErr("Server nicht erreichbar."); }
@@ -998,6 +1020,7 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
 
   const dateLabel = new Intl.DateTimeFormat("de-DE",{weekday:"short",day:"2-digit",month:"short"}).format(new Date());
   const lbl = {display:"block",fontSize:13,fontWeight:600,color:C.text,marginBottom:8};
+  const inputStyle = {background:C.bg,color:C.text,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px",fontSize:15,fontFamily:"'Barlow',sans-serif"};
 
   return (
     <div style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box",fontFamily:"'Barlow',sans-serif"}}>
@@ -1019,9 +1042,20 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
               <div style={{width:48,height:48,borderRadius:"50%",margin:"0 auto 12px",display:"grid",placeItems:"center",background:"rgba(61,220,132,0.16)",border:`1px solid ${C.go}`,color:C.go,fontSize:24}}>✓</div>
               <p style={{fontSize:15,fontWeight:700,marginBottom:6}}>Gespeichert für {dateLabel}</p>
               <p style={{color:C.muted,fontSize:13,margin:0}}>Danke — das schärft den Foil-Score für {loc.name}.</p>
+
+              {done.observed && done.obsRange ? (
+                <div style={{marginTop:14,padding:12,borderRadius:8,background:C.bg,border:`1px solid ${C.signal}`,textAlign:"left",fontSize:13,color:C.text}}>
+                  <span>Aus echten Stationswerten: <b style={{fontFamily:"monospace"}}>{done._wingM2||"?"} m²</b> bei ~<b style={{color:C.signal,fontFamily:"monospace"}}>{done.obsRange.lowKn}–{done.obsRange.highKn} kn</b> kalibriert (aus {done.obsRange.samples} Messung{done.obsRange.samples===1?"":"en"}).</span>
+                </div>
+              ) : (
+                <div style={{marginTop:14,padding:12,borderRadius:8,background:C.bg,border:`1px solid ${C.border2}`,textAlign:"left",fontSize:13,color:C.muted}}>
+                  <span>Keine Stationsdaten für dieses Zeitfenster — Session gespeichert, Kalibrierung folgt wenn Daten vorliegen.</span>
+                </div>
+              )}
+
               {done.rolling!=null && (
-                <div style={{marginTop:14,padding:12,borderRadius:8,background:C.bg,border:`1px solid ${C.border2}`,textAlign:"left",fontSize:13,color:C.text}}>
-                  <span>Für diesen Spot kalibriert: dein Abhebe-Schwellenwert hier liegt bei <b style={{color:C.go,fontFamily:"monospace"}}>{done.rolling} kn</b> (aus {done.samples} {done.samples===1?"Session":"Sessions"}). Gilt nur für {loc.name} — deine anderen Spots bleiben unberührt.</span>
+                <div style={{marginTop:10,padding:12,borderRadius:8,background:C.bg,border:`1px solid ${C.border2}`,textAlign:"left",fontSize:13,color:C.text}}>
+                  <span>Abhebe-Schwellenwert für {loc.name}: <b style={{color:C.go,fontFamily:"monospace"}}>{done.rolling} kn</b> (aus {done.samples} {done.samples===1?"Session":"Sessions"}).</span>
                 </div>
               )}
               {(() => {
@@ -1032,7 +1066,7 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
                 if(!entry || entry.minKn==null || entry.maxKn==null) return null;
                 return (
                   <div style={{marginTop:10,padding:12,borderRadius:8,background:C.bg,border:`1px solid ${C.border2}`,textAlign:"left",fontSize:13,color:C.text}}>
-                    <span>Range für <b style={{fontFamily:"monospace"}}>{wm} m²</b> an {loc.name} kalibriert: <b style={{color:C.signal,fontFamily:"monospace"}}>{entry.minKn}–{entry.maxKn} kn</b> (aus {entry.samples} {entry.samples===1?"Session":"Sessions"}).</span>
+                    <span>Range für <b style={{fontFamily:"monospace"}}>{wm} m²</b> an {loc.name}: <b style={{color:C.signal,fontFamily:"monospace"}}>{entry.minKn}–{entry.maxKn} kn</b> (aus {entry.samples} {entry.samples===1?"Session":"Sessions"}).</span>
                   </div>
                 );
               })()}
@@ -1056,58 +1090,42 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
                     background:planed===false?"rgba(232,64,64,0.14)":C.bg,
                     color:planed===false?C.stop:C.text}}>Kein Foilen heute</button>
               </div>
+            </div>
 
-              {planed===true && (
-                <div style={{marginTop:12,padding:14,borderRadius:8,border:`1px solid ${C.signal}`,background:C.bg}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14}}>
-                    <div>
-                      <span style={{fontFamily:"monospace",fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em"}}>Wind beim Abheben</span>
-                      <div><span style={{fontFamily:"monospace",fontSize:40,fontWeight:700,color:C.signal,lineHeight:1}}>{windKt.toFixed(1)}</span><span style={{fontSize:14,color:C.muted,marginLeft:6,fontWeight:600}}>kn</span></div>
-                    </div>
-                    <div style={{display:"flex",gap:8}}>
-                      <button type="button" onClick={()=>step(-0.5)} style={{width:42,height:42,borderRadius:8,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:20}}>−</button>
-                      <button type="button" onClick={()=>step(0.5)} style={{width:42,height:42,borderRadius:8,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:20}}>+</button>
-                    </div>
-                  </div>
-                  <p style={{fontSize:11,color:C.muted,marginTop:10}}>Der Wind, als dein Board zuerst hochkam — das kalibriert deinen Abhebe-Schwellenwert.</p>
-
-                  <div style={{marginTop:12,borderTop:`1px solid ${C.border}`,paddingTop:12}}>
-                    <span style={{fontFamily:"monospace",fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em"}}>Wing-Größe (geflogene m²)</span>
-                    <div style={{marginTop:6}}>
-                      {wingOptions.length > 0 ? (
-                        <select value={wingM2||""} onChange={e=>setWingM2(e.target.value?parseFloat(e.target.value):null)}
-                          style={{width:"100%",background:C.bg,color:C.text,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px",fontSize:14}}>
-                          <option value="">— nicht angeben —</option>
-                          {wingOptions.map(s=><option key={s} value={s}>{s} m²</option>)}
-                        </select>
-                      ) : (
-                        <div style={{display:"flex",alignItems:"center",gap:10}}>
-                          <span style={{fontFamily:"monospace",fontSize:22,fontWeight:700,color:C.text}}>{wingM2!=null?`${wingM2} m²`:"—"}</span>
-                          <div style={{display:"flex",gap:6}}>
-                            <button type="button" onClick={()=>setWingM2(w=>w!=null?Math.max(1,Math.round((w-0.5)*2)/2):null)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>−</button>
-                            <button type="button" onClick={()=>setWingM2(w=>w!=null?Math.min(20,Math.round((w+0.5)*2)/2):3.0)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>+</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{marginTop:12,borderTop:`1px solid ${C.border}`,paddingTop:12}}>
-                    <span style={{fontFamily:"monospace",fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em"}}>Oberes Ende (überpowert ab) — optional</span>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,marginTop:6}}>
-                      <div>
-                        <span style={{fontFamily:"monospace",fontSize:24,fontWeight:700,color:windTopKt?C.caution:C.muted,lineHeight:1}}>{windTopKt!=null?`${windTopKt.toFixed(1)} kn`:"—"}</span>
-                      </div>
-                      <div style={{display:"flex",gap:6}}>
-                        <button type="button" onClick={()=>setWindTopKt(null)} style={{height:36,padding:"0 10px",borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.muted,fontSize:11}}>✕</button>
-                        <button type="button" onClick={()=>stepTop(-0.5)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>−</button>
-                        <button type="button" onClick={()=>stepTop(0.5)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>+</button>
-                      </div>
-                    </div>
-                    <p style={{fontSize:11,color:C.muted,marginTop:6}}>Ab wann war es zu viel Wing — kalibriert das obere Range-Ende.</p>
+            <div style={{marginBottom:18}}>
+              <span style={lbl}>Wing-Größe (geflogen)</span>
+              {wingOptions.length > 0 ? (
+                <select value={wingM2||""} onChange={e=>setWingM2(e.target.value?parseFloat(e.target.value):null)}
+                  style={{width:"100%",...inputStyle}}>
+                  <option value="">— nicht angeben —</option>
+                  {wingOptions.map(s=><option key={s} value={s}>{s} m²</option>)}
+                </select>
+              ) : (
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontFamily:"monospace",fontSize:22,fontWeight:700,color:C.text}}>{wingM2!=null?`${wingM2} m²`:"—"}</span>
+                  <div style={{display:"flex",gap:6}}>
+                    <button type="button" onClick={()=>setWingM2(w=>w!=null?Math.max(1,Math.round((w-0.5)*2)/2):null)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>−</button>
+                    <button type="button" onClick={()=>setWingM2(w=>w!=null?Math.min(20,Math.round((w+0.5)*2)/2):3.0)} style={{width:36,height:36,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border2}`,background:C.panel,color:C.text,fontSize:16}}>+</button>
                   </div>
                 </div>
               )}
+            </div>
+
+            <div style={{marginBottom:18}}>
+              <span style={lbl}>Session-Zeitfenster</span>
+              <p style={{fontSize:11,color:C.muted,marginTop:0,marginBottom:10}}>Wann warst du auf dem Wasser? Der Wind wird aus echten Stationswerten in diesem Fenster abgeleitet.</p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div>
+                  <span style={{fontSize:11,color:C.muted,display:"block",marginBottom:4}}>Von</span>
+                  <input type="time" value={startTime} onChange={e=>setStartTime(e.target.value)}
+                    style={{width:"100%",boxSizing:"border-box",...inputStyle}} />
+                </div>
+                <div>
+                  <span style={{fontSize:11,color:C.muted,display:"block",marginBottom:4}}>Bis</span>
+                  <input type="time" value={endTime} onChange={e=>setEndTime(e.target.value)}
+                    style={{width:"100%",boxSizing:"border-box",...inputStyle}} />
+                </div>
+              </div>
             </div>
 
             <div style={{marginBottom:18}}>
@@ -1771,7 +1789,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.16.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.17.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2442,7 +2460,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.16.0</span>
+        <span>WindFoil Weather Intelligence v3.17.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

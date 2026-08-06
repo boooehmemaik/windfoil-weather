@@ -1,16 +1,48 @@
 // ============================================================================
 // WindFoil — Feedback API routes (Express)
-// File version: 1.1.0 (ESM .mjs)  |  App target: v3.11.0
+// File version: 1.2.0 (ESM .mjs)  |  App target: v3.17.0
 // ----------------------------------------------------------------------------
 // Mount:  app.use('/api/feedback', requireAuth, feedbackRouter)
 // Assumes Better Auth middleware has populated req.user = { id, ... }.
 // The "feedback only for today" rule is enforced HERE, server-side, against the
 // spot's timezone — the frontend date is never trusted.
+// POST /api/feedback body (v1.2.0): { spotId, wingM2, startedAt, endedAt,
+//   rating?, conditionsMatched?, notes? }
+// Wind-Range wird SERVERSEITIG aus geloggten Stationswerten abgeleitet —
+// keine rider-geschätzten Knoten mehr.
 // ============================================================================
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { db, localDay, recalibrateSpotPlaningThreshold, getSpotCalibration, hasEntitlement,
-         recalibrateSpotWingRange, getSpotWingCalibration } from './db.mjs';
+         recalibrateSpotWingRange, getSpotWingCalibration, getObservedWindRange } from './db.mjs';
+
+// ── Station-Key-Lookup: spiegelt findLiveStation / findMeasuredStation aus
+// proxy-server.js, ohne dessen Modul hier importieren zu müssen.
+// Gibt den stabilen station_key zurück, unter dem der Poller obs speichert.
+const SPECIAL_RADIUS_KM = 5;
+const STATION_MAP = [
+  // LIVE_STATIONS
+  { key: "talamone",  lat: 42.554, lon: 11.128, radiusKm: SPECIAL_RADIUS_KM },
+  // MEASURED_STATIONS (key = wc || icao || station)
+  { key: "torbole",   lat: 45.869, lon: 10.873, radiusKm: SPECIAL_RADIUS_KM },
+  { key: "ulcinj",    lat: 41.9166, lon: 19.25293, radiusKm: 12 },
+  { key: "LGPZ",      lat: 38.9254, lon: 20.7653, radiusKm: 40 },
+];
+
+function haversineKmFR(lat1, lon1, lat2, lon2) {
+  const R = 6371, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function findStationKey(lat, lon) {
+  for (const st of STATION_MAP) {
+    if (haversineKmFR(lat, lon, st.lat, st.lon) <= st.radiusKm) return st.key;
+  }
+  return null;
+}
 
 export const feedbackRouter = Router();
 const nowIso = () => new Date().toISOString();
@@ -98,10 +130,11 @@ feedbackRouter.get('/today', (req, res) => {
 });
 
 // --- POST /api/feedback -------------------------------------------------------
-// Create or update today's feedback. Body:
-//   { spotId, planed, planingWindKt, rating, conditionsMatched, notes,
-//     wingId?, foilId?, startedAt?, endedAt?, forecast? }
-// `forecast` (optional) is the snapshot the dashboard showed, stored for drift.
+// Create or update today's feedback (v1.2.0). Body:
+//   { spotId, wingM2, startedAt, endedAt,
+//     planed?, rating?, conditionsMatched?, notes?, forecast? }
+// Wind-Range wird serverseitig aus geloggten station_obs abgeleitet.
+// Response: { ok, sessionId, observed, wingCalibration }
 feedbackRouter.post('/', (req, res) => {
   const b = req.body || {};
   const spotRow = getSpot(b.spotId, req.user.id);
@@ -113,26 +146,41 @@ feedbackRouter.post('/', (req, res) => {
     return res.status(403).json({ error: 'feedback_locked', reason: 'only_today', today });
   }
 
-  // --- light validation mirroring the DB CHECK constraints ---
+  // --- Validierung ---
   if (b.rating != null && (b.rating < 1 || b.rating > 5))
     return res.status(400).json({ error: 'invalid_rating' });
   if (b.conditionsMatched != null && (b.conditionsMatched < 1 || b.conditionsMatched > 5))
     return res.status(400).json({ error: 'invalid_conditions_matched' });
   if (b.planed != null && ![0, 1, true, false].includes(b.planed))
     return res.status(400).json({ error: 'invalid_planed' });
-
-  // --- wing range validation ---
   if (b.wingM2 != null && (typeof b.wingM2 !== 'number' || b.wingM2 <= 0 || b.wingM2 > 20))
     return res.status(400).json({ error: 'invalid_wing_m2' });
-  if (b.rangeLowKt != null && (typeof b.rangeLowKt !== 'number' || b.rangeLowKt < 1 || b.rangeLowKt > 60))
-    return res.status(400).json({ error: 'invalid_range_low' });
-  if (b.rangeHighKt != null && (typeof b.rangeHighKt !== 'number' || b.rangeHighKt < 1 || b.rangeHighKt > 60))
-    return res.status(400).json({ error: 'invalid_range_high' });
-  if (b.rangeLowKt != null && b.rangeHighKt != null && b.rangeLowKt > b.rangeHighKt)
-    return res.status(400).json({ error: 'invalid_range' });
 
-  // Default-Mapping: wenn rangeLowKt fehlt aber planingWindKt gesetzt → range_low = planingWindKt
-  const rangeLowKt = b.rangeLowKt ?? (b.planingWindKt != null ? b.planingWindKt : null);
+  // --- startedAt / endedAt validieren ---
+  const startedAt = b.startedAt ?? null;
+  const endedAt   = b.endedAt   ?? null;
+  if (startedAt && endedAt) {
+    const tStart = Date.parse(startedAt), tEnd = Date.parse(endedAt);
+    if (isNaN(tStart) || isNaN(tEnd))
+      return res.status(400).json({ error: 'invalid_time_window' });
+    if (tStart >= tEnd)
+      return res.status(400).json({ error: 'start_must_be_before_end' });
+    if (tEnd - tStart > 24 * 60 * 60 * 1000)
+      return res.status(400).json({ error: 'window_too_long' });
+  }
+
+  // --- Wind-Range serverseitig aus Obs ableiten ---
+  let obs = null;
+  if (startedAt && endedAt) {
+    const stationKey = findStationKey(spotRow.latitude, spotRow.longitude);
+    if (stationKey) {
+      obs = getObservedWindRange(stationKey, startedAt, endedAt);
+    }
+  }
+  const observed     = obs != null;
+  const rangeLowKt   = observed ? obs.lowKn  : null;
+  const rangeHighKt  = observed ? obs.highKn : null;
+  const planingWindKt = observed ? obs.lowKn  : null; // Kompatibilität
 
   const planed = b.planed == null ? null : (b.planed ? 1 : 0);
 
@@ -146,32 +194,30 @@ feedbackRouter.post('/', (req, res) => {
       sessionId = session.id;
       db.prepare(`UPDATE sessions SET
           planed=?, planing_wind_kt=?, rating=?, conditions_matched=?, notes=?,
-          wing_id=COALESCE(?,wing_id), foil_id=COALESCE(?,foil_id),
           started_at=COALESCE(?,started_at), ended_at=COALESCE(?,ended_at),
           wing_m2=COALESCE(?,wing_m2), range_low_kt=?, range_high_kt=?,
           updated_at=?
         WHERE id=?`)
-        .run(planed, b.planingWindKt ?? null, b.rating ?? null,
+        .run(planed, planingWindKt, b.rating ?? null,
              b.conditionsMatched ?? null, b.notes ?? null,
-             b.wingId ?? null, b.foilId ?? null, b.startedAt ?? null, b.endedAt ?? null,
-             b.wingM2 ?? null, rangeLowKt, b.rangeHighKt ?? null,
+             startedAt, endedAt,
+             b.wingM2 ?? null, rangeLowKt, rangeHighKt,
              nowIso(), sessionId);
     } else {
       sessionId = randomUUID();
       db.prepare(`INSERT INTO sessions
-          (id,user_id,spot_id,session_date,started_at,ended_at,wing_id,foil_id,
+          (id,user_id,spot_id,session_date,started_at,ended_at,
            planed,planing_wind_kt,rating,conditions_matched,notes,
            wing_m2,range_low_kt,range_high_kt,created_at,updated_at)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-        .run(sessionId, req.user.id, b.spotId, today, b.startedAt ?? null,
-             b.endedAt ?? null, b.wingId ?? null, b.foilId ?? null,
-             planed, b.planingWindKt ?? null, b.rating ?? null,
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(sessionId, req.user.id, b.spotId, today, startedAt,
+             endedAt, planed, planingWindKt, b.rating ?? null,
              b.conditionsMatched ?? null, b.notes ?? null,
-             b.wingM2 ?? null, rangeLowKt, b.rangeHighKt ?? null,
+             b.wingM2 ?? null, rangeLowKt, rangeHighKt,
              nowIso(), nowIso());
     }
 
-    // Capture the forecast that was on screen, for later score-drift analysis.
+    // Forecast-Snapshot für Drift-Analyse (optional, unverändert).
     if (b.forecast) {
       const f = b.forecast;
       db.prepare(`INSERT INTO forecast_snapshots
@@ -188,13 +234,18 @@ feedbackRouter.post('/', (req, res) => {
   });
 
   const sessionId = tx();
-  // Close the loop PER SPOT: refresh only this spot's rolling threshold so the
-  // local wind assessment shapes the local score, not the rider's global profile.
-  const calibration = recalibrateSpotPlaningThreshold(req.user.id, b.spotId);
-  // Refresh wing-range calibration for this (user, spot).
+  // Per-Spot-Kalibrierung: nur wenn obs vorhanden (sonst keine Range → kein Effekt)
+  const calibration    = recalibrateSpotPlaningThreshold(req.user.id, b.spotId);
   const wingCalibration = recalibrateSpotWingRange(req.user.id, b.spotId);
 
-  res.json({ ok: true, sessionId, calibration, wingCalibration });
+  res.json({
+    ok: true,
+    sessionId,
+    observed,
+    ...(observed ? { obsRange: { lowKn: obs.lowKn, highKn: obs.highKn, samples: obs.samples } } : {}),
+    calibration,
+    wingCalibration,
+  });
 });
 
 // --- GET /api/feedback/forecast?spot=<id>&days=N -----------------------------
