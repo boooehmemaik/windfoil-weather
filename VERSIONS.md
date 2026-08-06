@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.16.0 (2026-08-06)
+**Quelle-Badge am Foil-Score — Forecast-Modell + Station sichtbar**
+- `index.html`: kleine Zeile „📡 Quelle: {Modell-Label}{ + Live-Station/Messstation}" in der Foil-Score-Karte. Macht sichtbar, dass z. B. Talamone bereits `AROME-HD + Best (max/h)` **plus** die Live-Station nutzt (war bisher nur in der API-Statuszeile). Reine Anzeige, keine Logikänderung
+
 ## v3.15.0 (2026-08-06)
 **Live-Nowcast-Anker + Böen-Fahrbarkeit: aktuelle Stunde direkt an der Live-Station verankert**
 - `index.html` v3.14.4 → v3.15.0: Frontend-only, kein Backend-/DB-Change
