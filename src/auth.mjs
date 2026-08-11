@@ -22,6 +22,36 @@ import { APIError } from 'better-auth/api';
 import Database from 'better-sqlite3';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import nodemailer from 'nodemailer';
+
+function createTransporter() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) return null;
+  return nodemailer.createTransport({
+    host, port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+}
+
+async function sendPasswordResetMail(to, resetUrl) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.warn('[windfoil] SMTP nicht konfiguriert — Reset-Link:', resetUrl);
+    return;
+  }
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  await transporter.sendMail({
+    from,
+    to,
+    subject: 'WindFoil — Passwort zurücksetzen',
+    text: `Hallo,\n\nbitte klicke auf den folgenden Link, um dein Passwort zurückzusetzen:\n\n${resetUrl}\n\nDer Link ist 1 Stunde gültig. Wenn du kein Reset angefordert hast, kannst du diese E-Mail ignorieren.\n\n-- WindFoil`,
+    html: `<p>Hallo,</p><p>bitte klicke auf den folgenden Link, um dein Passwort zurückzusetzen:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Der Link ist 1 Stunde gültig. Wenn du kein Reset angefordert hast, kannst du diese E-Mail ignorieren.</p><p>— WindFoil</p>`,
+  });
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DB_PATH = process.env.WINDFOIL_DB_PATH || join(__dirname, '..', 'data', 'windfoil.db');
@@ -41,10 +71,11 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    // For a small friends/beta circle, skip mandatory email verification for
-    // now; flip to true once you wire an outbound mailer.
     requireEmailVerification: false,
     minPasswordLength: 10,
+    sendResetPassword: async ({ user, url }) => {
+      await sendPasswordResetMail(user.email, url);
+    },
   },
 
   secret: process.env.BETTER_AUTH_SECRET,

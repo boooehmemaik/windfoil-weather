@@ -1,13 +1,11 @@
 // ============================================================================
-// WindFoil — Auth gate (login / signup / signout)
-// File version: 1.0.0  |  App target: v3.8.1
+// WindFoil — Auth gate (login / signup / signout / password reset)
+// File version: 1.1.0  |  App target: v3.8.1
 // ----------------------------------------------------------------------------
 // Wrap your dashboard:   <AuthGate><Dashboard /></AuthGate>
 // Signed out  -> shows the login/create-account card.
 // Signed in   -> renders children plus a slim header (email + sign out).
-//
-// NOTE: imports better-auth/react, so this renders inside your app, not in the
-// artifact preview. Visual language matches SessionFeedback.jsx.
+// ?token=XXX  -> automatically shows the password-reset form.
 // ============================================================================
 import React, { useState } from 'react';
 import { authClient, useSession } from './auth-client.js';
@@ -42,6 +40,11 @@ const STYLES = `
   font-weight:700;font-size:14px;}
 .wf-auth-submit:disabled{opacity:.5;cursor:not-allowed;}
 .wf-auth-err{color:var(--coral);font-size:13px;margin:0 0 12px;}
+.wf-auth-info{color:var(--lift);font-size:13px;margin:0 0 12px;}
+.wf-auth-link{background:none;border:none;color:var(--haze);font-size:12px;
+  cursor:pointer;padding:10px 0 0;text-decoration:underline;display:block;
+  text-align:right;}
+.wf-auth-link:hover{color:var(--foam);}
 .wf-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:10px 16px;background:var(--deep);border-bottom:1px solid var(--line);}
 .wf-bar-id{font-size:13px;color:var(--haze);}
@@ -54,30 +57,59 @@ const STYLES = `
 
 export default function AuthGate({ children }) {
   const { data: session, isPending } = useSession();
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
+
+  // If the URL contains ?token= we came from a password-reset email link.
+  const urlToken = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('token')
+    : null;
+
+  const [mode, setMode] = useState(urlToken ? 'reset' : 'signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
+  const [resetToken] = useState(urlToken || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+
+  function switchMode(m) { setMode(m); setError(''); setInfo(''); }
 
   async function submit() {
-    setError(''); setBusy(true);
+    setError(''); setInfo(''); setBusy(true);
     try {
-      const fn = mode === 'signup'
-        ? authClient.signUp.email({ name, email, password })
-        : authClient.signIn.email({ email, password });
-      const { error: err } = await fn;
-      if (err) setError(err.message || 'That didn\u2019t work \u2014 check your details.');
+      if (mode === 'forgot') {
+        const redirectTo = window.location.origin + window.location.pathname;
+        const { error: err } = await authClient.requestPasswordReset({ email, redirectTo });
+        if (err) setError(err.message || 'Fehler beim Senden.');
+        else setInfo('Falls diese E-Mail-Adresse bekannt ist, wurde ein Reset-Link gesendet.');
+      } else if (mode === 'reset') {
+        if (password !== password2) { setError('Passwörter stimmen nicht überein.'); setBusy(false); return; }
+        const { error: err } = await authClient.resetPassword({ newPassword: password, token: resetToken });
+        if (err) { setError(err.message || 'Ungültiger oder abgelaufener Link.'); }
+        else {
+          const u = new URL(window.location.href);
+          u.searchParams.delete('token');
+          window.history.replaceState({}, '', u.toString());
+          setInfo('Passwort erfolgreich geändert. Du kannst dich jetzt einloggen.');
+          switchMode('signin');
+        }
+      } else {
+        const fn = mode === 'signup'
+          ? authClient.signUp.email({ name, email, password })
+          : authClient.signIn.email({ email, password });
+        const { error: err } = await fn;
+        if (err) setError(err.message || 'That didn’t work — check your details.');
+      }
     } catch {
-      setError('Couldn\u2019t reach the server. Try again.');
+      setError('Couldn’t reach the server. Try again.');
     } finally { setBusy(false); }
   }
 
   if (isPending) {
     return (<><style>{STYLES}</style>
       <div className="wf-auth"><div className="wf-auth-screen">
-        <p style={{ color: '#7FA6AC' }}>Checking your session\u2026</p>
+        <p style={{ color: '#7FA6AC' }}>Checking your session…</p>
       </div></div></>);
   }
 
@@ -91,6 +123,66 @@ export default function AuthGate({ children }) {
         </div>
         {children}
       </div></>);
+  }
+
+  // ---- password reset: enter new password ----
+  if (mode === 'reset') {
+    return (<><style>{STYLES}</style>
+      <div className="wf-auth"><div className="wf-auth-screen">
+        <div className="wf-auth-card">
+          <div className="wf-auth-brand">WindFoil</div>
+          <h1 className="wf-auth-title">Neues Passwort</h1>
+          <p className="wf-auth-sub">Gib dein neues Passwort ein (mind. 10 Zeichen).</p>
+          {error && <p className="wf-auth-err" role="alert">{error}</p>}
+          <div className="wf-field">
+            <label htmlFor="wf-pw1">Neues Passwort</label>
+            <input id="wf-pw1" type="password" value={password}
+              onChange={e => setPassword(e.target.value)} autoComplete="new-password" />
+          </div>
+          <div className="wf-field">
+            <label htmlFor="wf-pw2">Passwort wiederholen</label>
+            <input id="wf-pw2" type="password" value={password2}
+              onChange={e => setPassword2(e.target.value)} autoComplete="new-password"
+              onKeyDown={e => e.key === 'Enter' && submit()} />
+          </div>
+          <button className="wf-auth-submit" type="button" disabled={busy} onClick={submit}>
+            {busy ? 'Bitte warten…' : 'Passwort ändern'}
+          </button>
+          <button className="wf-auth-link" type="button" onClick={() => switchMode('signin')}>
+            Zurück zum Login
+          </button>
+        </div>
+      </div></div></>);
+  }
+
+  // ---- forgot password: request reset email ----
+  if (mode === 'forgot') {
+    return (<><style>{STYLES}</style>
+      <div className="wf-auth"><div className="wf-auth-screen">
+        <div className="wf-auth-card">
+          <div className="wf-auth-brand">WindFoil</div>
+          <h1 className="wf-auth-title">Passwort vergessen</h1>
+          <p className="wf-auth-sub">Gib deine E-Mail-Adresse ein — wir schicken dir einen Reset-Link.</p>
+          {error && <p className="wf-auth-err" role="alert">{error}</p>}
+          {info && <p className="wf-auth-info" role="status">{info}</p>}
+          {!info && (
+            <>
+              <div className="wf-field">
+                <label htmlFor="wf-forgot-email">E-Mail</label>
+                <input id="wf-forgot-email" type="email" value={email}
+                  onChange={e => setEmail(e.target.value)} autoComplete="email"
+                  onKeyDown={e => e.key === 'Enter' && submit()} />
+              </div>
+              <button className="wf-auth-submit" type="button" disabled={busy} onClick={submit}>
+                {busy ? 'Bitte warten…' : 'Reset-Link senden'}
+              </button>
+            </>
+          )}
+          <button className="wf-auth-link" type="button" onClick={() => switchMode('signin')}>
+            Zurück zum Login
+          </button>
+        </div>
+      </div></div></>);
   }
 
   // ---- signed out: login / create account ----
@@ -107,12 +199,13 @@ export default function AuthGate({ children }) {
 
         <div className="wf-tabs" role="tablist">
           <button role="tab" aria-selected={mode === 'signin'}
-            onClick={() => { setMode('signin'); setError(''); }}>Sign in</button>
+            onClick={() => switchMode('signin')}>Sign in</button>
           <button role="tab" aria-selected={mode === 'signup'}
-            onClick={() => { setMode('signup'); setError(''); }}>Create account</button>
+            onClick={() => switchMode('signup')}>Create account</button>
         </div>
 
         {error && <p className="wf-auth-err" role="alert">{error}</p>}
+        {info && <p className="wf-auth-info" role="status">{info}</p>}
 
         {mode === 'signup' && (
           <div className="wf-field">
@@ -135,8 +228,14 @@ export default function AuthGate({ children }) {
         </div>
 
         <button className="wf-auth-submit" type="button" disabled={busy} onClick={submit}>
-          {busy ? 'One moment\u2026' : mode === 'signup' ? 'Create account' : 'Sign in'}
+          {busy ? 'One moment…' : mode === 'signup' ? 'Create account' : 'Sign in'}
         </button>
+
+        {mode === 'signin' && (
+          <button className="wf-auth-link" type="button" onClick={() => switchMode('forgot')}>
+            Passwort vergessen?
+          </button>
+        )}
       </div>
     </div></div></>);
 }
