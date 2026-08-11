@@ -754,11 +754,13 @@ app.get("/api/station/bias", async (req, res) => {
 // ── Endpoint: historical hourly observations ──────────────────────────────────
 app.get("/api/station/history", async (req, res) => {
   if (!KEY) return res.status(503).json({ ok: false, error: "API key not configured" });
-  const { lat, lon } = req.query;
-  const days = Math.min(parseInt(req.query.days || "7", 10), 10);
-  if (!lat || !lon) return res.status(400).json({ ok: false, error: "lat/lon required" });
+  const latF = parseFloat(req.query.lat), lonF = parseFloat(req.query.lon);
+  if (isNaN(latF) || isNaN(lonF) || latF < -90 || latF > 90 || lonF < -180 || lonF > 180)
+    return res.status(400).json({ ok: false, error: "lat/lon required and must be valid coordinates" });
+  const daysRaw = parseInt(req.query.days || "7", 10);
+  const days = Math.min(isNaN(daysRaw) ? 7 : daysRaw, 10);
 
-  const ck = `hist:${lat}:${lon}:${days}`;
+  const ck = `hist:${latF}:${lonF}:${days}`;
   const hit = cacheGet(ck);
   if (hit) return res.json({ ...hit, cached: true });
 
@@ -767,7 +769,7 @@ app.get("/api/station/history", async (req, res) => {
     const start = new Date(); start.setDate(end.getDate() - days);
     const fmt = d => d.toISOString().split("T")[0];
     const url = `https://api.weatherbit.io/v2.0/history/hourly`
-      + `?lat=${lat}&lon=${lon}&start_date=${fmt(start)}&end_date=${fmt(end)}`
+      + `?lat=${latF}&lon=${lonF}&start_date=${fmt(start)}&end_date=${fmt(end)}`
       + `&units=M&key=${KEY}`;
     const r = await fetch(url);
     const j = await r.json();

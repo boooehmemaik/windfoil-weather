@@ -58,7 +58,7 @@ function cvt(ms, unit) {
 function fmtW(ms, unit) {
   if(unit==="kn") return `${cvt(ms,"kn").toFixed(1)} kn`;
   if(unit==="bf") return `${cvt(ms,"bf")} BF`;
-  return `${cvt(ms,"ms").toFixed(1)} m/s`;
+  return `${cvt(ms,unit).toFixed(1)} m/s`;
 }
 function unitLabel(unit) {
   return unit==="kn"?"kn":unit==="bf"?"BF":"m/s";
@@ -273,7 +273,7 @@ function calcWindow(weight,wingM2,foilCm2,skill,knownPlaneMs) {
   return{ minWind:Math.round(minW*10)/10,
           optMin:Math.round(minW*1.08*10)/10,
           optMax:Math.round(minW*2.6*10)/10,
-          maxWind:Math.round(minW*2.6*sm*10)/10 };
+          maxWind:Math.round(minW*2.6*(1+(2-sm)*0.3)*10)/10 };
 }
 function scoreHour(w,win) {
   if(w<win.minWind) return Math.max(0,Math.round((w/win.minWind)*30));
@@ -447,7 +447,8 @@ function App() {
     const order = ["Nord","Nordost","Ost","Südost","Süd","Südwest","West","Nordwest"];
     results.sort((a,b)=>order.indexOf(a.name)-order.indexOf(b.name));
     setNearbyStations(results);
-    setNearbyStatus(anyLive ? "live" : "demo");
+    const allLive = results.every(r => r.live);
+    setNearbyStatus(anyLive ? (allLive ? "live" : "partial") : "demo");
   }
 
   // ── Reverse geocode coords → place name via Open-Meteo (no key needed) ──────
@@ -546,10 +547,18 @@ function App() {
       return;
     }
 
-    // Model current values (this hour) from forecast
-    const nowH = new Date().getHours();
-    const modelCurrentWind = fc?.hourly?.windspeed_10m?.[nowH] ?? null;
-    const modelCurrentDir  = fc?.hourly?.winddirection_10m?.[nowH] ?? null;
+    // Model current values (this hour) from forecast.
+    // Use spot's UTC offset so we index the correct hour in the spot's timezone,
+    // not the browser's local hour which may differ.
+    const spotOffsetSec = fc?.utc_offset_seconds ?? 0;
+    const spotNowSec = Math.floor(Date.now() / 1000) + spotOffsetSec;
+    const spotNowH = Math.floor(spotNowSec / 3600) % 24;
+    const spotD = new Date(spotNowSec * 1000);
+    const spotDateStr = `${spotD.getUTCFullYear()}-${String(spotD.getUTCMonth()+1).padStart(2,'0')}-${String(spotD.getUTCDate()).padStart(2,'0')}`;
+    const targetTs = `${spotDateStr}T${String(spotNowH).padStart(2,'0')}:00`;
+    const nowIdx = fc?.hourly?.time?.indexOf(targetTs) ?? -1;
+    const modelCurrentWind = nowIdx >= 0 ? (fc?.hourly?.windspeed_10m?.[nowIdx] ?? null) : null;
+    const modelCurrentDir  = nowIdx >= 0 ? (fc?.hourly?.winddirection_10m?.[nowIdx] ?? null) : null;
 
     // Historical means
     let stationHistMeanWind = null, modelHistMeanWind = null;
@@ -1103,7 +1112,7 @@ function App() {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
                 <span style={S.sec}>📡 Lokale Wetterstationen (Umkreis ~10–15 km)</span>
                 <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>
-                  {nearbyStatus==="loading"?"⏳ lädt…":nearbyStatus==="live"?"✅ Live":nearbyStatus==="demo"?"⚠️ Demo":""}
+                  {nearbyStatus==="loading"?"⏳ lädt…":nearbyStatus==="live"?"✅ Live":nearbyStatus==="partial"?"⚡ Teils live":nearbyStatus==="demo"?"⚠️ Demo":""}
                 </span>
               </div>
               {nearbyStatus==="loading" && (
