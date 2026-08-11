@@ -260,6 +260,11 @@ function isGardaSpot(lat, lon){
 function isVasilikiSpot(lat, lon){
   return haversineKm(lat, lon, 38.6297, 20.6103) <= SPECIAL_RADIUS_KM;
 }
+// Kathisma / NW coast of Lefkada — open Ionian exposure to the Meltemi (NW).
+// No funnel effect; pure synoptic gradient, earlier peak than Vasiliki's Eric.
+function isLefkadaNWSpot(lat, lon){
+  return haversineKm(lat, lon, 38.7520, 20.5790) <= SPECIAL_RADIUS_KM;
+}
 function thermalRegime(lat, lon){
   // Lago di Garda — afternoon "Ora" comes up the lake from the south.
   if(isGardaSpot(lat,lon))
@@ -267,6 +272,9 @@ function thermalRegime(lat, lon){
   // Vasiliki (Lefkada) — cross-shore "Eric" from the WNW, afternoon peak.
   if(isVasilikiSpot(lat,lon))
     return { dir:300, label:"Eric (WNW)", origin:"um Kap Doukato", peakHour:15 };
+  // Kathisma / NW Lefkada — direct Meltemi from the NW, mid-day peak.
+  if(isLefkadaNWSpot(lat,lon))
+    return { dir:315, label:"Meltemi (NW)", origin:"vom Ionischen Meer", peakHour:13 };
   // Generic coastal sea breeze.
   return { dir:250, label:"Meeresbrise (W-SW)", origin:"vom Meer", peakHour:14 };
 }
