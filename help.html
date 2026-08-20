@@ -1,112 +1,731 @@
 <!DOCTYPE html>
-<html lang="de"><head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>WindFoil — Hilfe</title><!-- v3.5.0 -->
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
-<style>
-  :root{
-    --bg:#0a0e14; --surface:#111820; --panel:#151d28; --border:#1e2d3d;
-    --border2:#243040; --sky:#3a9ad9; --signal:#f07820; --go:#3ddc84;
-    --caution:#f5b942; --text:#d8e4f0; --muted:#5a7a96;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);
-    font-family:'Barlow',sans-serif;font-size:15px;line-height:1.6;
-    -webkit-text-size-adjust:100%}
-  header{position:sticky;top:0;z-index:10;background:rgba(10,14,20,.97);
-    border-bottom:1px solid var(--border);padding:12px 18px;
-    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-  header .brand{font-family:monospace;font-size:12px;letter-spacing:.12em;
-    text-transform:uppercase;color:var(--muted)}
-  header .brand b{color:var(--signal)}
-  a.back{color:var(--sky);text-decoration:none;font-size:13px;font-weight:500}
-  a.back:hover{text-decoration:underline}
-  main{max-width:760px;margin:0 auto;padding:22px 18px 60px}
-  h1{font-size:24px;font-weight:700;margin:8px 0 4px}
-  .lead{color:var(--muted);margin:0 0 26px}
-  section{background:var(--surface);border:1px solid var(--border);
-    border-left:3px solid var(--signal);border-radius:8px;
-    padding:16px 18px;margin-bottom:16px}
-  section h2{font-size:17px;font-weight:700;margin:0 0 8px;display:flex;
-    align-items:center;gap:8px}
-  section h2 .ico{font-size:18px}
-  section p{margin:0 0 8px}
-  ul{margin:6px 0 0;padding-left:20px}
-  li{margin-bottom:6px}
-  code,kbd{background:var(--panel);border:1px solid var(--border2);
-    border-radius:4px;padding:1px 6px;font-family:monospace;font-size:13px;color:var(--text)}
-  .note{background:var(--panel);border:1px solid var(--border2);
-    border-radius:6px;padding:10px 14px;color:var(--muted);font-size:13px;margin-top:10px}
-  .tag{display:inline-block;background:var(--panel);border:1px solid var(--border2);
-    color:var(--sky);border-radius:4px;padding:1px 8px;font-family:monospace;font-size:11px}
-  footer{border-top:1px solid var(--border);background:var(--surface);
-    text-align:center;padding:14px;color:var(--muted);font-family:monospace;font-size:11px}
-  footer a{color:var(--sky);text-decoration:none}
-</style>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WindFoil Weather Intelligence – Hilfe & Bedienung</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0a0e14;
+      --panel:      #151d28;
+      --panel2:     #1a2535;
+      --border:     #1e2d3d;
+      --border2:    #263a50;
+      --text:       #d8e4f0;
+      --text-muted: #5a7a96;
+      --accent:     #f07820;
+      --accent-dim: #a84e0f;
+      --blue:       #4db8e8;
+      --green:      #22c55e;
+      --red:        #ef4444;
+      --yellow:     #f59e0b;
+      --mono:       'Courier New', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      font-size: 22px;
+      color: var(--accent);
+      font-family: var(--mono);
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+    .logo-text {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .logo-sub {
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+    .back-link {
+      font-size: 13px;
+      color: var(--blue);
+      text-decoration: none;
+      border: 1px solid var(--border2);
+      padding: 6px 14px;
+      border-radius: 4px;
+      transition: border-color .2s, color .2s;
+      white-space: nowrap;
+    }
+    .back-link:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ── Layout ── */
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+    @media (max-width: 680px) {
+      .page { grid-template-columns: 1fr; }
+      .toc-sidebar { display: none; }
+    }
+
+    /* ── TOC ── */
+    .toc-sidebar {
+      position: sticky;
+      top: 70px;
+    }
+    .toc {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+    }
+    .toc-title {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .toc ol {
+      list-style: none;
+      counter-reset: toc-counter;
+    }
+    .toc li {
+      counter-increment: toc-counter;
+      margin-bottom: 4px;
+    }
+    .toc li::before {
+      content: counter(toc-counter) ". ";
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .toc a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color .15s;
+    }
+    .toc a:hover { color: var(--text); }
+
+    /* ── Content ── */
+    .content > section {
+      margin-bottom: 52px;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h2 .section-num {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      min-width: 22px;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--blue);
+      margin: 22px 0 8px;
+    }
+
+    p { margin-bottom: 10px; }
+
+    ul, ol {
+      padding-left: 20px;
+      margin-bottom: 10px;
+    }
+    li { margin-bottom: 4px; }
+
+    /* ── Panel cards ── */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+    .panel-title {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* ── Chips / badges ── */
+    .chip {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid;
+      white-space: nowrap;
+      vertical-align: middle;
+      margin: 1px 2px;
+    }
+    .chip-orange { color: var(--accent);  border-color: var(--accent-dim); background: rgba(240,120,32,.08); }
+    .chip-blue   { color: var(--blue);    border-color: #2a6080;           background: rgba(77,184,232,.08); }
+    .chip-green  { color: var(--green);   border-color: #166534;           background: rgba(34,197,94,.08); }
+    .chip-red    { color: var(--red);     border-color: #991b1b;           background: rgba(239,68,68,.08); }
+    .chip-yellow { color: var(--yellow);  border-color: #92400e;           background: rgba(245,158,11,.08); }
+    .chip-gray   { color: var(--text-muted); border-color: var(--border2); background: rgba(90,122,150,.08); }
+
+    /* ── Score bar ── */
+    .score-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 60px;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .score-label { font-size: 13px; color: var(--text-muted); }
+    .score-bar-bg {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+    .score-val { font-family: var(--mono); font-size: 13px; text-align: right; }
+
+    /* ── Kite table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    thead th {
+      background: var(--panel2);
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: .5px;
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      color: var(--text);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr.active-size td { background: rgba(34,197,94,.07); }
+    tbody tr.active-size td:first-child { color: var(--green); font-weight: 700; }
+
+    /* ── Step list ── */
+    .steps { list-style: none; padding: 0; counter-reset: step-counter; }
+    .steps li {
+      counter-increment: step-counter;
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: start;
+    }
+    .steps li::before {
+      content: counter(step-counter);
+      background: var(--accent);
+      color: #000;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    /* ── Tip boxes ── */
+    .tip {
+      border-left: 3px solid var(--accent);
+      background: rgba(240,120,32,.06);
+      padding: 12px 16px;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .tip.blue  { border-color: var(--blue);   background: rgba(77,184,232,.06); }
+    .tip.green { border-color: var(--green);  background: rgba(34,197,94,.06); }
+    .tip.red   { border-color: var(--red);    background: rgba(239,68,68,.06); }
+    .tip strong { display: block; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+    .tip.blue strong   { color: var(--blue); }
+    .tip.green strong  { color: var(--green); }
+    .tip.red strong    { color: var(--red); }
+    .tip strong:not([class]) { color: var(--accent); }
+
+    /* ── Emoji status ── */
+    .day-tab-example {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--panel2);
+      border: 1px solid var(--border2);
+      padding: 5px 12px;
+      border-radius: 5px;
+      font-size: 13px;
+      margin: 2px 4px;
+    }
+    .day-tab-example .score-num { font-family: var(--mono); }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 24px 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: .5px;
+    }
+    footer a { color: var(--text-muted); text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+    footer .footer-logo {
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+  </style>
 </head>
 <body>
+
+<!-- ── Header ── -->
 <header>
-  <span class="brand">WindFoil · <b>Hilfe</b></span>
-  <a class="back" href="/">← Zurück zur App</a>
+  <div class="header-inner">
+    <a class="logo" href="app-react.html">
+      <span class="logo-icon">⟁</span>
+      <div>
+        <div class="logo-text">WindFoil</div>
+        <div class="logo-sub">Weather Intelligence</div>
+      </div>
+    </a>
+    <a class="back-link" href="app-react.html">← Zurück zur App</a>
+  </div>
 </header>
 
-<main>
-  <h1>Hilfe & Anleitung</h1>
-  <p class="lead">So holst du das Beste aus der WindFoil-Vorhersage heraus — Standort, Foil-Score, Equipment und Feedback.</p>
+<!-- ── Page ── -->
+<div class="page">
 
-  <section>
-    <h2><span class="ico">📍</span> Standort wählen</h2>
-    <p>Oben über <b>„Ort ändern"</b> legst du fest, für welchen Spot die Vorhersage gilt. Drei Wege:</p>
-    <ul>
-      <li><b>Vorlage:</b> einen der vorgegebenen Spots antippen.</li>
-      <li><b>Link / Koordinaten:</b> einen Google-Maps-Link einfügen (die Koordinaten stehen nach dem <code>@</code>) oder Koordinaten direkt eingeben. Mit <b>Name</b> kannst du dem Spot einen eigenen Namen geben.</li>
-      <li><b>Mein Standort:</b> per GPS deinen aktuellen Ort übernehmen.</li>
-    </ul>
-    <p><b>Übernehmen &amp; merken ★</b> speichert den Spot dauerhaft, <b>Nur übernehmen</b> nutzt ihn nur für diese Sitzung. Zuletzt verwendete Spots erscheinen unter „Zuletzt verwendet".</p>
-    <div class="note">Deine Spots werden serverseitig zu deinem Konto gespeichert und sind nach dem Login auf jedem Gerät da — auch wenn dein Browser den lokalen Speicher löscht (z. B. iPhone/Safari).</div>
-  </section>
+  <!-- TOC sidebar -->
+  <aside class="toc-sidebar">
+    <nav class="toc" aria-label="Inhaltsverzeichnis">
+      <div class="toc-title">Inhalt</div>
+      <ol>
+        <li><a href="#erste-schritte">Erste Schritte</a></li>
+        <li><a href="#standort">Standort wählen</a></li>
+        <li><a href="#foil-modus">Foil-Modus</a></li>
+        <li><a href="#kite-modus">Kite-Modus</a></li>
+        <li><a href="#score">Score verstehen</a></li>
+        <li><a href="#thermik">Thermik &amp; Meeresbrise</a></li>
+        <li><a href="#tipps">Tipps &amp; Hinweise</a></li>
+      </ol>
+    </nav>
+  </aside>
 
-  <section>
-    <h2><span class="ico">🎯</span> Foil-Score verstehen</h2>
-    <p>Der <b>Foil-Score</b> (0–100) bewertet, wie gut ein Tag zum Wingfoilen passt — auf dich und dein Setup abgestimmt. Höher ist besser; die Farbe zeigt die Eignung auf einen Blick.</p>
-    <ul>
-      <li><b>Beste Zeit:</b> das vorhergesagte Zeitfenster mit den besten Bedingungen am Tag.</li>
-      <li><b>7-Tage-Analyse:</b> Tage 4–7 sind unsicherer und mit <span class="tag">≈ unsicher</span> sowie gedämpft dargestellt.</li>
-      <li><b>Stationsabgleich:</b> wo verfügbar, wird das Modell mit echten Messstationen abgeglichen (Konfidenz-Wert).</li>
-    </ul>
-  </section>
+  <!-- Main content -->
+  <main class="content" id="hilfe">
 
-  <section>
-    <h2><span class="ico">🏄</span> Profil &amp; „Abheben ab"</h2>
-    <p>Im Profil hinterlegst du <b>Gewicht</b> und <b>Skill-Level</b> — beides fließt in den Score ein. Optional gibst du bei <b>„Abheben ab (kn)"</b> an, ab wie viel Wind du erfahrungsgemäß ins Gleiten/Foilen kommst; dieser Wert überschreibt die Formel.</p>
-    <p>Mit <b>Profil speichern</b> wird alles deinem Konto zugeordnet.</p>
-  </section>
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="erste-schritte">
+      <h2><span class="section-num">01</span> Erste Schritte</h2>
 
-  <section>
-    <h2><span class="ico">🎒</span> Equipment &amp; automatische Setup-Wahl</h2>
-    <p>Lege deine Setups an (<b>Name</b>, <b>Wing</b> in m², <b>Foil</b> in cm², optional <b>„ab (kn)"</b>). Aktivierst du <b>„Automatische Setup-Wahl"</b>, schlägt die App pro Tag das passende Setup aus deinem Material vor.</p>
-    <div class="note">Lege mindestens ein Equipment an, damit die automatische Wahl greift.</div>
-  </section>
+      <p>WindFoil Weather Intelligence zeigt dir tagesaktuelle Windvorhersagen aus der <strong>Open-Meteo API</strong> und berechnet daraus einen sportartspezifischen Score — optimiert für Windfoil/Wing und Kitesurfen.</p>
 
-  <section>
-    <h2><span class="ico">📣</span> Session-Feedback</h2>
-    <p>Nach einer Session gibst du über <b>📣 Feedback</b> an, wie es war (abgehoben ja/nein, gefühlter Wind beim Abheben, Bewertung, ob die Bedingungen zur Prognose passten). Daraus lernt die App und <b>kalibriert deine Abhebe-Schwelle pro Spot</b> — die Vorhersage wird mit der Zeit genauer auf dich zugeschnitten.</p>
-  </section>
+      <div class="panel">
+        <div class="panel-title">So startest du</div>
+        <ol class="steps">
+          <li>Wähle deinen <strong>Sportmodus</strong>: <span class="chip chip-orange">🏄 FOIL</span> oder <span class="chip chip-blue">🪁 KITE</span> — der Schalter befindet sich oben in der App.</li>
+          <li>Gib deinen <strong>Standort</strong> ein (Standard: Talamone, IT). Du kannst GPS, Koordinaten oder einen Google-Maps-Link verwenden.</li>
+          <li>Trage dein <strong>Rider-Profil</strong> ein (Gewicht, Material, Fahrkönnen).</li>
+          <li>Wähle einen der <strong>Tages-Tabs</strong> (Heute / Morgen / +2 Tage) — der farbige Score zeigt dir sofort, ob es sich lohnt.</li>
+          <li>Scrolle durch die <strong>Charts</strong> für Details zu Wind, Böen, Thermik und historischen Vergleichswerten.</li>
+        </ol>
+      </div>
 
-  <section>
-    <h2><span class="ico">⚙️</span> Einheiten &amp; Anzeige</h2>
-    <p>Die Windeinheit lässt sich zwischen <b>Knoten (kn)</b>, <b>m/s</b> und <b>Beaufort (bf)</b> umschalten. Datenquellen: Open-Meteo, ERA5/ECMWF, ergänzt um deine Eingaben.</p>
-  </section>
+      <h3>Windeinheiten</h3>
+      <p>Alle Windwerte lassen sich jederzeit umschalten. Der Schalter oben rechts wechselt zwischen:</p>
+      <ul>
+        <li><span class="chip chip-gray">m/s</span> Meter pro Sekunde (interne Berechnungsbasis)</li>
+        <li><span class="chip chip-gray">kn</span> Knoten (nautische Meile/h — Standard im Wassersport)</li>
+        <li><span class="chip chip-gray">BF</span> Beaufort (Windstärkeskala 0–12)</li>
+      </ul>
+    </section>
 
-  <section>
-    <h2><span class="ico">📲</span> Als App aufs iPhone</h2>
-    <p>In Safari über <b>Teilen → „Zum Home-Bildschirm"</b> hinzufügen — dann startet WindFoil im Vollbild wie eine App. Funktionsumfang ist identisch zur Webseite. Melde dich an, damit Spots und Einstellungen sicher serverseitig gespeichert werden.</p>
-  </section>
-</main>
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="standort">
+      <h2><span class="section-num">02</span> Standort wählen</h2>
 
+      <p>Du kannst deinen Spot auf vier Wegen eingeben:</p>
+
+      <div class="panel">
+        <div class="panel-title">Eingabemöglichkeiten</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Methode</th>
+              <th>Beispiel / Hinweis</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GPS</td>
+              <td>Schaltfläche „Mein Standort" — Browser-Geolocation muss erlaubt sein</td>
+            </tr>
+            <tr>
+              <td>Koordinaten</td>
+              <td><span class="chip chip-gray">42.5531, 11.1403</span> (Lat, Lon, dezimal)</td>
+            </tr>
+            <tr>
+              <td>Google Maps-Link</td>
+              <td>URL aus dem Browser oder der App einfügen — Koordinaten werden automatisch extrahiert</td>
+            </tr>
+            <tr>
+              <td>Letzte Standorte</td>
+              <td>Bis zu <strong>8 Spots</strong> werden im Browser gespeichert und sind per Klick wählbar</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Nahegelegene Stationen</h3>
+      <p>Die App zeigt ein Raster von Wetterstationen im Umkreis von ca. <strong>10–15 km</strong> in 6 Richtungen. Ein <strong>Konfidenz-Score</strong> vergleicht Modelldaten mit Messstationsdaten (erfordert Backend-Proxy mit Weatherbit-Key).</p>
+
+      <div class="tip blue">
+        <strong>Tipp</strong>
+        Küstenstationen können deutlich vom Modellgitter abweichen — prüfe immer die Differenz zwischen Stationswert und Vorhersage.
+      </div>
+    </section>
+
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="foil-modus">
+      <h2><span class="section-num">03</span> Foil-Modus 🏄</h2>
+
+      <p>Der Foil-Modus ist für <strong>Windfoil und Wing-Foil</strong> ausgelegt. Basierend auf deinem Material berechnet die App ein personalisiertes Windfenster und bewertet den Tag.</p>
+
+      <h3>Rider-Profil</h3>
+      <div class="panel">
+        <div class="panel-title">Eingabefelder</div>
+        <table>
+          <thead>
+            <tr><th>Feld</th><th>Beschreibung</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Gewicht</td><td>Körpergewicht in kg — beeinflusst Liftoff-Schwelle</td></tr>
+            <tr><td>Wing-Größe</td><td>Flächeninhalt des Wings in m² — größere Fläche = weniger Wind nötig</td></tr>
+            <tr><td>Foil-Frontfläche</td><td>Frontflügel in cm² — größere Fläche = niedrigerer Liftoff</td></tr>
+            <tr><td>Fahrkönnen</td>
+              <td>
+                <span class="chip chip-gray">Beginner</span>
+                <span class="chip chip-gray">Intermediate</span>
+                <span class="chip chip-gray">Advanced</span>
+                <span class="chip chip-gray">Pro</span><br>
+                Fortgeschrittene können in einem breiteren Fenster fahren
+              </td>
+            </tr>
+            <tr><td>Liftoff-Schwelle</td><td>Optional: eigener Messwert in Knoten überschreibt die Berechnung</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Berechnetes Windfenster</h3>
+      <p>Aus deinen Eingaben ermittelt die App drei Grenzwerte:</p>
+      <ul>
+        <li><span class="chip chip-blue">Min</span> — Liftoff-Wind: unter diesem Wert kein Abheben möglich</li>
+        <li><span class="chip chip-green">Optimal</span> — bestes Fahrgefühl, volle Kontrolle</li>
+        <li><span class="chip chip-red">Max</span> — Sicherheitsgrenze, ab hier Überpowerung</li>
+      </ul>
+
+      <h3>Charts im Foil-Modus</h3>
+      <ul>
+        <li><strong>Wind &amp; Böen</strong> — stündliche Werte mit Böenüberlagerung</li>
+        <li><strong>Windrichtung</strong> — Kompasskurs über den Tag</li>
+        <li><strong>Temperatur</strong> — Luft- und gefühlte Temperatur</li>
+        <li><strong>Thermik-Index</strong> — CAPE und LI-Werte (Böenrisiko)</li>
+        <li><strong>Luftdruck</strong> — Tendenz und absoluter Wert</li>
+        <li><strong>Historischer Vergleich</strong> — ERA5-Klimadaten zum Vergleich</li>
+        <li><strong>Foil-Fenster-Analyse</strong> — visuell farblich markierter Bereich zwischen Min und Max</li>
+      </ul>
+    </section>
+
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="kite-modus">
+      <h2><span class="section-num">04</span> Kite-Modus 🪁 (Crazyfly Sculp)</h2>
+
+      <p>Der Kite-Modus ist aktuell auf den <strong>Crazyfly Sculp</strong> (Allround Freeride/Foil) optimiert. Du wählst Größe und Profil — die App berechnet das exakte Windfenster und gibt gezielte Empfehlungen.</p>
+
+      <h3>Rider-Profil</h3>
+      <div class="panel">
+        <div class="panel-title">Eingabefelder</div>
+        <table>
+          <thead>
+            <tr><th>Feld</th><th>Beschreibung</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Gewicht</td><td>Körpergewicht in kg — schwere Fahrer brauchen mehr Wind</td></tr>
+            <tr><td>Kite-Modell</td><td>Crazyfly Sculp (aktuell einziges Modell)</td></tr>
+            <tr><td>Kite-Größe</td><td>6 Größen von 7 m² bis 14 m² — Herstellerwind-range wird direkt angezeigt</td></tr>
+            <tr><td>Fahrkönnen</td>
+              <td>
+                <span class="chip chip-gray">Beginner</span>
+                <span class="chip chip-gray">Intermediate</span>
+                <span class="chip chip-gray">Advanced</span>
+                <span class="chip chip-gray">Pro</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Sculp Windranges (Herstellerangaben)</h3>
+      <div class="panel">
+        <div class="panel-title">Crazyfly Sculp — Referenztabelle (aktive Größe grün hervorgehoben)</div>
+        <table>
+          <thead>
+            <tr><th>Größe</th><th>Min (kn)</th><th>Max (kn)</th><th>Einsatzbereich</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>7 m²</td><td>18 kn</td><td>40 kn</td><td>Stark bis Sturm</td></tr>
+            <tr><td>8 m²</td><td>16 kn</td><td>38 kn</td><td>Frisch bis Sturm</td></tr>
+            <tr class="active-size"><td>9 m²</td><td>14 kn</td><td>34 kn</td><td>Mäßig bis Stark ← Beispiel</td></tr>
+            <tr><td>10 m²</td><td>13 kn</td><td>30 kn</td><td>Mäßig bis Stark</td></tr>
+            <tr><td>12 m²</td><td>10 kn</td><td>26 kn</td><td>Leicht bis Frisch</td></tr>
+            <tr><td>14 m²</td><td>9 kn</td><td>20 kn</td><td>Sehr leicht bis Frisch</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px; color:var(--text-muted);">Quelle: crazyflykites.com · Stand 2026. Die tatsächlichen Grenzen werden durch Gewicht und Können individuell angepasst.</p>
+      </div>
+
+      <h3>Kite-Empfehlungen</h3>
+      <p>Die App zeigt direkt unter dem Score eine textuelle Einschätzung:</p>
+      <ul>
+        <li><span class="chip chip-red">Kite zu groß</span> — zu wenig Wind für die gewählte Größe</li>
+        <li><span class="chip chip-yellow">Kite zu klein</span> — Wind überschreitet den sicheren Bereich</li>
+        <li><span class="chip chip-green">Idealer Bereich</span> — Wind passt optimal zur Größe und deinem Profil</li>
+        <li><span class="chip chip-orange">Grenzbereich</span> — fahren möglich, aber Aufmerksamkeit erforderlich</li>
+      </ul>
+
+      <div class="tip">
+        <strong>Hinweis</strong>
+        Die angezeigten Grenzen berücksichtigen bereits dein Gewicht und Fahrkönnen — Beginner erhalten ein engeres, sichereres Fenster; Pro-Fahrer ein breiteres.
+      </div>
+    </section>
+
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="score">
+      <h2><span class="section-num">05</span> Score verstehen</h2>
+
+      <p>Jeder Tag erhält einen Score von <span class="chip chip-gray">0</span> bis <span class="chip chip-green">100</span>. Der Score misst, wie gut der prognostizierte Wind zu deinem berechneten Windfenster passt.</p>
+
+      <div class="panel">
+        <div class="panel-title">Score-Skala</div>
+
+        <div class="score-row">
+          <div class="score-label"><span class="chip chip-green">80 – 100</span></div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:90%; background:var(--green);"></div></div>
+          <div class="score-val" style="color:var(--green);">✅ Top</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label"><span class="chip chip-yellow">50 – 79</span></div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:60%; background:var(--yellow);"></div></div>
+          <div class="score-val" style="color:var(--yellow);">⚠️ OK</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label"><span class="chip chip-red">0 – 49</span></div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:25%; background:var(--red);"></div></div>
+          <div class="score-val" style="color:var(--red);">❌ Schlecht</div>
+        </div>
+      </div>
+
+      <h3>Score-Logik</h3>
+      <ul>
+        <li><strong>100</strong> = Wind liegt mitten im optimalen Fenster, keine Böenspitzen, kein Thermikrisiko</li>
+        <li>Score sinkt, wenn Wind unter dem Min- oder über dem Max-Wert liegt</li>
+        <li>Böen und Thermik-Warnungen reduzieren den Score zusätzlich</li>
+        <li>Kein Wind = Score 0 · Zu viel Wind = Score 0</li>
+      </ul>
+
+      <h3>Tages-Tabs</h3>
+      <p>Die vier Tabs zeigen auf einen Blick:</p>
+      <div style="margin: 10px 0 14px;">
+        <span class="day-tab-example">Heute <span class="score-num" style="color:var(--green);">82 ✅</span></span>
+        <span class="day-tab-example">Morgen <span class="score-num" style="color:var(--yellow);">61 ⚠️</span></span>
+        <span class="day-tab-example">+2 <span class="score-num" style="color:var(--red);">23 ❌</span></span>
+        <span class="day-tab-example">+3 <span class="score-num" style="color:var(--yellow);">55 ⚠️</span></span>
+      </div>
+      <p>Tippe auf einen Tab, um die zugehörigen Charts und die detaillierte Stunden-Prognose anzuzeigen.</p>
+    </section>
+
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="thermik">
+      <h2><span class="section-num">06</span> Thermik &amp; Meeresbrise</h2>
+
+      <h3>Thermik-Analyse (CAPE / LI)</h3>
+      <p>Thermische Aufwinde können den Bodenwind stark beeinflussen — besonders bei warmem Wetter oder nachmittags. Die App wertet zwei atmosphärische Indizes aus:</p>
+
+      <div class="panel">
+        <div class="panel-title">Indizes im Überblick</div>
+        <table>
+          <thead>
+            <tr><th>Index</th><th>Bedeutung</th><th>Warnschwellen</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>CAPE</td>
+              <td>Convective Available Potential Energy — verfügbare Energie für Aufwinde</td>
+              <td>
+                <span class="chip chip-green">&lt; 300 J/kg</span> unkritisch<br>
+                <span class="chip chip-yellow">300–1000</span> mäßig<br>
+                <span class="chip chip-red">&gt; 1000</span> hohes Böenrisiko
+              </td>
+            </tr>
+            <tr>
+              <td>LI</td>
+              <td>Lifted Index — Stabilitätsmaß der Atmosphäre</td>
+              <td>
+                <span class="chip chip-green">&gt; 2</span> stabil<br>
+                <span class="chip chip-yellow">0 bis 2</span> leicht instabil<br>
+                <span class="chip chip-red">&lt; 0</span> instabil, Böengefahr
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip red">
+        <strong>Warnung</strong>
+        Hohe CAPE-Werte kombiniert mit negativem LI deuten auf plötzliche Böen oder Gewitter hin. Im Zweifel lieber an Land bleiben.
+      </div>
+
+      <h3>Meeresbrise-Erkennung</h3>
+      <p>Die App erkennt typische Meeresbrisenmuster anhand von Windrichtung, Tageszeit und Temperaturgradient. Meeresbrise bedeutet in der Regel gleichmäßigeren, vorhersehbareren Wind — besonders an Küstenspots wie Talamone.</p>
+
+      <ul>
+        <li>Meeresbrise setzt meist <strong>10–12 Uhr</strong> ein und erreicht ihr Maximum am frühen Nachmittag</li>
+        <li>Wind dreht typischerweise von Land auf See (onshore)</li>
+        <li>Ein entsprechendes Symbol wird im Chart angezeigt, wenn das Muster erkannt wird</li>
+      </ul>
+
+      <div class="tip green">
+        <strong>Tipp</strong>
+        Meeresbrise-Tage bieten oft die besten Bedingungen für Foil — stabiler Wind, kaum Böen, zuverlässige Fenster.
+      </div>
+    </section>
+
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="tipps">
+      <h2><span class="section-num">07</span> Tipps &amp; Hinweise</h2>
+
+      <h3>Letzte Standorte</h3>
+      <p>Die App speichert bis zu <strong>8 Spots</strong> automatisch im Browser-Speicher (localStorage). Beim nächsten Besuch sind sie per Klick wieder verfügbar. Das Löschen des Browser-Caches löscht auch die gespeicherten Spots.</p>
+
+      <h3>Vorhersagegenauigkeit</h3>
+      <div class="tip">
+        <strong>Zu beachten</strong>
+        Open-Meteo liefert Gitterpunkt-Daten mit ca. 1–5 km Auflösung. Lokale Effekte (Berge, Buchten, Kap-Beschleunigung) können den tatsächlichen Wind deutlich vom Modell abweichen lassen. Nutze die Stationsdaten als Plausibilitätsprüfung.
+      </div>
+
+      <h3>Historischer Vergleich (ERA5)</h3>
+      <p>Der ERA5-Chart zeigt, wie der aktuelle Forecast im Vergleich zu historischen Klimadaten des gleichen Ortes und der gleichen Jahreszeit liegt. Ein deutlich höherer Forecast als der Klimamittelwert kann auf ein Ereignis hinweisen.</p>
+
+      <h3>Häufige Fragen</h3>
+
+      <div class="panel" style="margin-bottom:10px;">
+        <div class="panel-title">Die App zeigt „Demo-Modus" an</div>
+        <p>Wenn die Open-Meteo API nicht erreichbar ist (z. B. kein Internet), wechselt die App automatisch in einen Demo-Modus mit Beispieldaten. Die Charts sind weiterhin sichtbar, aber nicht aktuell.</p>
+      </div>
+
+      <div class="panel" style="margin-bottom:10px;">
+        <div class="panel-title">Konfidenz-Score fehlt oder zeigt „–"</div>
+        <p>Der Stations-vs-Modell-Konfidenz-Score benötigt einen <strong>Backend-Proxy</strong> mit einem gültigen Weatherbit-API-Key. Ohne diesen wird der Wert nicht berechnet.</p>
+      </div>
+
+      <div class="panel" style="margin-bottom:10px;">
+        <div class="panel-title">Mein GPS-Standort wird nicht erkannt</div>
+        <p>Stelle sicher, dass der Browser die Geolocation-Berechtigung für diese Seite erhalten hat. In den meisten Browsern findest du die Einstellung über das Schloss-Symbol in der Adressleiste.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Der Score wirkt zu niedrig, obwohl Wind da ist</div>
+        <p>Prüfe dein Rider-Profil: Möglicherweise liegt dein Windfenster (Min/Max) nicht gut zu den Prognosewerten. Böenspitzen oder Thermik-Warnungen können den Score zusätzlich drücken — auch wenn der Durchschnittwind passt.</p>
+      </div>
+
+      <h3>Datenschutz</h3>
+      <p>Die App speichert ausschließlich Standort-Koordinaten lokal im Browser. Es werden keine persönlichen Daten an Dritte übertragen. Wetterdaten werden direkt von Open-Meteo abgerufen — ohne Zwischenspeicherung.</p>
+    </section>
+
+  </main>
+</div>
+
+<!-- ── Footer ── -->
 <footer>
-  WindFoil Weather Intelligence v3.5.0 · <a href="/">Zur App</a>
+  <div class="footer-logo">⟁ WINDFOIL</div>
+  <div>Weather Intelligence · Hilfe &amp; Bedienung</div>
+  <div style="margin-top:8px;">
+    <a href="app-react.html">← Zurück zur App</a>
+    &nbsp;·&nbsp;
+    Wetterdaten: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
+    &nbsp;·&nbsp;
+    Kite-Daten: <a href="https://crazyflykites.com" target="_blank" rel="noopener">Crazyfly Kites</a>
+  </div>
 </footer>
-</body></html>
+
+</body>
+</html>
