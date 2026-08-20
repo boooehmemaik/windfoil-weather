@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.22.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.23.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -31,18 +31,19 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
   <script src="vendor/babel.min.js"></script>
   <script type="text/babel" data-presets="react">
 const { useState, useEffect, useCallback, useRef } = React;
-const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, ReferenceDot, Cell } = Recharts;
+const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, ReferenceDot, Cell } = Recharts;
 // 16-point compass abbreviation from a meteorological bearing (deg the wind comes FROM).
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.22.0
+// WindFoil Weather Intelligence v3.23.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
 // Changelog v3.20.0: seaBreeze align cutoff 60°→80° (Eric active from ~SW-W); active threshold 0.3→0.25; chart wind line shows winsEffBoosted (consistent with score)
 // Changelog v3.21.0: Ensemble-Median (5–6 Modelle) als Windquelle statt Einzelmodell; p10/p90-Streuung erfasst; Böen im Windverhältnis reskaliert. ACHTUNG: senkt Torbole ~25 % (löst die arome_best_max-Hüllkurve ab) — wird von MOS (Stufe 3–5) wieder ausgeglichen
 // Changelog v3.22.0: MOS-Korrektur ersetzt seaBreeze wo Messdaten existieren (Konvexkombination, keine Doppelzählung); Thermik wandert vor die Stationskorrekturen; Pelèr-Faktor blendet gegen MOS aus
+// Changelog v3.23.0: Transparente Darstellung — Ensemble-p10/p90 als Streuungsband im Wind-Chart (ComposedChart/Area, bewusst nicht MOS-korrigiert); Korrektur-Badge zeigt MOS / MOS-Brise-Blend / Meeresbrise inkl. Vorzeichen; Modell-Streuung als vierter Konfidenz-Part (w:1, zieht den Score absichtlich Richtung 50) und als vierte Zelle im Stationsvergleich
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -1035,7 +1036,7 @@ async function fetchStationMos(lat, lon) {
   } catch(e) { return { ok:false, error:e.message }; }
 }
 
-function computeConfidence({ stationCurrent, modelCurrentWind, modelCurrentDir, stationHistMeanWind, modelHistMeanWind }) {
+function computeConfidence({ stationCurrent, modelCurrentWind, modelCurrentDir, stationHistMeanWind, modelHistMeanWind, ensSpreadMs }) {
   const parts=[], notes=[];
   if(stationCurrent && stationCurrent.ok && modelCurrentWind!=null && stationCurrent.wind!=null){
     const errMs=Math.abs(stationCurrent.wind-modelCurrentWind);
@@ -1051,6 +1052,14 @@ function computeConfidence({ stationCurrent, modelCurrentWind, modelCurrentDir, 
     const bias=Math.abs(stationHistMeanWind-modelHistMeanWind);
     parts.push({w:0.35,v:Math.max(0,100-(bias/4)*100)});
     notes.push(`Hist. Bias ${bias.toFixed(1)} m/s`);
+  }
+  // ACHTUNG, kein Tippfehler: w:1 gegenüber 0.45/0.20/0.35 (Summe 1.0) ist Absicht.
+  // Der Part verdoppelt die Gewichtssumme und halbiert damit das Gewicht ALLER
+  // Stations-Parts — die Modell-Streuung soll den Score kräftig Richtung 50 ziehen,
+  // wenn die Modelle sich uneinig sind. Nicht "korrigieren".
+  if(ensSpreadMs!=null){
+    parts.push({w:1,v:Math.max(0,100-(ensSpreadMs/4)*100)});
+    notes.push(`Modell-Streuung ${ensSpreadMs.toFixed(1)} m/s`);
   }
   if(!parts.length) return { confidence:null, notes:["Kein Stationsabgleich verfügbar"] };
   const wsum=parts.reduce((a,p)=>a+p.w,0);
@@ -1743,9 +1752,17 @@ function App() {
     const stationHistMeanWind = biasOk ? bias.stationMeanMs : null;
     const modelHistMeanWind   = biasOk ? bias.modelMeanMs   : null;
 
+    // Median der Ensemble-Streuung über die Mittagsstunden (Index 11..18).
+    // Die direkte Indizierung folgt der bereits bestehenden Annahme dieser Funktion
+    // (siehe modelCurrentWind oben, das fc.hourly.windspeed_10m[nowH] genauso direkt
+    // indiziert): das Array beginnt bei Mitternacht des heutigen Tages.
+    // fc trägt __ens hier bereits — loadData ruft uns nach attachEnsemble auf.
+    const spreads = (fc?.__ens?.spread || []).slice(11,19).filter(v=>v!=null);
+    const ensSpreadMs = spreads.length ? spreads.slice().sort((a,b)=>a-b)[Math.floor(spreads.length/2)] : null;
+
     const { confidence, notes } = computeConfidence({
       stationCurrent: cur, modelCurrentWind, modelCurrentDir,
-      stationHistMeanWind, modelHistMeanWind,
+      stationHistMeanWind, modelHistMeanWind, ensSpreadMs,
     });
 
     setStationCmp({
@@ -2018,7 +2035,12 @@ function App() {
     const hh=parseInt(l.slice(0,2),10);
     const mw = meas && meas.wind[hh]!=null ? cvt(meas.wind[hh],windUnit) : null;
     const mg = meas && meas.gust[hh]!=null ? cvt(meas.gust[hh],windUnit) : null;
-    return {h:l,wind:cvt(dayData.winsEffBoosted[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i],mwind:mw,mgust:mg};
+    // Streuungsband = rohes Ensemble-p10/p90, BEWUSST nicht MOS-korrigiert. Es
+    // beantwortet "wie uneinig sind die Modelle", nicht "wie systematisch falsch
+    // liegen sie" — das sind zwei verschiedene Fragen, die nicht vermischt werden.
+    const band = dayData.ens && dayData.ens.p10[i]!=null && dayData.ens.p90[i]!=null
+      ? [cvt(dayData.ens.p10[i],windUnit), cvt(dayData.ens.p90[i],windUnit)] : null;
+    return {h:l,wind:cvt(dayData.winsEffBoosted[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i],mwind:mw,mgust:mg,band};
   }):[];
   const dirData   = dayData?dayData.labels.map((l,i)=>({idx:i,dir:dayData.dirs[i]})):[];
   const tempData  = dayData?dayData.labels.map((l,i)=>({h:l,temp:dayData.temp[i]})):[];
@@ -2164,7 +2186,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.22.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.23.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2383,7 +2405,22 @@ function App() {
                 {icon:"⬆",label:`Max Böe ${fmtW(dayData.maxG,windUnit)}`,c:dayData.maxG>dayData.win.maxWind?C.stop:C.caution},
                 {icon:"🌡",label:`${dayData.maxT.toFixed(0)}°C max`,c:C.sky},
                 {icon:dayData.thInfo.icon,label:dayData.thInfo.label,c:dayData.thInfo.color},
-                ...(dayData.sb.active?[{icon:"🌊",label:`Meeresbrise +${fmtW(dayData.sb.boost,windUnit)}`,c:C.sky}]:[]),
+                ...(()=>{ // Korrektur-Badge: zeigt, WOHER der Thermik-Aufschlag stammt.
+                  const t=dayData.thermal;
+                  if(t && t.source==="mos"){
+                    // Vorzeichen muss sichtbar bleiben: ein negatives addMs ist der Sinn
+                    // der Übung (abends versprochener Wind, der nicht kommt) und darf
+                    // nicht wie eine Anhebung aussehen.
+                    const sign = t.addMs<0 ? "−" : "+";
+                    return [{icon:"🎯",label:`MOS-Korrektur ${sign}${fmtW(Math.abs(t.addMs),windUnit)} · ${t.n} Tage`,c:C.signal}];
+                  }
+                  if(t && t.source==="blend"){
+                    const pct=Math.round(t.mosWeight*100);
+                    return [{icon:"🎯",label:`MOS ${pct}% / 🌊 Brise ${100-pct}%`,c:C.signal}];
+                  }
+                  // source==="seabreeze" — oder thermal fehlt (defensiv): alter Chip.
+                  return dayData.sb.active?[{icon:"🌊",label:`Meeresbrise +${fmtW(dayData.sb.boost,windUnit)}`,c:C.sky}]:[];
+                })(),
               ].map((b,i)=>(
                 <div key={i} style={{border:`1px solid ${b.c}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:b.c,display:"flex",alignItems:"center",gap:6,background:C.surface}}>
                   {b.icon} {b.label}
@@ -2461,7 +2498,7 @@ function App() {
                     )}
                     {forecast?.__model && MODEL_LABELS[forecast.__model] && (
                       <div style={{marginTop:6,fontSize:10,color:C.muted,fontFamily:"monospace"}}>
-                        📡 Quelle: {MODEL_LABELS[forecast.__model]}{dayData.liveBoost?.applied ? " + Live-Station" : dayData.measuredCorr?.applied ? " + Messstation" : ""}
+                        📡 Quelle: {MODEL_LABELS[forecast.__model]}{(dayData.thermal?.source==="mos"||dayData.thermal?.source==="blend") ? " + MOS" : ""}{dayData.liveBoost?.applied ? " + Live-Station" : dayData.measuredCorr?.applied ? " + Messstation" : ""}
                       </div>
                     )}
                   </div>
@@ -2500,7 +2537,10 @@ function App() {
               </div>}
               <div style={S.cwL}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={windData}><CartesianGrid {...gr} />
+                  <ComposedChart data={windData}>
+                    {/* Zuerst gerendert ⇒ liegt unter allen Linien. */}
+                    {dayData.ens && <Area yAxisId="l" dataKey="band" name="Modell-Streuung" stroke="none" fill={C.sky} fillOpacity={0.12} isAnimationActive={false} legendType="none" />}
+                    <CartesianGrid {...gr} />
                     <XAxis dataKey="h" {...ax} interval={3} />
                     <YAxis yAxisId="l" {...ax} />
                     <YAxis yAxisId="r" orientation="right" domain={[0,100]} {...ax} tick={{...ax.tick,fill:C.go}} />
@@ -2519,7 +2559,7 @@ function App() {
                       return <ReferenceDot yAxisId="l" x={lh} y={cvt(live.wind,windUnit)} r={5} fill={C.go} stroke="#fff" strokeWidth={1.5} ifOverflow="extendDomain" label={{value:"Live",position:"top",fontSize:9,fill:C.go,fontFamily:"monospace"}} />;
                     })()}
                     <Line yAxisId="r" type="monotone" dataKey="score" name={sport==="kite"?"Kite-Score":"Wingfoil-Score"} stroke={C.go} strokeWidth={1.5} dot={false} strokeOpacity={0.8} />
-                  </LineChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
@@ -2740,6 +2780,20 @@ function App() {
                           </div>
                         )}
                       </div>
+                      {/* Vierte Zelle — das Grid ist auto-fit/minmax(150px,1fr), passt sich selbst an. */}
+                      {dayData?.ens && (()=>{
+                        const ph = Math.min(23, Math.max(0, dayData.regime?.peakHour ?? 14));
+                        const p10 = dayData.ens.p10[ph], p90 = dayData.ens.p90[ph];
+                        const n = dayData.ens.nMembers?.[ph] ?? dayData.ens.members?.length ?? null;
+                        return (
+                          <div style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px"}}>
+                            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",marginBottom:4}}>Modell-Streuung</div>
+                            <div style={{fontSize:12,color:C.text}}>📊 {p10!=null&&p90!=null?`${fmtW(p10,windUnit)} – ${fmtW(p90,windUnit)}`:"–"}</div>
+                            <div style={{fontSize:11,color:C.muted}}>p10–p90 um {String(ph).padStart(2,"0")}:00</div>
+                            {n!=null && <div style={{fontFamily:"monospace",fontSize:8,color:C.dim,marginTop:4}}>{n} Member</div>}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Divergence notes */}
@@ -2945,7 +2999,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.22.0</span>
+        <span>WindFoil Weather Intelligence v3.23.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
