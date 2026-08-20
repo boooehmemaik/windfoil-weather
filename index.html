@@ -969,6 +969,20 @@ async function fetchStationBias(lat, lon) {
     return r.json();
   } catch(e) { return { ok:false, error:e.message }; }
 }
+// Gelernte Stunden-Bias-Korrektur (MOS): wie weit der Ensemble-Median an dieser
+// Station je LOKALER Stunde systematisch neben der Beobachtung liegt.
+// Nicht zu verwechseln mit fetchStationBias() darüber — das ist ein EINZELNER
+// Mittelwert-Bias einer Meteostat-Station gegen das Archiv und speist nur den
+// Konfidenz-Score. Das hier ist vorzeichenbehaftet, stundenaufgelöst und wird auf
+// den Wind angewendet. Antwortet rauschfrei mit ok:false, wo es keine Station
+// oder noch keine gelernten Daten gibt.
+async function fetchStationMos(lat, lon) {
+  try {
+    const r = await fetch(`${PROXY_BASE}/mos?lat=${lat}&lon=${lon}`, { signal: AbortSignal.timeout(8000) });
+    if(!r.ok) throw new Error(`Proxy ${r.status}`);
+    return r.json();
+  } catch(e) { return { ok:false, error:e.message }; }
+}
 
 function computeConfidence({ stationCurrent, modelCurrentWind, modelCurrentDir, stationHistMeanWind, modelHistMeanWind }) {
   const parts=[], notes=[];
@@ -1413,6 +1427,7 @@ function App() {
   const [activeDay,setActiveDay]= useState(0);
   const [measured,setMeasured] = useState(null); // real station feed for the active day (null = none)
   const [live,setLive] = useState(null); // current-only real station snapshot (null = none)
+  const [mos,setMos] = useState(null); // gelernte Stunden-Bias-Korrektur (null = keine Station/keine Daten)
   const [clock,setClock]       = useState("");
   const [windUnit,setWindUnit]  = useState("kn"); // 'ms' | 'kn' | 'bf'
   const [theme,setThemeState]   = useState(()=>loadStored("wf_theme","dark")); // 'dark' | 'light'
@@ -1719,6 +1734,18 @@ function App() {
     load();
     const id=setInterval(load,60000);
     return ()=>{ cancelled=true; clearInterval(id); };
+  },[loc]);
+
+  // ── Gelernte Stunden-Bias-Korrektur (MOS) ─────────────────────────────────
+  // Anders als das Measured-Overlay hängt das NICHT am angezeigten Tag: der Bias
+  // ist eine Eigenschaft von (Station, lokale Stunde) und gilt für alle 7 Tage.
+  // Deshalb nur an `loc` gekoppelt — ein Tabwechsel löst keinen Request aus.
+  useEffect(()=>{
+    if(!loc){ setMos(null); return; }
+    let cancelled=false;
+    fetchStationMos(loc.lat, loc.lon)
+      .then(d=>{ if(!cancelled) setMos(d&&d.ok?d:null); });
+    return ()=>{ cancelled=true; };
   },[loc]);
 
   // ── Compute day start indices from actual calendar dates ──────────────────

@@ -631,6 +631,53 @@ app.get("/api/station/live", async (req, res) => {
   }
 });
 
+// ── Endpoint: gelernte Stunden-Bias-Korrektur (MOS) ───────────────────────────
+// GET /api/station/mos?lat=..&lon=..  → 24 Stundenwerte des systematischen
+// Fehlers zwischen Ensemble-Median und Beobachtung, oder ok:false (rauschfrei,
+// wie /api/station/live), damit das Frontend die Route für jeden Spot aufrufen
+// kann und die Korrektur einfach ausbleibt, wo es keine Station gibt.
+//
+// `km` gehört zwingend in die Antwort: der Client dämpft die Korrektur mit der
+// Distanz (measuredWeight). Ein Flughafen 34 km entfernt hat den Eric von
+// Vasiliki nicht gemessen — das darf nicht so aussehen, als hätte er.
+app.get("/api/station/mos", async (req, res) => {
+  const la = parseFloat(req.query.lat), lo = parseFloat(req.query.lon);
+  if (!Number.isFinite(la) || !Number.isFinite(lo))
+    return res.status(400).json({ ok: false, error: "lat/lon required" });
+
+  // Dieselben Radien wie die Ist-Overlays. Live-Stationen zuerst: wo beide
+  // greifen, ist die Snapshot-Station die mit den saubereren Zeitstempeln.
+  const live = findLiveStation(la, lo);
+  const meas = live ? null : findMeasuredStation(la, lo);
+  const st = live || meas;
+  if (!st) return res.json({ ok: false, error: "no_mos_station" });
+
+  const key = live ? st.key : (st.wc || st.icao || st.station);
+
+  try {
+    // Gecacht wird NUR der stationsabhängige Teil. `km` hängt an der Anfrage, und
+    // eine Station bedient mehrere Spots: LGPZ deckt 40 km ab, Vasiliki liegt
+    // 35.5 km entfernt, Preveza-Stadt 3.8 km. Läge km im Cache, bekäme der zweite
+    // Spot die Distanz des ersten — und in Stufe 5 damit dessen Vertrauensgewicht.
+    const ck = `mos:${key}`;
+    let m = cacheGet(ck), cached = true;
+    if (!m) {
+      cached = false;
+      const { getMosBias } = await import("./src/mos.mjs");
+      m = getMosBias(getObsDb(), key);
+      // Kein Ergebnis heisst "der Job hatte noch nichts zu lernen" — kein Fehler.
+      if (!m) return res.json({ ok: false, error: "no_mos_data", station: key });
+      cacheSet(ck, m, 60 * 60_000); // Bias ändert sich höchstens einmal je Nacht
+    }
+    res.json({
+      ok: true, ...m, cached,
+      station: { key, label: st.label, km: Math.round(haversineKm(la, lo, st.lat, st.lon) * 10) / 10 },
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // ── Endpoint: current observation ─────────────────────────────────────────────
 app.get("/api/station/current", async (req, res) => {
   if (!KEY) return res.status(503).json({ ok: false, error: "API key not configured" });
