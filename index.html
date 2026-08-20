@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.21.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.22.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,12 +36,13 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.21.0
+// WindFoil Weather Intelligence v3.22.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
 // Changelog v3.20.0: seaBreeze align cutoff 60°→80° (Eric active from ~SW-W); active threshold 0.3→0.25; chart wind line shows winsEffBoosted (consistent with score)
 // Changelog v3.21.0: Ensemble-Median (5–6 Modelle) als Windquelle statt Einzelmodell; p10/p90-Streuung erfasst; Böen im Windverhältnis reskaliert. ACHTUNG: senkt Torbole ~25 % (löst die arome_best_max-Hüllkurve ab) — wird von MOS (Stufe 3–5) wieder ausgeglichen
+// Changelog v3.22.0: MOS-Korrektur ersetzt seaBreeze wo Messdaten existieren (Konvexkombination, keine Doppelzählung); Thermik wandert vor die Stationskorrekturen; Pelèr-Faktor blendet gegen MOS aus
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -386,29 +387,39 @@ function isPelerHour(hour, dir){
   if(dir==null || hour==null || hour>PELER.lastHour) return false;
   return angDiff(dir, PELER.oraBearing) > PELER.oraGuard; // not within 70° of the S-Ora
 }
-function applyPelerBoost(fc, lat, lon){
+function applyPelerBoost(fc, lat, lon, mos){
   if(!isGardaSpot(lat,lon) || !hasWindData(fc)) return fc;
   const h=fc.hourly, dirs=h.winddirection_10m||[], times=h.time||[];
   const ens=fc.__ens;
-  let boosted=0;
+  let boosted=0, anyMosFaded=false;
   for(let i=0;i<h.windspeed_10m.length;i++){
     const hour = times[i] ? parseInt(times[i].slice(11,13),10) : null;
     if(!isPelerHour(hour, dirs[i])) continue;
-    if(h.windspeed_10m[i]!=null) h.windspeed_10m[i]=Math.round(h.windspeed_10m[i]*PELER.windFactor*100)/100;
-    if(h.windgusts_10m && h.windgusts_10m[i]!=null) h.windgusts_10m[i]=Math.round(h.windgusts_10m[i]*PELER.gustFactor*100)/100;
+    // B3-Guard: der 1.40er Pelèr-Faktor ist eine raise-only-Heuristik für genau
+    // das, was MOS an dieser Stunde misst. Sobald MOS greift, fährt er gegen
+    // 1.00 — sonst zählt der Vormittags-Pelèr am Gardasee doppelt.
+    const mh = (mos && mos.hours) ? mos.hours[hour] : null;
+    const mw = (mh && mh.n >= MOS_MIN_SAMPLES)
+      ? mosWeight(mh.n, mos.station ? mos.station.km : null) : 0;
+    const wf = 1 + (PELER.windFactor - 1) * (1 - mw);
+    const gf = 1 + (PELER.gustFactor - 1) * (1 - mw);
+    if(h.windspeed_10m[i]!=null) h.windspeed_10m[i]=Math.round(h.windspeed_10m[i]*wf*100)/100;
+    if(h.windgusts_10m && h.windgusts_10m[i]!=null) h.windgusts_10m[i]=Math.round(h.windgusts_10m[i]*gf*100)/100;
     // Sobald das Ensemble verdrahtet ist, ist ES die angezeigte Windquelle —
     // bliebe es hier unkorrigiert, wäre der Pelèr-Boost am Gardasee durch das
     // Verdrahten still verschwunden. p10/p90 mit anheben, sonst läge die
     // Windlinie ausserhalb ihres eigenen Streuungsbands.
     if(ens){
       for(const k of ["wind","p10","p90"]){
-        if(ens[k] && ens[k][i]!=null) ens[k][i]=Math.round(ens[k][i]*PELER.windFactor*100)/100;
+        if(ens[k] && ens[k][i]!=null) ens[k][i]=Math.round(ens[k][i]*wf*100)/100;
       }
       if(ens.spread && ens.spread[i]!=null) ens.spread[i]=Math.round((ens.p90[i]-ens.p10[i])*100)/100;
     }
     boosted++;
+    if(mw > 0) anyMosFaded = true;
   }
   if(boosted) fc.__pelerBoost = true;
+  if(anyMosFaded) fc.__pelerFaded = true;
   return fc;
 }
 
@@ -631,6 +642,46 @@ function ensembleGridMatches(fcHourly, ensHourly) {
   return !!(Array.isArray(a) && Array.isArray(b) && a.length && a.length === b.length && a[0] === b[0]);
 }
 // <</ensemble>>
+
+// <<thermal-correction>>
+// Genau EINE Thermik-Korrektur je Stunde: entweder gelernt (MOS) oder
+// modelliert (seaBreeze) oder ein Übergang — aber NIE beides addiert.
+//
+// Warum das arithmetisch gesperrt sein muss und nicht per Tuning: der MOS-Bias
+// ist als median(obs − ensembleMedian_raw) definiert. Alles, was seaBreeze()
+// modelliert, steckt da bereits drin — es wurde ja mitgemessen. Beides zu
+// addieren stapelt zuverlässig +3.5 auf +3.0. Eine Konvexkombination kann per
+// Konstruktion nicht über max(a,b) hinaus, egal wie die Gewichte stehen.
+const MOS_MIN_SAMPLES = 8;   // Spiegelt den Serverwert; darunter zählt MOS nicht
+const MOS_W_K         = 8;   // Übergabe-Dämpfung. NICHT 15 — sonst wird MOS nie wirksam
+const clamp01 = v => Math.max(0, Math.min(1, v));
+
+// Zwei Dämpfungen, die sich multiplizieren, und das ist Absicht:
+//   Server, n/(n+10):  schützt den WERT      — wenig Daten ⇒ Bias gegen 0
+//   hier,   n/(n+8):   steuert die ÜBERGABE  — plus Distanz zur Station
+// Bei n=13 und km=0 ergibt das 0.62; zusammen mit dem Server 0.57 × 0.62 ≈ 0.35.
+// Wer einen der beiden Faktoren ändert, muss den anderen kennen.
+function mosWeight(n, km) {
+  if (!n || n < MOS_MIN_SAMPLES) return 0;
+  return clamp01((n / (n + MOS_W_K)) * (measuredWeight(km) / STATION_TRUST_AT_SPOT));
+}
+
+// mos: Antwort von /api/station/mos oder null.
+// sb wird IMMER mitgeliefert — die UI liest dayData.sb an zwei Stellen.
+function thermalCorrection(hour, dir, month, regime, mos) {
+  const sb  = seaBreeze(dir, hour, month, regime);
+  const sbB = sb.active ? sb.boost : 0;
+  const m   = (mos && mos.hours) ? mos.hours[hour] : null;
+  const w   = (m && m.n >= MOS_MIN_SAMPLES)
+    ? mosWeight(m.n, mos.station ? mos.station.km : null) : 0;
+  if (w <= 0) return { addMs: sbB, source: "seabreeze", mosWeight: 0, n: m ? m.n : 0, sb };
+  return {
+    addMs: Math.round((w * m.biasShrunkMs + (1 - w) * sbB) * 100) / 100,
+    source: w >= 0.85 ? "mos" : "blend",
+    mosWeight: w, n: m.n, sb,
+  };
+}
+// <</thermal-correction>>
 
 async function tryFetchForecast(lat, lon) {
   const base = {
@@ -1624,13 +1675,19 @@ function App() {
     try {
       // Trägermodell und Ensemble parallel. Das Ensemble ist NICHT fatal: fällt
       // es aus, rechnet die App wie vorher mit dem Trägermodell weiter.
-      const [fcRes, ensRes] = await Promise.all([
+      const [fcRes, ensRes, mosRes] = await Promise.all([
         tryFetchForecast(l.lat, l.lon),
         tryFetchEnsemble(l.lat, l.lon).catch(()=>null),
+        fetchStationMos(l.lat, l.lon).catch(()=>null),
       ]);
       fc = fcRes;
+      // MOS MUSS vor applyPelerBoost feststehen: der Pelèr-Faktor blendet sich aus,
+      // sobald MOS an dieser Stunde sicher ist (B3, Doppelzählung am Gardasee). Käme
+      // mos aus einem eigenen useEffect, entschiede ein Race, ob der Guard greift.
+      const mosData = (mosRes && mosRes.ok) ? mosRes : null;
+      setMos(mosData);
       attachEnsemble(fc, ensRes);
-      applyPelerBoost(fc, l.lat, l.lon); // lift the under-forecast channeled N-wind at Garda
+      applyPelerBoost(fc, l.lat, l.lon, mosData); // lift the under-forecast channeled N-wind at Garda
       const ml = MODEL_LABELS[fc.__model];
       const ensTag = fc.__ens ? ` (${fc.__ens.members.length})` : "";
       setApiStatus(s=>({...s,forecast:(ml ? `✅ ${ml}${ensTag}` : "✅ Live")+(fc.__pelerBoost ? " +Pelèr" : "")}));
@@ -1736,18 +1793,6 @@ function App() {
     return ()=>{ cancelled=true; clearInterval(id); };
   },[loc]);
 
-  // ── Gelernte Stunden-Bias-Korrektur (MOS) ─────────────────────────────────
-  // Anders als das Measured-Overlay hängt das NICHT am angezeigten Tag: der Bias
-  // ist eine Eigenschaft von (Station, lokale Stunde) und gilt für alle 7 Tage.
-  // Deshalb nur an `loc` gekoppelt — ein Tabwechsel löst keinen Request aus.
-  useEffect(()=>{
-    if(!loc){ setMos(null); return; }
-    let cancelled=false;
-    fetchStationMos(loc.lat, loc.lon)
-      .then(d=>{ if(!cancelled) setMos(d&&d.ok?d:null); });
-    return ()=>{ cancelled=true; };
-  },[loc]);
-
   // ── Compute day start indices from actual calendar dates ──────────────────
   // API may start mid-day (e.g. 17:00 local time) — find index where each
   // calendar day (00:00) begins, so "Heute" = today's 00:00 not hour[0]
@@ -1831,16 +1876,22 @@ function App() {
     const regime=thermalRegime(loc.lat,loc.lon);
     const thermik=Array.from({length:24},(_,i)=>computeThermik(h,s+i,regime));
     const activeDateStr = h.time[s] ? h.time[s].slice(0,10) : null;
-    const lb = applyLiveStationBoost(wins, gust, live, activeDay===0);
+    // Thermik VOR den Stationskorrekturen — siehe Kommentar oben zu k.
+    const month_n=new Date().getMonth()+1;
+    const tcs = wins.map((w,i)=> thermalCorrection(i, dirs[i]??180, month_n, regime, mos));
+    const winsTh = wins.map((w,i)=> w==null ? w : Math.round((w + tcs[i].addMs)*100)/100);
+    const lb = applyLiveStationBoost(winsTh, gust, live, activeDay===0);
     const mc = applyMeasuredStationCorrection(lb.wins, lb.gust, measured, activeDateStr);
     const winsEff = mc.wins, gustEff = mc.gust;
     const slice=(arr,a,b)=>arr.slice(a,b).filter(Boolean);
     const midW=slice(winsEff,12,16).reduce((a,b)=>a+b,0)/4||winsEff[12]||0;
     const midG=slice(gustEff,12,16).reduce((a,b)=>a+b,0)/4||gustEff[12]||0;
     const midDir=dirs[14]??dirs[12]??180;
-    const month_n=new Date().getMonth()+1;
-    const sb=seaBreeze(midDir,regime?.peakHour??14,month_n,regime);
-    const effW=midW+(sb.active?sb.boost:0);
+    // midW kommt jetzt aus winsEff, das die Thermik SCHON enthält — effW darf sie
+    // deshalb nicht noch einmal draufrechnen.
+    const tcPeak=thermalCorrection(regime?.peakHour??14,midDir,month_n,regime,mos);
+    const sb=tcPeak.sb;
+    const effW=midW;
     // Per-hour boosted winds for scoring (Eric/Meltemi thermik applied each hour)
     let win, pickedGear=null;
     if(sport==="foil" && useGear && gear.length){
@@ -1850,7 +1901,9 @@ function App() {
     if(!win){
       win=getActiveWin();
     }
-    const winsEffBoosted=winsEff.map((w,i)=>{const sbh=seaBreeze(dirs[i]??midDir,i,month_n,regime);return w+(sbh.active?sbh.boost:0);});
+    // winsEff enthält die Thermik bereits (siehe winsTh oben). Ein zweiter
+    // Durchgang wäre genau die Doppelzählung, gegen die thermalCorrection baut.
+    const winsEffBoosted=winsEff;
     const scores=winsEffBoosted.map(w=>scoreHour(w,win));
     const avgW=winsEffBoosted.reduce((a,b)=>a+b,0)/winsEffBoosted.length;
     const maxG=Math.max(...gustEff);
@@ -1859,7 +1912,7 @@ function App() {
     const dayScore=scoreDay(winsEffBoosted,win);
     const session=bestSession(winsEffBoosted,win); // {score,startHour,endHour}
     const thInfo=classifyThermik(maxTh);
-    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,winsEffBoosted,dayScore,thInfo,pickedGear,session,liveBoost:lb,measuredCorr:mc,ens:ensD,carrierWins};
+    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,winsEffBoosted,dayScore,thInfo,pickedGear,session,liveBoost:lb,measuredCorr:mc,ens:ensD,carrierWins,thermal:tcPeak,thermalHours:tcs};
   })();
 
   const dayScores = forecast ? Array.from({length:7},(_,d)=>{
@@ -1885,12 +1938,12 @@ function App() {
       ? rescaleGusts(forecast.hourly.windgusts_10m.slice(start,start+24),
                      forecast.hourly.windspeed_10m.slice(start,start+24), slice)
       : forecast.hourly.windgusts_10m.slice(start, start+24);
-    if (d === 0) { const lb=applyLiveStationBoost(slice,gslice,live,true); slice=lb.wins; gslice=lb.gust; }
-    if (d === activeDay) { const mc=applyMeasuredStationCorrection(slice,gslice,measured,dstr); slice=mc.wins; gslice=mc.gust; }
     const dirs_d=forecast.hourly.winddirection_10m.slice(start,start+24);
     const regime_d=thermalRegime(loc.lat,loc.lon);
     const month_d=new Date().getMonth()+1;
-    slice=slice.map((w,i)=>{const sbh=seaBreeze(dirs_d[i]??180,i,month_d,regime_d);return w+(sbh.active?sbh.boost:0);});
+    slice=slice.map((w,i)=> w==null ? w : Math.round((w + thermalCorrection(i, dirs_d[i]??180, month_d, regime_d, mos).addMs)*100)/100);
+    if (d === 0) { const lb=applyLiveStationBoost(slice,gslice,live,true); slice=lb.wins; gslice=lb.gust; }
+    if (d === activeDay) { const mc=applyMeasuredStationCorrection(slice,gslice,measured,dstr); slice=mc.wins; gslice=mc.gust; }
     return scoreDay(slice, win, 0);
   }) : [];
 
@@ -2111,7 +2164,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.21.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.22.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2892,7 +2945,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.21.0</span>
+        <span>WindFoil Weather Intelligence v3.22.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
