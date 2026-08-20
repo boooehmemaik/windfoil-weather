@@ -383,7 +383,7 @@ const ADDICTED_BASE = "https://en.addicted-sports.com";
 const SPECIAL_RADIUS_KM = 5;
 const MEASURED_STATIONS = [
   // type "addicted": addicted-sports getWeatherData.php (knots, CSRF — see below)
-  { type: "addicted", wc: "torbole", path: "gardasee/torbole", lat: 45.869, lon: 10.873, label: "Torbole (Gardasee)" },
+  { type: "addicted", wc: "torbole", path: "gardasee/torbole", tz: "Europe/Rome", lat: 45.869, lon: 10.873, label: "Torbole (Gardasee)" },
   // type "neverin": neverin.hr JSON API fronting the official ZHMS station
   // (m/s, full hourly series, NO gusts). Covers the whole Ulcinj riviera (town
   // ~3 km, Velika Plaža/Ada Bojana further SE) → wider radius.
@@ -955,6 +955,13 @@ app.post("/api/admin/users/delete", (req, res) => {
 // auf dieselbe DB-Datei (WAL erlaubt parallele Writer). Blockiert den Serverstart
 // NICHT (setInterval), crasht NICHT bei Stationsfehlern (try/catch pro Station).
 const OBS_POLL_MS = 600_000; // 10 Minuten
+
+// Ab diesem Zeitpunkt sind station_obs.ts echte UTC-Instants. Alle Zeilen DAVOR
+// stammen aus MEASURED_STATIONS mit UTC-indizierten Lokalstunden (Phasenfehler,
+// siehe Kommentar in pollStationObs) und dürfen NICHT in die MOS-Statistik.
+// Nicht rückwirkend korrigierbar, weil der Offset je Station/Datum (DST) variiert.
+const MOS_OBS_EPOCH = "2026-08-20T00:00:00.000Z";
+
 let obsDb = null;
 function getObsDb() {
   if (!obsDb) {
@@ -998,32 +1005,39 @@ async function pollStationObs() {
 
   // ── MEASURED_STATIONS (tägliche Serien: Torbole/Ulcinj/LGPZ) ─────────────
   // Wir holen die aktuelle Stunde aus der heutigen Tagesserie.
-  const todayZ = ts.slice(0, 10); // YYYY-MM-DD UTC
+  //
+  // WICHTIG (Fix v3.21.0): fetchMeasuredDay* füllen ihre 24-Slot-Arrays
+  // STATIONSLOKAL (localPartsTZ(ep, st.tz) → wind[hour]). Früher wurde hier mit
+  // new Date().getUTCHours() indiziert — das verschob jede Beobachtung um den
+  // UTC-Offset (Torbole +2 h). Bei einem stark tagesgangabhängigen Signal
+  // (12h→14h: 4.2→5.6 m/s) erzeugt das ±1.4 m/s Scheinbias und macht jede
+  // stundenweise MOS-Statistik unbrauchbar. Datum ebenso: ein UTC-Datum für eine
+  // lokale Tagesserie ist nahe lokaler Mitternacht um einen Tag daneben.
   for (const st of MEASURED_STATIONS) {
     const stKey = st.wc || st.icao || st.station;
     try {
+      const { date: localDate, hour: localHour } = localPartsTZ(Date.now() / 1000, st.tz);
       let dayResult;
       if (st.type === "neverin") {
-        dayResult = await fetchMeasuredDayNeverin(st, todayZ);
+        dayResult = await fetchMeasuredDayNeverin(st, localDate);
       } else if (st.type === "metar") {
-        dayResult = await fetchMeasuredDayMetar(st, todayZ);
+        dayResult = await fetchMeasuredDayMetar(st, localDate);
       } else {
-        dayResult = await fetchMeasuredDay(st, todayZ);
+        dayResult = await fetchMeasuredDay(st, localDate);
       }
       if (!dayResult.ok) {
         console.log(`[obs-poller] ${stKey}: skip (${dayResult.error})`);
         continue;
       }
-      // Aktuelle Stunde (UTC) aus der Tagesserie nehmen
-      const nowHourUTC = new Date().getUTCHours();
-      const wind = dayResult.hourly.wind[nowHourUTC];
-      const gust = dayResult.hourly.gust ? dayResult.hourly.gust[nowHourUTC] : null;
+      // Aktuelle Stunde in STATIONS-Zeitzone aus der Tagesserie nehmen
+      const wind = dayResult.hourly.wind[localHour];
+      const gust = dayResult.hourly.gust ? dayResult.hourly.gust[localHour] : null;
       if (wind == null) {
-        console.log(`[obs-poller] ${stKey}: skip (no wind for hour ${nowHourUTC})`);
+        console.log(`[obs-poller] ${stKey}: skip (no wind for local hour ${localHour})`);
         continue;
       }
       getObsDb()._insertObs.run(stKey, ts, wind, gust ?? null, st.lat, st.lon);
-      console.log(`[obs-poller] ${stKey}: wind=${wind} m/s gust=${gust ?? "n/a"} (hour=${nowHourUTC})`);
+      console.log(`[obs-poller] ${stKey}: wind=${wind} m/s gust=${gust ?? "n/a"} (localHour=${localHour} ${st.tz})`);
     } catch (e) {
       console.warn(`[obs-poller] ${stKey} error:`, e.message);
     }
