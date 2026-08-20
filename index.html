@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.20.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.21.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,11 +36,12 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.20.0
+// WindFoil Weather Intelligence v3.21.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
 // Changelog v3.20.0: seaBreeze align cutoff 60°→80° (Eric active from ~SW-W); active threshold 0.3→0.25; chart wind line shows winsEffBoosted (consistent with score)
+// Changelog v3.21.0: Ensemble-Median (5–6 Modelle) als Windquelle statt Einzelmodell; p10/p90-Streuung erfasst; Böen im Windverhältnis reskaliert. ACHTUNG: senkt Torbole ~25 % (löst die arome_best_max-Hüllkurve ab) — wird von MOS (Stufe 3–5) wieder ausgeglichen
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -276,6 +277,7 @@ function pickForecastModel(lat, lon) {
 const MODEL_LABELS = {
   meteofrance_arome_france_hd:"AROME-HD 1.5km",
   arome_best_max:"AROME-HD + Best (max/h)",
+  ens_median_v1:"Ensemble-Median",
 };
 
 // Local thermal-wind regime — the dominant afternoon thermal-breeze direction,
@@ -387,12 +389,23 @@ function isPelerHour(hour, dir){
 function applyPelerBoost(fc, lat, lon){
   if(!isGardaSpot(lat,lon) || !hasWindData(fc)) return fc;
   const h=fc.hourly, dirs=h.winddirection_10m||[], times=h.time||[];
+  const ens=fc.__ens;
   let boosted=0;
   for(let i=0;i<h.windspeed_10m.length;i++){
     const hour = times[i] ? parseInt(times[i].slice(11,13),10) : null;
     if(!isPelerHour(hour, dirs[i])) continue;
     if(h.windspeed_10m[i]!=null) h.windspeed_10m[i]=Math.round(h.windspeed_10m[i]*PELER.windFactor*100)/100;
     if(h.windgusts_10m && h.windgusts_10m[i]!=null) h.windgusts_10m[i]=Math.round(h.windgusts_10m[i]*PELER.gustFactor*100)/100;
+    // Sobald das Ensemble verdrahtet ist, ist ES die angezeigte Windquelle —
+    // bliebe es hier unkorrigiert, wäre der Pelèr-Boost am Gardasee durch das
+    // Verdrahten still verschwunden. p10/p90 mit anheben, sonst läge die
+    // Windlinie ausserhalb ihres eigenen Streuungsbands.
+    if(ens){
+      for(const k of ["wind","p10","p90"]){
+        if(ens[k] && ens[k][i]!=null) ens[k][i]=Math.round(ens[k][i]*PELER.windFactor*100)/100;
+      }
+      if(ens.spread && ens.spread[i]!=null) ens.spread[i]=Math.round((ens.p90[i]-ens.p10[i])*100)/100;
+    }
     boosted++;
   }
   if(boosted) fc.__pelerBoost = true;
@@ -653,6 +666,39 @@ async function tryFetchForecast(lat, lon) {
   }
   const fc = await fetchModel("");
   fc.__model = "best_match";
+  return fc;
+}
+
+// Zweiter, schlanker Call NEBEN tryFetchForecast. Das Trägermodell bleibt
+// unverändert und liefert weiterhin Richtung, Böen, CAPE, Lifted Index und
+// Druck — hier wird ausschliesslich windspeed_10m je Member geholt.
+//
+// Gemessen bei forecast_days=7: Trägermodell 11.1 KB, dieser Call 11.6 KB,
+// ein "fettes" Ensemble mit allen neun Variablen dagegen 42.3 KB. Der schlanke
+// Zuschnitt macht ausserdem strukturell unmöglich, dass jemand später Böen aus
+// dem Ensemble erwartet — zwei der Modelle (AIFS, IFS025) rechnen gar keine.
+async function tryFetchEnsemble(lat, lon) {
+  const members = ensembleMembers(lat, lon);
+  const p = new URLSearchParams({
+    latitude: lat, longitude: lon, hourly: "windspeed_10m",
+    wind_speed_unit: "ms", forecast_days: 7, timezone: "auto",
+    models: members.join(","),
+  });
+  const j = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${p}`);
+  return { hourly: j?.hourly, ens: combineEnsemble(j?.hourly, members) };
+}
+
+// Hängt das Ensemble ans Trägerobjekt — aber nur, wenn beide auf derselben
+// Zeitachse liegen. Beide Calls gehen getrennt raus (eigenes timezone=auto,
+// eigener Modellauf); bei Versatz wird das Ensemble komplett verworfen statt
+// stundenweise verschoben verrechnet. Ein fehlendes Ensemble ist nie fatal —
+// die App rechnet dann wie vorher mit dem Trägermodell.
+function attachEnsemble(fc, res) {
+  if (!fc || !res?.ens) return fc;
+  if (!ensembleGridMatches(fc.hourly, res.hourly)) { fc.__ensRejected = "grid_mismatch"; return fc; }
+  fc.__ens = res.ens;
+  fc.__carrierModel = fc.__model;   // Quelle für Böen/CAPE/Richtung, fürs Badge
+  fc.__model = "ens_median_v1";
   return fc;
 }
 
@@ -1561,10 +1607,18 @@ function App() {
     // Fetch forecast independently – fallback to demo
     let fc = null;
     try {
-      fc = await tryFetchForecast(l.lat, l.lon);
+      // Trägermodell und Ensemble parallel. Das Ensemble ist NICHT fatal: fällt
+      // es aus, rechnet die App wie vorher mit dem Trägermodell weiter.
+      const [fcRes, ensRes] = await Promise.all([
+        tryFetchForecast(l.lat, l.lon),
+        tryFetchEnsemble(l.lat, l.lon).catch(()=>null),
+      ]);
+      fc = fcRes;
+      attachEnsemble(fc, ensRes);
       applyPelerBoost(fc, l.lat, l.lon); // lift the under-forecast channeled N-wind at Garda
       const ml = MODEL_LABELS[fc.__model];
-      setApiStatus(s=>({...s,forecast:(ml ? `✅ ${ml}` : "✅ Live")+(fc.__pelerBoost ? " +Pelèr" : "")}));
+      const ensTag = fc.__ens ? ` (${fc.__ens.members.length})` : "";
+      setApiStatus(s=>({...s,forecast:(ml ? `✅ ${ml}${ensTag}` : "✅ Live")+(fc.__pelerBoost ? " +Pelèr" : "")}));
       setLoadMsg("Forecast geladen. Lade ERA5-Archiv…");
     } catch(e) {
       setApiStatus(s=>({...s,forecast:"⚠️ Demo"}));
@@ -1723,8 +1777,21 @@ function App() {
   const dayData = (() => {
     if(!forecast) return null;
     const h=forecast.hourly, s=dayStartIndices[activeDay] ?? activeDay*24;
-    const wins=h.windspeed_10m.slice(s,s+24);
-    const gust=h.windgusts_10m.slice(s,s+24);
+    // Wind kommt aus dem Ensemble-Median, Böen/Richtung/CAPE vom Trägermodell.
+    // Stunden ohne Ensemble-Wert (zu wenige Member) fallen auf den Träger zurück —
+    // combineEnsemble erfindet dort bewusst keinen Wert.
+    const carrierWins=h.windspeed_10m.slice(s,s+24);
+    const ensD=forecast.__ens ? {
+      wind:  forecast.__ens.wind.slice(s,s+24),
+      p10:   forecast.__ens.p10.slice(s,s+24),
+      p90:   forecast.__ens.p90.slice(s,s+24),
+      spread:forecast.__ens.spread.slice(s,s+24),
+      nMembers:forecast.__ens.nMembers.slice(s,s+24),
+      members:forecast.__ens.members,
+    } : null;
+    const wins=ensD ? ensD.wind.map((w,i)=> w==null ? carrierWins[i] : w) : carrierWins;
+    const gustRaw=h.windgusts_10m.slice(s,s+24);
+    const gust=ensD ? rescaleGusts(gustRaw, carrierWins, wins) : gustRaw;
     const dirs=h.winddirection_10m.slice(s,s+24);
     const temp=h.temperature_2m.slice(s,s+24);
     const pres=h.surface_pressure.slice(s,s+24);
@@ -1765,14 +1832,20 @@ function App() {
     const dayScore=scoreDay(winsEffBoosted,win);
     const session=bestSession(winsEffBoosted,win); // {score,startHour,endHour}
     const thInfo=classifyThermik(maxTh);
-    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,winsEffBoosted,dayScore,thInfo,pickedGear,session,liveBoost:lb,measuredCorr:mc};
+    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,winsEffBoosted,dayScore,thInfo,pickedGear,session,liveBoost:lb,measuredCorr:mc,ens:ensD,carrierWins};
   })();
 
   const dayScores = forecast ? Array.from({length:7},(_,d)=>{
     const start = dayStartIndices[d] ?? d*24;
+    // Dieselbe Windquelle wie dayData — sonst bewerten die Tages-Tabs einen
+    // anderen Wind als der angezeigte Tag. Genau diese Inkonsistenz war der
+    // Bug, den v3.19.0 für die Thermik behoben hat.
+    const srcW = forecast.__ens
+      ? forecast.__ens.wind.map((w,i)=> w==null ? forecast.hourly.windspeed_10m[i] : w)
+      : forecast.hourly.windspeed_10m;
     // representative wind for the day (midday avg) to pick gear
-    const dw = forecast.hourly.windspeed_10m.slice(start+12,start+16).filter(Boolean);
-    const dayMidW = dw.length ? dw.reduce((a,b)=>a+b,0)/dw.length : (forecast.hourly.windspeed_10m[start+13]||0);
+    const dw = srcW.slice(start+12,start+16).filter(Boolean);
+    const dayMidW = dw.length ? dw.reduce((a,b)=>a+b,0)/dw.length : (srcW[start+13]||0);
     let win;
     if(sport==="foil" && useGear && gear.length){
       const best = pickBestSetup(gear, rider.weight, rider.skill, dayMidW, spotWingMap);
@@ -1780,8 +1853,11 @@ function App() {
     }
     if(!win) win=getActiveWin();
     const dstr = forecast.hourly.time[start] ? forecast.hourly.time[start].slice(0,10) : null;
-    let slice = forecast.hourly.windspeed_10m.slice(start, start+24);
-    let gslice= forecast.hourly.windgusts_10m.slice(start, start+24);
+    let slice = srcW.slice(start, start+24);
+    let gslice= forecast.__ens
+      ? rescaleGusts(forecast.hourly.windgusts_10m.slice(start,start+24),
+                     forecast.hourly.windspeed_10m.slice(start,start+24), slice)
+      : forecast.hourly.windgusts_10m.slice(start, start+24);
     if (d === 0) { const lb=applyLiveStationBoost(slice,gslice,live,true); slice=lb.wins; gslice=lb.gust; }
     if (d === activeDay) { const mc=applyMeasuredStationCorrection(slice,gslice,measured,dstr); slice=mc.wins; gslice=mc.gust; }
     const dirs_d=forecast.hourly.winddirection_10m.slice(start,start+24);
@@ -2008,7 +2084,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.20.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.21.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2789,7 +2865,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.20.0</span>
+        <span>WindFoil Weather Intelligence v3.21.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
