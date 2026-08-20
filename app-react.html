@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WindFoil Weather Intelligence</title>
-  <!-- v2.1.0 — Standalone React build (CDN + in-browser Babel) -->
+  <!-- v2.2.0 — Standalone React build (CDN + in-browser Babel) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <style>
@@ -34,9 +34,10 @@
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell } = Recharts;
 
-// WindFoil Weather Intelligence v2.1.0
+// WindFoil Weather Intelligence v2.2.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 
+// Changelog v2.2.0: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window
 // Changelog v2.1.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
 // ── Unit conversion (all internals in m/s) ───────────────────────────────────
@@ -50,6 +51,50 @@ const msToBf  = ms => {
   return 12;
 };
 const BF_LABEL = ["0 Windstille","1 Leicht","2 Leicht","3 Leise","4 Mäßig","5 Frisch","6 Stark","7 Steif","8 Stürmisch","9 Sturm","10 Schwerer Sturm","11 Orkan","12 Orkan"];
+
+// ── Crazyfly Kite Catalogue (Quelle: crazyflykites.com, Stand 2026) ──────────
+const CRAZYFLY_KITES = [
+  { model:"Sculp", desc:"Allround Freeride/Foil", sizes:[
+    {m:7, minKn:18, maxKn:40},{m:8, minKn:16, maxKn:38},
+    {m:9, minKn:14, maxKn:34},{m:10,minKn:13, maxKn:30},
+    {m:12,minKn:10, maxKn:26},{m:14,minKn: 9, maxKn:20},
+  ]},
+];
+
+function calcKiteWindow(kiteMinKn, kiteMaxKn, skill, weight) {
+  const sm={beginner:1.15,intermediate:1.0,advanced:0.9,pro:0.85}[skill]??1.0;
+  const wm=Math.max(0.85,Math.min(1.2,weight/80));
+  const minMs=knToMs(kiteMinKn)*sm*wm;
+  const maxMs=knToMs(kiteMaxKn)/sm;
+  const span=maxMs-minMs;
+  return{
+    minWind:Math.round(minMs*10)/10,
+    optMin :Math.round((minMs+span*0.15)*10)/10,
+    optMax :Math.round((minMs+span*0.75)*10)/10,
+    maxWind:Math.round(maxMs*10)/10,
+  };
+}
+
+function kiteRec(effW,midG,win,kiteModel,kiteSize,skill,windUnit){
+  const lines=[];
+  if(effW<win.minWind){
+    lines.push(`⚠️ <b>Zu wenig Wind</b> — ${fmtW(effW,windUnit)}, Kite braucht ≥${fmtW(win.minWind,windUnit)}`);
+    lines.push(`💡 Größeren Kite wählen oder auf Wind-Zunahme warten.`);
+  } else if(effW<=win.optMax){
+    lines.push(`✅ <b>Optimale Bedingungen</b> — ${fmtW(effW,windUnit)} im Fenster (${fmtW(win.optMin,windUnit)}–${fmtW(win.optMax,windUnit)})`);
+    lines.push(`🪁 ${kiteModel} ${kiteSize}m — ideal für ${skill}`);
+  } else if(effW<=win.maxWind){
+    lines.push(`⚠️ <b>Overpowered-Zone</b> — ${fmtW(effW,windUnit)} an der Obergrenze`);
+    lines.push(`💡 Kite zu groß — kleinere Größe oder Bar depower erwägen`);
+  } else {
+    lines.push(`🚨 <b>Kite zu klein / zu viel Wind</b> — ${fmtW(effW,windUnit)} > Max ${fmtW(win.maxWind,windUnit)}`);
+    lines.push(`⛔ Session abbrechen oder deutlich kleineren Kite`);
+  }
+  if(midG-effW>4) lines.push(`💨 <b>Böen-Δ ${fmtW(midG-effW,windUnit)}</b> — Erhöhte Leinenspannung!`);
+  lines.push(`<br>📐 <b>Dein Kite-Fenster:</b> Start ${fmtW(win.minWind,windUnit)} · Optimal ${fmtW(win.optMin,windUnit)}–${fmtW(win.optMax,windUnit)} · Max ${fmtW(win.maxWind,windUnit)}`);
+  return lines.join("<br>");
+}
+
 function cvt(ms, unit) {
   if(unit==="kn") return Math.round(msToKn(ms)*10)/10;
   if(unit==="bf") return msToBf(ms);
@@ -73,7 +118,7 @@ const C = {
 };
 
 // ── Demo data generator (realistic Navarino/May values) ──────────────────────
-// ── Demo data v2.1.0 ─────────────────────────────────────────────────────────
+// ── Demo data v2.2.0 ─────────────────────────────────────────────────────────
 // Key fix: timestamps generated as "YYYY-MM-DDTHH:00" using LOCAL calendar date
 // so dayStartIndices.findIndex("YYYY-MM-DD") always matches correctly
 // regardless of user timezone. No Date.toISOString() (= UTC) used.
@@ -85,7 +130,7 @@ function localDateStr(date) {
   return `${y}-${m}-${d}`;
 }
 
-// ── Parse coordinates from a Google Maps link or raw coords v2.1.0 ───────────
+// ── Parse coordinates from a Google Maps link or raw coords v2.2.0 ───────────
 // Supports formats:
 //   https://www.google.com/maps/@36.9833,21.6667,14z
 //   https://maps.google.com/?q=36.9833,21.6667
@@ -288,7 +333,7 @@ function scoreDay(winds,win,start=0) {
   return hrs.length ? Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length) : 0;
 }
 
-// ── Real station vs model: confidence scoring v2.1.0 ─────────────────────────
+// ── Real station vs model: confidence scoring v2.2.0 ─────────────────────────
 const PROXY_BASE = "/api/station";
 
 async function fetchStationCurrent(lat, lon) {
@@ -351,7 +396,7 @@ const gr = { stroke:"rgba(255,255,255,0.05)" };
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
-  const [loc,setLoc]           = useState({lat:36.9833,lon:21.6667,name:"Navarino / Gialova"});
+  const [loc,setLoc]           = useState({lat:42.5527,lon:11.1338,name:"Talamone"});
   const [rider,setRider]       = useState({weight:80,wingSize:5.0,foilFront:1800,skill:"intermediate",planeKn:""});
   const [ri,setRi]             = useState({weight:80,wingSize:5.0,foilFront:1800,skill:"intermediate",planeKn:""});
   const [forecast,setForecast] = useState(null);
@@ -366,7 +411,7 @@ function App() {
   const [geoStatus,setGeoStatus]= useState(""); // "", "loading", "error"
   const [geoError,setGeoError] = useState("");
   const [locTab,setLocTab]     = useState("preset");
-  const [selPreset,setSelPreset]= useState(0);
+  const [selLoc,setSelLoc]     = useState(null); // null → Talamone default
   const [custom,setCustom]     = useState({link:"",name:""});
   const [linkError,setLinkError]= useState("");
   const [stations,setStations] = useState([]);
@@ -376,13 +421,32 @@ function App() {
   const [stationCmp,setStationCmp] = useState(null); // { current, hist, confidence, notes, available }
   const [stationCmpStatus,setStationCmpStatus] = useState(""); // "", "loading", "ok", "unavailable"
 
-  const PRESETS = [
-    {lat:36.9833,lon:21.6667,name:"Navarino / Gialova"},
-    {lat:36.8900,lon:21.7500,name:"Pylos"},
-    {lat:37.0736,lon:22.4294,name:"Sparti"},
-    {lat:37.5000,lon:22.3731,name:"Korinthia"},
-    {lat:38.7520,lon:20.5790,name:"Lefkada NW / Kathisma"},
-  ];
+  // Sport-Modus
+  const [sport,setSport] = useState(()=>{ try{return localStorage.getItem("windfoil.sport")??"foil";}catch{return"foil";} });
+  useEffect(()=>{ try{localStorage.setItem("windfoil.sport",sport);}catch{} },[sport]);
+
+  // Kite Rider-Profil
+  const DEFAULT_KITE={kiteModel:"Sculp",kiteSize:9,skill:"intermediate",weight:80};
+  const [kiteRider,setKiteRider]=useState(DEFAULT_KITE);
+  const [kiteRi,setKiteRi]=useState(DEFAULT_KITE);
+
+  // Fester Spot, unterhalb der "zuletzt verwendet"-Liste angezeigt
+  const TALAMONE = {lat:42.5527,lon:11.1338,name:"Talamone"};
+
+  // Zuletzt verwendete Orte (max. 8, im Browser gespeichert)
+  const RECENT_MAX = 8;
+  const [recentLocs,setRecentLocs] = useState(()=>{
+    try { const s = localStorage.getItem("windfoil.recentLocs"); return s ? JSON.parse(s) : []; }
+    catch { return []; }
+  });
+  function pushRecent(l){
+    setRecentLocs(prev=>{
+      const same = p => Math.abs(p.lat-l.lat)<1e-4 && Math.abs(p.lon-l.lon)<1e-4;
+      const next = [{lat:l.lat,lon:l.lon,name:l.name}, ...prev.filter(p=>!same(p))].slice(0,RECENT_MAX);
+      try { localStorage.setItem("windfoil.recentLocs", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
 
   useEffect(()=>{
     const t=setInterval(()=>setClock(new Date().toLocaleTimeString("de-DE")),1000);
@@ -481,7 +545,8 @@ function App() {
         const lat = Math.round(pos.coords.latitude  * 10000) / 10000;
         const lon = Math.round(pos.coords.longitude * 10000) / 10000;
         const name = await reverseGeocode(lat, lon);
-        setLoc({ lat, lon, name: name || `Mein Standort (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)` });
+        const gl = { lat, lon, name: name || `Mein Standort (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)` };
+        setLoc(gl); pushRecent(gl);
         setGeoStatus("");
         setShowLoc(false);
       },
@@ -548,9 +613,9 @@ function App() {
       return;
     }
 
-    // Model current values (this hour) from forecast.
-    // Use spot's UTC offset so we index the correct hour in the spot's timezone,
-    // not the browser's local hour which may differ.
+    // Model current values (this hour) from forecast
+    // Use spot's UTC offset (from API response) to find the correct forecast index,
+    // not the browser's local hour which may differ from the spot's timezone.
     const spotOffsetSec = fc?.utc_offset_seconds ?? 0;
     const spotNowSec = Math.floor(Date.now() / 1000) + spotOffsetSec;
     const spotNowH = Math.floor(spotNowSec / 3600) % 24;
@@ -613,6 +678,16 @@ function App() {
     return result;
   })();
 
+  // ── Sport-aware wind window ───────────────────────────────────────────────
+  function getActiveWin(){
+    if(sport==="kite"){
+      const kite=CRAZYFLY_KITES.find(k=>k.model===kiteRider.kiteModel);
+      const size=kite?.sizes.find(s=>s.m===kiteRider.kiteSize);
+      if(kite&&size) return calcKiteWindow(size.minKn,size.maxKn,kiteRider.skill,kiteRider.weight);
+    }
+    return calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill,rider.planeKn?knToMs(parseFloat(rider.planeKn)):null);
+  }
+
   // ── Derived day data ────────────────────────────────────────────────────────
   const dayData = (() => {
     if(!forecast) return null;
@@ -629,7 +704,7 @@ function App() {
       return `${String(i).padStart(2,'0')}:00`;
     });
     const thermik=Array.from({length:24},(_,i)=>computeThermik(h,s+i));
-    const win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, rider.planeKn?knToMs(parseFloat(rider.planeKn)):null);
+    const win=getActiveWin();
     const scores=wins.map(w=>scoreHour(w,win));
     const avgW=wins.reduce((a,b)=>a+b,0)/wins.length;
     const maxG=Math.max(...gust);
@@ -647,7 +722,7 @@ function App() {
   })();
 
   const dayScores = forecast ? Array.from({length:4},(_,d)=>{
-    const win=calcWindow(rider.weight,rider.wingSize,rider.foilFront,rider.skill, rider.planeKn?knToMs(parseFloat(rider.planeKn)):null);
+    const win=getActiveWin();
     return scoreDay(forecast.hourly.windspeed_10m,win,dayStartIndices[d] ?? d*24);
   }) : [];
 
@@ -688,6 +763,7 @@ function App() {
   const rec = (() => {
     if(!dayData) return "";
     const{effW,midG,win}=dayData;
+    if(sport==="kite") return kiteRec(effW,midG,win,kiteRider.kiteModel,kiteRider.kiteSize,kiteRider.skill,windUnit);
     const{weight,wingSize,foilFront,skill}=rider;
     const lines=[];
     if(effW<win.minWind){
@@ -742,7 +818,7 @@ function App() {
           <span style={{fontSize:24,color:C.signal}}>⟁</span>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:"#fff"}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v2.1.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v2.2.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -750,6 +826,14 @@ function App() {
             <span title="Forecast API">FC:{apiStatus.forecast}</span>
             <span title="Historical API">ERA5:{apiStatus.historical}</span>
           </span>
+          {/* Sport-Umschalter */}
+          <div style={{display:"flex",gap:3}}>
+            {[{k:"foil",l:"🏄 Wingfoiling"},{k:"kite",l:"🪁 Kitesurfing"}].map(({k,l})=>(
+              <button key={k} onClick={()=>setSport(k)} style={{background:sport===k?C.signal:"transparent",border:`1px solid ${sport===k?C.signal:C.border2}`,color:sport===k?"#fff":C.muted,borderRadius:3,padding:"3px 10px",fontFamily:"monospace",fontSize:10,cursor:"pointer"}}>
+                {l}
+              </button>
+            ))}
+          </div>
           <div style={{display:"flex",gap:3}}>
             {["ms","kn","bf"].map(u=>(
               <button key={u} onClick={()=>setWindUnit(u)} style={{background:windUnit===u?C.signal:"transparent",border:`1px solid ${windUnit===u?C.signal:C.border2}`,color:windUnit===u?"#fff":C.muted,borderRadius:3,padding:"2px 7px",fontFamily:"monospace",fontSize:10,cursor:"pointer",textTransform:"uppercase"}}>
@@ -773,31 +857,82 @@ function App() {
 
       {/* RIDER BAR */}
       <div style={S.riderBar}>
-        <div style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted,marginBottom:10}}>🏄 Rider-Profil</div>
+        <div style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted,marginBottom:10}}>
+          {sport==="kite"?"🪁 Kite-Profil":"🏄 Wingfoil-Profil"}
+        </div>
         <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end"}}>
-          {[{l:"Gewicht (kg)",k:"weight",step:1,min:40,max:150},{l:"Wing (m²)",k:"wingSize",step:.5,min:2,max:12},{l:"Foil Front (cm²)",k:"foilFront",step:50,min:600,max:3000}].map(f=>(
-            <div key={f.k} style={{display:"flex",flexDirection:"column",gap:4}}>
-              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>{f.l}</label>
-              <input type="number" value={ri[f.k]} step={f.step} min={f.min} max={f.max}
-                onChange={e=>setRi(r=>({...r,[f.k]:parseFloat(e.target.value)}))}
-                style={{...S.inp,width:110,fontSize:13}} />
+
+          {/* ── FOIL-MODUS ── */}
+          {sport==="foil" && <>
+            {[{l:"Gewicht (kg)",k:"weight",step:1,min:40,max:150},{l:"Wing (m²)",k:"wingSize",step:.5,min:2,max:12},{l:"Foil Front (cm²)",k:"foilFront",step:50,min:600,max:3000}].map(f=>(
+              <div key={f.k} style={{display:"flex",flexDirection:"column",gap:4}}>
+                <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>{f.l}</label>
+                <input type="number" value={ri[f.k]} step={f.step} min={f.min} max={f.max}
+                  onChange={e=>setRi(r=>({...r,[f.k]:parseFloat(e.target.value)}))}
+                  style={{...S.inp,width:110,fontSize:13}} />
+              </div>
+            ))}
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>Skill-Level</label>
+              <select value={ri.skill} onChange={e=>setRi(r=>({...r,skill:e.target.value}))}
+                style={{...S.inp,width:140,fontSize:13}}>
+                {["beginner","intermediate","advanced","pro"].map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
-          ))}
-          <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>Skill-Level</label>
-            <select value={ri.skill} onChange={e=>setRi(r=>({...r,skill:e.target.value}))}
-              style={{...S.inp,width:140,fontSize:13}}>
-              {["beginner","intermediate","advanced","pro"].map(s=><option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}} title="Optional: ab wie viel Wind du erfahrungsgemäß abhebst. Überschreibt die Formel.">Abheben ab (kn) · optional</label>
-            <input type="number" value={ri.planeKn} step={0.5} min={4} max={30}
-              placeholder="z.B. 11"
-              onChange={e=>setRi(r=>({...r,planeKn:e.target.value}))}
-              style={{...S.inp,width:130,fontSize:13}} />
-          </div>
-          <button style={S.btn} onClick={()=>{setRider({...ri});setActiveDay(0);}}>ANALYSE STARTEN →</button>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}} title="Optional: ab wie viel Wind du erfahrungsgemäß abhebst. Überschreibt die Formel.">Abheben ab (kn) · optional</label>
+              <input type="number" value={ri.planeKn} step={0.5} min={4} max={30}
+                placeholder="z.B. 11"
+                onChange={e=>setRi(r=>({...r,planeKn:e.target.value}))}
+                style={{...S.inp,width:130,fontSize:13}} />
+            </div>
+          </>}
+
+          {/* ── KITE-MODUS ── */}
+          {sport==="kite" && <>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>Gewicht (kg)</label>
+              <input type="number" value={kiteRi.weight} step={1} min={40} max={150}
+                onChange={e=>setKiteRi(r=>({...r,weight:parseFloat(e.target.value)}))}
+                style={{...S.inp,width:100,fontSize:13}} />
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>Kite Modell</label>
+              <select value={kiteRi.kiteModel}
+                onChange={e=>{
+                  const model=e.target.value;
+                  const firstSize=CRAZYFLY_KITES.find(k=>k.model===model)?.sizes[0]?.m??9;
+                  setKiteRi(r=>({...r,kiteModel:model,kiteSize:firstSize}));
+                }}
+                style={{...S.inp,width:120,fontSize:13}}>
+                {CRAZYFLY_KITES.map(k=><option key={k.model} value={k.model}>{k.model}</option>)}
+              </select>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>Kite Größe</label>
+              <select value={kiteRi.kiteSize}
+                onChange={e=>setKiteRi(r=>({...r,kiteSize:parseInt(e.target.value)}))}
+                style={{...S.inp,width:160,fontSize:13}}>
+                {(CRAZYFLY_KITES.find(k=>k.model===kiteRi.kiteModel)?.sizes??[]).map(s=>{
+                  const adjW=calcKiteWindow(s.minKn,s.maxKn,"intermediate",kiteRi.weight);
+                  return <option key={s.m} value={s.m}>{s.m} m  ·  Hersteller {s.minKn}–{s.maxKn} kn  ·  für {kiteRi.weight}kg {Math.round(msToKn(adjW.minWind))}–{Math.round(msToKn(adjW.maxWind))} kn</option>;
+                })}
+              </select>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>Skill-Level</label>
+              <select value={kiteRi.skill} onChange={e=>setKiteRi(r=>({...r,skill:e.target.value}))}
+                style={{...S.inp,width:140,fontSize:13}}>
+                {["beginner","intermediate","advanced","pro"].map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </>}
+
+          <button style={S.btn} onClick={()=>{
+            if(sport==="kite"){ setKiteRider({...kiteRi}); }
+            else { setRider({...ri}); }
+            setActiveDay(0);
+          }}>ANALYSE STARTEN →</button>
         </div>
       </div>
 
@@ -842,11 +977,16 @@ function App() {
                 return (
                   <div style={{...S.card,marginBottom:0,minWidth:150,textAlign:"center"}}>
                     <div style={{fontFamily:"monospace",fontWeight:900,fontSize:52,color:sc2col(adj.score),lineHeight:1}}>{adj.score}</div>
-                    <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>Foil-Score</div>
+                    <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>{sport==="kite"?"Kite-Score":"Wingfoil-Score"}</div>
                     {adj.adjusted && (
                       <div style={{fontSize:9,color:C.caution,marginTop:3}}>roh {dayData.dayScore} · justiert</div>
                     )}
-                    <div style={{fontSize:10,color:C.muted,marginTop:4}}>{rider.weight}kg·{rider.wingSize}m²·{rider.foilFront}cm²{rider.planeKn?` · ab ${rider.planeKn}kn`:""}</div>
+                    <div style={{fontSize:10,color:C.muted,marginTop:4}}>
+                      {sport==="kite"
+                        ? `${kiteRider.kiteModel} ${kiteRider.kiteSize}m · ${kiteRider.weight}kg · ${kiteRider.skill}`
+                        : `${rider.weight}kg·${rider.wingSize}m²·${rider.foilFront}cm²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`
+                      }
+                    </div>
                     {conf!=null && (
                       <div style={{marginTop:6,paddingTop:6,borderTop:`1px solid ${C.border}`,fontSize:10,color:cc.color}}>
                         {cc.icon} {cc.label} ({conf}%)
@@ -878,7 +1018,7 @@ function App() {
                 {v:dayData.maxT.toFixed(0),u:"°C",l:"Temperatur"},
                 {v:Math.round(Math.max(...dayData.pres)),u:"hPa",l:"Luftdruck"},
                 {v:dayData.maxTh,u:"",l:"Thermik-Index"},
-                {v:`${cvt(dayData.win.optMin,windUnit).toFixed(windUnit==="bf"?0:1)}–${cvt(dayData.win.optMax,windUnit).toFixed(windUnit==="bf"?0:1)}`,u:unitLabel(windUnit),l:"Foil-Fenster"},
+                {v:`${cvt(dayData.win.optMin,windUnit).toFixed(windUnit==="bf"?0:1)}–${cvt(dayData.win.optMax,windUnit).toFixed(windUnit==="bf"?0:1)}`,u:unitLabel(windUnit),l:sport==="kite"?"Kite-Fenster":"Wingfoil-Fenster"},
               ].map((s,i)=>(
                 <div key={i} style={{...S.card,marginBottom:0,padding:"10px 12px"}}>
                   <div style={{fontFamily:"monospace",fontWeight:700,fontSize:19,color:"#fff"}}>{s.v}<span style={{fontSize:10,color:C.muted,marginLeft:3}}>{s.u}</span></div>
@@ -909,6 +1049,45 @@ function App() {
                 </ResponsiveContainer>
               </div>
             </div>
+
+            {/* CRAZYFLY WIND-RANGES (nur Kite-Modus) */}
+            {sport==="kite" && (
+              <div style={S.card}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
+                  <span style={S.sec}>🪁 Crazyfly Kite-Windranges</span>
+                  <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>crazyflykites.com · Stand 2026</span>
+                </div>
+                <div style={{fontSize:10,color:C.muted,marginBottom:10,lineHeight:1.5}}>
+                  Herstellerangaben (Referenzgewicht ~80 kg). Die zweite Spalte zeigt dein angepasstes Fenster für <b style={{color:C.text}}>{kiteRider.weight} kg · {kiteRider.skill}</b>.
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:8}}>
+                  {CRAZYFLY_KITES.map(kite=>(
+                    <div key={kite.model} style={{background:C.bg,border:`1px solid ${kiteRider.kiteModel===kite.model?C.signal:C.border2}`,borderRadius:6,padding:"10px 12px"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
+                        <b style={{fontFamily:"monospace",fontSize:12,color:kiteRider.kiteModel===kite.model?C.signal:C.text}}>{kite.model}</b>
+                        <span style={{fontSize:9,color:C.muted}}>{kite.desc}</span>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"3px 8px",fontSize:10,color:C.dim,marginBottom:4,paddingLeft:6}}>
+                        <span></span><span>Hersteller</span><span>{kiteRider.weight} kg</span>
+                      </div>
+                      {kite.sizes.map(s=>{
+                        const isActive=kiteRider.kiteModel===kite.model&&kiteRider.kiteSize===s.m;
+                        const adj=calcKiteWindow(s.minKn,s.maxKn,kiteRider.skill,kiteRider.weight);
+                        return(
+                          <div key={s.m} style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"3px 8px",
+                            fontSize:11,color:isActive?C.go:C.muted,marginBottom:3,
+                            borderLeft:`2px solid ${isActive?C.go:"transparent"}`,paddingLeft:6}}>
+                            <span>{s.m} m</span>
+                            <span style={{fontFamily:"monospace",color:C.dim}}>{s.minKn}–{s.maxKn} kn</span>
+                            <span style={{fontFamily:"monospace",color:isActive?C.go:C.muted}}>{Math.round(msToKn(adj.minWind))}–{Math.round(msToKn(adj.maxWind))} kn</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* GRID 2: Direction + Temp */}
             <div style={S.grid2}>
@@ -994,7 +1173,7 @@ function App() {
 
             {/* FOIL WINDOW */}
             <div style={S.card}>
-              <div style={S.sec}>Foil-Fenster Analyse — Rider-spezifisch + Foil-Score</div>
+              <div style={S.sec}>{sport==="kite"?"Kite-Fenster Analyse — Kite-spezifisch + Kite-Score":"Wingfoil-Fenster Analyse — Rider-spezifisch + Wingfoil-Score"}</div>
               <div style={S.cwL}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={windData}><CartesianGrid {...gr} />
@@ -1007,7 +1186,7 @@ function App() {
                     <ReferenceLine yAxisId="l" y={cvt(dayData.win.minWind,windUnit)} stroke={C.caution} strokeDasharray="4 3" />
                     <Line yAxisId="l" type="monotone" dataKey="wind" name={`Wind ${unitLabel(windUnit)}`} stroke={C.sky} strokeWidth={2} dot={false} />
                     <Line yAxisId="l" type="monotone" dataKey="gust" name={`Böen ${unitLabel(windUnit)}`} stroke={C.signal} strokeDasharray="4 3" strokeWidth={1.5} dot={false} />
-                    <Line yAxisId="r" type="monotone" dataKey="score" name="Foil-Score" stroke={C.go} strokeWidth={1.5} dot={false} strokeOpacity={0.8} />
+                    <Line yAxisId="r" type="monotone" dataKey="score" name={sport==="kite"?"Kite-Score":"Wingfoil-Score"} stroke={C.go} strokeWidth={1.5} dot={false} strokeOpacity={0.8} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -1101,7 +1280,7 @@ function App() {
                     )}
 
                     <div style={{fontSize:9,color:C.dim,marginTop:10,lineHeight:1.5}}>
-                      Großer Unterschied zwischen Station und Modell ⇒ niedriger Vertrauens-Score ⇒ der Foil-Score (heute) wird Richtung neutral gedämpft. Stations-Quelle: {cur?.source || stationCmp.hist?.source || "Weatherbit"}.
+                      Großer Unterschied zwischen Station und Modell ⇒ niedriger Vertrauens-Score ⇒ der Wingfoil-Score (heute) wird Richtung neutral gedämpft. Stations-Quelle: {cur?.source || stationCmp.hist?.source || "Weatherbit"}.
                     </div>
                   </div>
                 );
@@ -1208,16 +1387,25 @@ function App() {
               <div style={{fontSize:9,color:C.dim,textAlign:"center",marginBottom:12,letterSpacing:"0.05em"}}>
                 — oder manuell wählen —
               </div>
-              {locTab==="preset"&&(
+              {locTab==="preset"&&(()=>{
+                const isSel = p => selLoc && Math.abs(selLoc.lat-p.lat)<1e-4 && Math.abs(selLoc.lon-p.lon)<1e-4;
+                const LocBtn = (p,key) => (
+                  <button key={key} onClick={()=>setSelLoc(p)} style={{background:C.bg,border:`1px solid ${isSel(p)?C.signal:C.border2}`,borderRadius:4,color:C.text,textAlign:"left",padding:"8px 12px",cursor:"pointer"}}>
+                    <b style={{display:"block",fontSize:13}}>{p.name}</b>
+                    <span style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{p.lat}°N {p.lon}°E</span>
+                  </button>
+                );
+                return (
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {PRESETS.map((p,i)=>(
-                    <button key={i} onClick={()=>setSelPreset(i)} style={{background:C.bg,border:`1px solid ${selPreset===i?C.signal:C.border2}`,borderRadius:4,color:C.text,textAlign:"left",padding:"8px 12px",cursor:"pointer"}}>
-                      <b style={{display:"block",fontSize:13}}>{p.name}</b>
-                      <span style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{p.lat}°N {p.lon}°E</span>
-                    </button>
-                  ))}
+                  {recentLocs.length>0 && (
+                    <div style={{fontFamily:"monospace",fontSize:10,color:C.muted,letterSpacing:"0.05em",marginBottom:2}}>Zuletzt verwendet</div>
+                  )}
+                  {recentLocs.slice(0,RECENT_MAX).map((p,i)=>LocBtn(p,`recent-${i}`))}
+                  {recentLocs.length>0 && <div style={{height:1,background:C.border2,margin:"6px 0"}} />}
+                  {LocBtn(TALAMONE,"talamone")}
                 </div>
-              )}
+                );
+              })()}
               {locTab==="custom"&&(()=>{
                 const parsed = parseLocationInput(custom.link);
                 const ok = parsed && !parsed.error;
@@ -1257,12 +1445,13 @@ function App() {
               })()}
               <div style={{textAlign:"right",marginTop:14}}>
                 <button style={S.btn} onClick={()=>{
-                  if(locTab==="preset"){ setLoc(PRESETS[selPreset]); setShowLoc(false); return; }
+                  if(locTab==="preset"){ const p = selLoc || TALAMONE; setLoc(p); pushRecent(p); setShowLoc(false); return; }
                   const parsed = parseLocationInput(custom.link);
                   if(!parsed){ setLinkError("Bitte einen Link oder Koordinaten eingeben."); return; }
                   if(parsed.error){ setLinkError(parsed.error); return; }
                   const name = custom.name.trim() || parsePlaceName(custom.link) || `${parsed.lat.toFixed(3)}°N ${parsed.lon.toFixed(3)}°E`;
-                  setLoc({lat:parsed.lat,lon:parsed.lon,name});
+                  const cl = {lat:parsed.lat,lon:parsed.lon,name};
+                  setLoc(cl); pushRecent(cl);
                   setLinkError("");
                   setShowLoc(false);
                 }}>Übernehmen</button>
@@ -1273,8 +1462,8 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v2.1.0</span>
-        <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
+        <span>WindFoil Weather Intelligence v2.2.0</span>
+        <span>{sport==="kite"?"Crazyfly · Kite-Modus · Open-Meteo":"Open-Meteo · ERA5 ECMWF · Rider-Input"}</span>
         <span>Standort: {loc.name}</span>
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
