@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.18.1 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.20.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,9 +36,11 @@ const { LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Car
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.18.1
+// WindFoil Weather Intelligence v3.20.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
+// Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
+// Changelog v3.20.0: seaBreeze align cutoff 60°→80° (Eric active from ~SW-W); active threshold 0.3→0.25; chart wind line shows winsEffBoosted (consistent with score)
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -585,11 +587,11 @@ function seaBreeze(windDir, hour, month, regime) {
   // Align against the spot's thermal-breeze direction (Garda Ora ~195°, coastal
   // sea breeze 250°), wrap-around safe so e.g. 198° still matches a 195° target.
   const target = regime?.dir ?? 250;
-  const align=Math.max(0,1-angDiff(windDir,target)/60);
+  const align=Math.max(0,1-angDiff(windDir,target)/80);
   const season=[0,.4,.5,.7,.9,1,1,1,.8,.6,.4,.2,.3][month]??0.5;
   const hf=Math.sin(Math.PI*(hour-10)/9);
   const boost=align*season*hf*3.5;
-  return{active:align>0.3,boost:Math.round(boost*10)/10,align};
+  return{active:align>0.25,boost:Math.round(boost*10)/10,align};
 }
 
 // <<wing-scoring>>
@@ -1616,9 +1618,10 @@ function App() {
     const midW=slice(winsEff,12,16).reduce((a,b)=>a+b,0)/4||winsEff[12]||0;
     const midG=slice(gustEff,12,16).reduce((a,b)=>a+b,0)/4||gustEff[12]||0;
     const midDir=dirs[14]??dirs[12]??180;
-    const sb=seaBreeze(midDir,14,new Date().getMonth()+1,regime); // getMonth() is local — correct
+    const month_n=new Date().getMonth()+1;
+    const sb=seaBreeze(midDir,regime?.peakHour??14,month_n,regime);
     const effW=midW+(sb.active?sb.boost:0);
-    // Choose window: use midW (not effW) — consistent with dayScores tabs.
+    // Per-hour boosted winds for scoring (Eric/Meltemi thermik applied each hour)
     let win, pickedGear=null;
     if(sport==="foil" && useGear && gear.length){
       const best = pickBestSetup(gear, rider.weight, rider.skill, midW, spotWingMap);
@@ -1627,15 +1630,16 @@ function App() {
     if(!win){
       win=getActiveWin();
     }
-    const scores=winsEff.map(w=>scoreHour(w,win));
-    const avgW=winsEff.reduce((a,b)=>a+b,0)/winsEff.length;
+    const winsEffBoosted=winsEff.map((w,i)=>{const sbh=seaBreeze(dirs[i]??midDir,i,month_n,regime);return w+(sbh.active?sbh.boost:0);});
+    const scores=winsEffBoosted.map(w=>scoreHour(w,win));
+    const avgW=winsEffBoosted.reduce((a,b)=>a+b,0)/winsEffBoosted.length;
     const maxG=Math.max(...gustEff);
     const maxT=Math.max(...temp);
     const maxTh=Math.max(...thermik);
-    const dayScore=scoreDay(winsEff,win);
-    const session=bestSession(winsEff,win); // {score,startHour,endHour}
+    const dayScore=scoreDay(winsEffBoosted,win);
+    const session=bestSession(winsEffBoosted,win); // {score,startHour,endHour}
     const thInfo=classifyThermik(maxTh);
-    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,dayScore,thInfo,pickedGear,session,liveBoost:lb,measuredCorr:mc};
+    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,winsEffBoosted,dayScore,thInfo,pickedGear,session,liveBoost:lb,measuredCorr:mc};
   })();
 
   const dayScores = forecast ? Array.from({length:7},(_,d)=>{
@@ -1654,6 +1658,10 @@ function App() {
     let gslice= forecast.hourly.windgusts_10m.slice(start, start+24);
     if (d === 0) { const lb=applyLiveStationBoost(slice,gslice,live,true); slice=lb.wins; gslice=lb.gust; }
     if (d === activeDay) { const mc=applyMeasuredStationCorrection(slice,gslice,measured,dstr); slice=mc.wins; gslice=mc.gust; }
+    const dirs_d=forecast.hourly.winddirection_10m.slice(start,start+24);
+    const regime_d=thermalRegime(loc.lat,loc.lon);
+    const month_d=new Date().getMonth()+1;
+    slice=slice.map((w,i)=>{const sbh=seaBreeze(dirs_d[i]??180,i,month_d,regime_d);return w+(sbh.active?sbh.boost:0);});
     return scoreDay(slice, win, 0);
   }) : [];
 
@@ -1728,7 +1736,7 @@ function App() {
     const hh=parseInt(l.slice(0,2),10);
     const mw = meas && meas.wind[hh]!=null ? cvt(meas.wind[hh],windUnit) : null;
     const mg = meas && meas.gust[hh]!=null ? cvt(meas.gust[hh],windUnit) : null;
-    return {h:l,wind:cvt(dayData.wins[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i],mwind:mw,mgust:mg};
+    return {h:l,wind:cvt(dayData.winsEffBoosted[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i],mwind:mw,mgust:mg};
   }):[];
   const dirData   = dayData?dayData.labels.map((l,i)=>({idx:i,dir:dayData.dirs[i]})):[];
   const tempData  = dayData?dayData.labels.map((l,i)=>({h:l,temp:dayData.temp[i]})):[];
@@ -1874,7 +1882,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.18.1</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.20.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2655,7 +2663,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.18.1</span>
+        <span>WindFoil Weather Intelligence v3.20.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
