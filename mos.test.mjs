@@ -158,6 +158,33 @@ test('Rollup ignoriert Zeilen vor der Epoche', () => {
   db.close();
 });
 
+test('obsPreFixValid: Snapshot-Stationen behalten ihre Historie vor der Epoche', () => {
+  // LIVE_STATIONS hatten nie einen Phasenfehler — sie schreiben einen Momentanwert
+  // unter den echten Poll-Zeitstempel. Sie mit der Epoche zu beschneiden hiesse,
+  // gültige Tage wegzuwerfen und auf etwas zu warten, was schon dasteht.
+  const db = buildDb();
+  markObsEpoch(db, '2026-08-20T00:00:00.000Z');
+  seedRawPolls(db, { day: '2026-08-10', hoursUTC: [12] });
+  seedRawPolls(db, { day: '2026-08-21', hoursUTC: [12] });
+
+  rollupObsHourly(db, [{ ...TORBOLE, obsPreFixValid: true }]);
+  const days = db.prepare('SELECT DISTINCT local_day FROM station_obs_hourly ORDER BY local_day')
+    .all().map(r => r.local_day);
+  assert.deepEqual(days, ['2026-08-10', '2026-08-21'], 'beide Tage, nicht nur der nach der Epoche');
+
+  // Ohne das Flag bleibt die Epoche scharf — der Schutz für MEASURED_STATIONS
+  // darf davon nicht aufgeweicht werden.
+  const db2 = buildDb();
+  markObsEpoch(db2, '2026-08-20T00:00:00.000Z');
+  seedRawPolls(db2, { day: '2026-08-10', hoursUTC: [12] });
+  seedRawPolls(db2, { day: '2026-08-21', hoursUTC: [12] });
+  rollupObsHourly(db2, [TORBOLE]);
+  assert.deepEqual(
+    db2.prepare('SELECT DISTINCT local_day FROM station_obs_hourly').all().map(r => r.local_day),
+    ['2026-08-21']);
+  db.close(); db2.close();
+});
+
 test('Rollup ist idempotent und überspringt Stationen ohne Zeitzone', () => {
   const db = buildDb();
   markObsEpoch(db, '2026-08-20T00:00:00.000Z');

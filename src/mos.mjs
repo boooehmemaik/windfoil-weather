@@ -117,9 +117,19 @@ export function rollupObsHourly(db, stations, { sinceIso = null } = {}) {
   const tx = db.transaction(() => {
     for (const st of stations) {
       if (!st.tz) continue;   // ohne Zeitzone ist "lokale Stunde" nicht definiert
+
+      // Die Epoche gilt nur für Stationen, die vom Phasenfehler betroffen WAREN.
+      // Der Fehler steckte im MEASURED_STATIONS-Zweig, der eine lokal befüllte
+      // Tagesserie mit der UTC-Stunde indizierte. LIVE_STATIONS holen dagegen
+      // einen Momentanwert und legen ihn unter dem echten Poll-Zeitstempel ab —
+      // da gibt es keine Stunde, die falsch sein könnte, und ihre Historie ist
+      // rückwirkend gültig. Sie pauschal mit zu verwerfen hiesse, Talamones 14
+      // brauchbare Tage wegzuwerfen und acht Tage auf etwas zu warten, das schon
+      // in der Datenbank steht.
+      const cutoff = st.obsPreFixValid ? "" : epoch;
       const rows = db.prepare(
         `SELECT ts, wind_ms, gust_ms FROM station_obs WHERE station_key=? AND ts>=? ORDER BY ts`
-      ).all(st.key, epoch);
+      ).all(st.key, cutoff);
 
       // Bucket-Schlüssel ist die STATIONSLOKALE Stunde, nicht die UTC-Stunde.
       const buckets = new Map();

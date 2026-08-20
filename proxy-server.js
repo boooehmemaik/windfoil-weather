@@ -1137,9 +1137,15 @@ const MOS_JOB_DELAY_MS = 90_000; // hält den Boot-Pfad frei und meidet den WAL-
 // Beide Stationsquellen auf eine Form bringen. MEASURED_STATIONS haben keinen
 // einheitlichen Schlüssel — station_obs nutzt dieselbe wc||icao||station-Ableitung
 // wie der Poller; sie muss hier identisch sein, sonst findet der Job keine Zeilen.
+// obsPreFixValid: LIVE_STATIONS waren vom Phasenfehler nie betroffen. Sie holen
+// einen Momentanwert und schreiben ihn unter dem echten Poll-Zeitstempel weg —
+// es gibt dort keine Stundenindizierung, die daneben liegen könnte. Ihre Historie
+// vor der MOS-Epoche ist deshalb gültig und wird mitgelernt.
 function mosStations() {
   return [
-    ...LIVE_STATIONS.map(s => ({ key: s.key, lat: s.lat, lon: s.lon, tz: s.tz })),
+    ...LIVE_STATIONS.map(s => ({
+      key: s.key, lat: s.lat, lon: s.lon, tz: s.tz, obsPreFixValid: true,
+    })),
     ...MEASURED_STATIONS.map(s => ({
       key: s.wc || s.icao || s.station, lat: s.lat, lon: s.lon, tz: s.tz,
     })),
