@@ -493,6 +493,132 @@ function applyMeasuredStationCorrection(wins, gust, measured, activeDateStr) {
 }
 // <</measured-correction>>
 
+// <<ensemble>>
+// Ensemble-Median statt Einzelmodell.
+//
+// Warum: an Lefkada spannen die Modelle für denselben Nachmittag 2.99–5.41 m/s
+// auf (81 % Spannweite). Die App zeigte bisher icon_eu — im unteren Drittel.
+// Das ist die Ursache des wiederkehrenden "Forecast zu niedrig", nicht die
+// Thermik-Formel. (AROME deckt Lefkada gar nicht ab; best_match fällt dort auf
+// ICON-EU 7 km zurück.)
+//
+// Median, nicht Mittel: ein Mittel wird vom GFS-Ausreißer hochgezogen und
+// springt, sobald ein Member aus der Domain fällt. Die MOS-Bias-Korrektur lernt
+// später das Residuum gegen genau diese Größe — ein bewegliches Ziel wäre nicht
+// lernbar. Gewichte wären mangels Verifikationsdaten geraten und nur als
+// "gelernt" etikettierte Heuristik.
+//
+// NUR Windgeschwindigkeit. Richtung bräuchte einen zirkulären Median (0/360-Wrap);
+// seaBreeze und computeThermik hängen beide an der Richtung, ein naiver Median
+// dort erzeugt Alignment-Fehler statt sie zu vermeiden. Richtung, Böen, CAPE und
+// Lifted Index bleiben vom Trägermodell.
+const ENS_CORE = ["ecmwf_ifs025","ecmwf_aifs025_single","icon_eu","icon_global","gfs_seamless"];
+const ENS_MIN_MEMBERS  = 3;    // pro STUNDE; darunter ist ein Median nicht aussagekräftig
+const ENS_LONG_RANGE   = 0.8;  // ab dieser Abdeckung gilt ein Member als durchgehend
+
+const ensR2 = v => (v == null || !Number.isFinite(v)) ? null : Math.round(v * 100) / 100;
+
+// best_match wird NIE aufgenommen: es aliast je nach Region auf icon_eu oder gfs
+// und würde dasselbe Modell zweimal in den Median stimmen lassen.
+function ensembleMembers(lat, lon) {
+  const hi = pickForecastModel(lat, lon);
+  return hi ? [hi, ...ENS_CORE] : ENS_CORE.slice();
+}
+
+// Open-Meteo liefert Member als `windspeed_10m_<model>`. Modelle außerhalb ihrer
+// räumlichen Domain fehlen KOMPLETT — kein null-gefülltes Array, der Key
+// existiert einfach nicht (verifiziert: AROME an Lefkada).
+//
+// Abdeckung wird hier NICHT global geprüft. Die Modelle haben sehr
+// unterschiedliche Vorhersagelängen: AROME ~48 h, ICON-EU ~120 h, IFS/GFS 168 h.
+// Eine globale Schwelle über das 7-Tage-Fenster würde AROME (29 %) und ICON-EU
+// (71 %) rauswerfen — also ausgerechnet die hochauflösenden Modelle, die für
+// Tag 1–2 am meisten wert sind. Zugelassen wird deshalb jeder Member mit
+// mindestens einem verwertbaren Wert; welche Member eine konkrete Stunde tragen,
+// entscheidet combineEnsemble pro Stunde.
+function admitMembers(hourly, members, n) {
+  const out = [];
+  for (const m of members) {
+    const arr = hourly?.[`windspeed_10m_${m}`];
+    if (!Array.isArray(arr) || arr.length < n) continue;
+    let ok = 0;
+    for (let i = 0; i < n; i++) if (Number.isFinite(arr[i])) ok++;
+    if (ok > 0) out.push({ model: m, arr, coverage: ok / n });
+  }
+  return out;
+}
+
+// Lineare Interpolation zwischen Rängen. Bei 5–6 Membern liegt p10 sonst immer
+// exakt auf dem Minimum und p90 auf dem Maximum — das Streuungsband wäre dann
+// nur "min bis max" und ein einzelner Ausreißer würde es allein aufspannen.
+function quantile(values, q) {
+  const a = values.slice().sort((x, y) => x - y);
+  if (!a.length) return null;
+  const pos = (a.length - 1) * q;
+  const lo = Math.floor(pos), hi = Math.ceil(pos);
+  return lo === hi ? a[lo] : a[lo] + (a[hi] - a[lo]) * (pos - lo);
+}
+const median = arr => quantile(arr, 0.5);
+
+// → {wind,p10,p90,spread,nMembers,members,membersLong,n} | null
+//
+// Einzelne Stunden können null sein (zu wenige Member zu DIESER Stunde). Der
+// Aufrufer muss dort auf den Trägerwind zurückfallen — combineEnsemble erfindet
+// keinen Wert, wo keiner gerechnet wurde.
+//
+// Die Member-Zusammensetzung ändert sich über den Horizont: Tag 1 trägt AROME
+// mit, ab ~Tag 5 nur noch IFS/AIFS/GFS/ICON-global. Das ist gewollt und ehrlich —
+// `nMembers[i]` macht es sichtbar, und die Streuung wächst dort ohnehin.
+function combineEnsemble(hourly, members) {
+  const n = hourly?.time?.length || 0;
+  if (!n) return null;
+  const adm = admitMembers(hourly, members, n);
+  if (adm.length < ENS_MIN_MEMBERS) return null;
+  const wind = new Array(n).fill(null), p10 = new Array(n).fill(null),
+        p90  = new Array(n).fill(null), spread = new Array(n).fill(null),
+        nMembers = new Array(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    const v = [];
+    for (const m of adm) if (Number.isFinite(m.arr[i])) v.push(m.arr[i]);
+    nMembers[i] = v.length;
+    if (v.length < ENS_MIN_MEMBERS) continue;
+    wind[i]   = ensR2(quantile(v, 0.50));
+    p10[i]    = ensR2(quantile(v, 0.10));
+    p90[i]    = ensR2(quantile(v, 0.90));
+    spread[i] = ensR2(p90[i] - p10[i]);
+  }
+  return {
+    wind, p10, p90, spread, nMembers, n,
+    members: adm.map(m => m.model),
+    membersLong: adm.filter(m => m.coverage >= ENS_LONG_RANGE).map(m => m.model),
+  };
+}
+
+// Böen kommen vom Trägermodell, der Wind vom Ensemble. Weichen beide auseinander,
+// entstehen wind > gust-Lücken — und die "Böen deutlich über Wind"-Warnung
+// (midG - effW > 4) feuert grundlos. Also die Böe im selben Verhältnis mitziehen,
+// gedeckelt, damit ein Trägerwind nahe null den Faktor nicht explodieren lässt.
+const GUST_K_MIN = 0.75, GUST_K_MAX = 1.35, GUST_CARRIER_FLOOR_MS = 1.0;
+function rescaleGusts(gust, carrierWind, ensWind) {
+  if (!Array.isArray(gust)) return gust;
+  return gust.map((g, i) => {
+    const c = carrierWind?.[i], e = ensWind?.[i];
+    if (!Number.isFinite(g) || !Number.isFinite(c) || !Number.isFinite(e)) return g;
+    if (c < GUST_CARRIER_FLOOR_MS) return g;
+    return ensR2(g * Math.min(GUST_K_MAX, Math.max(GUST_K_MIN, e / c)));
+  });
+}
+
+// Ensemble und Trägermodell müssen auf DERSELBEN Zeitachse liegen — beide Calls
+// gehen getrennt raus und können unterschiedliche timezone/Startstunde liefern.
+// Passt das nicht, wird das Ensemble komplett verworfen statt stundenweise
+// verschoben verrechnet (Muster von mergeForecastsMax).
+function ensembleGridMatches(fcHourly, ensHourly) {
+  const a = fcHourly?.time, b = ensHourly?.time;
+  return !!(Array.isArray(a) && Array.isArray(b) && a.length && a.length === b.length && a[0] === b[0]);
+}
+// <</ensemble>>
+
 async function tryFetchForecast(lat, lon) {
   const base = {
     latitude:lat, longitude:lon,
