@@ -568,6 +568,7 @@ app.get("/api/station/measured", async (req, res) => {
 const LIVE_STATIONS = [
   {
     key: "talamone", lat: 42.554, lon: 11.128, radiusKm: SPECIAL_RADIUS_KM,
+    tz: "Europe/Rome", // für den MOS-Rollup: ohne tz ist "lokale Stunde" nicht definiert
     label: "Talamone (Baia di Talamone)",
     source: "VTC Velapassion · Davis Vantage Vue",
     // WView/SteelSeries feed; hotlink-protected → needs the Referer of its page,
@@ -956,11 +957,18 @@ app.post("/api/admin/users/delete", (req, res) => {
 // NICHT (setInterval), crasht NICHT bei Stationsfehlern (try/catch pro Station).
 const OBS_POLL_MS = 600_000; // 10 Minuten
 
-// Ab diesem Zeitpunkt sind station_obs.ts echte UTC-Instants. Alle Zeilen DAVOR
-// stammen aus MEASURED_STATIONS mit UTC-indizierten Lokalstunden (Phasenfehler,
-// siehe Kommentar in pollStationObs) und dürfen NICHT in die MOS-Statistik.
-// Nicht rückwirkend korrigierbar, weil der Offset je Station/Datum (DST) variiert.
-const MOS_OBS_EPOCH = "2026-08-20T00:00:00.000Z";
+// Ab der Marke app_meta['mos_obs_epoch'] sind station_obs.ts echte UTC-Instants.
+// Alle Zeilen DAVOR stammen aus MEASURED_STATIONS mit UTC-indizierten Lokalstunden
+// (Phasenfehler, siehe Kommentar in pollStationObs) und dürfen NICHT in die
+// MOS-Statistik. Nicht rückwirkend korrigierbar, weil der Offset je Station und
+// Datum (DST) variiert.
+//
+// Die Marke ist bewusst KEINE Konstante: der Fix wird erst mit dem Service-Neustart
+// aktiv, und wann der passiert, weiss der Code beim Ausrollen nicht. Ein
+// hartkodierter Wert wäre entweder zu früh (nimmt kaputte Zeilen mit) oder zu spät
+// (wirft gute weg). Stattdessen setzt der GEFIXTE Poller sie beim ersten Lauf selbst
+// per INSERT OR IGNORE — damit ist sie per Konstruktion exakt der Zeitpunkt, ab dem
+// die Daten stimmen. Siehe markObsEpoch() in src/mos.mjs und Migration 007.
 
 let obsDb = null;
 function getObsDb() {
@@ -983,6 +991,17 @@ async function pollStationObs() {
   const ts = new Date().toISOString();
   const prune14d = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   console.log(`[obs-poller] polling ${LIVE_STATIONS.length} live + ${MEASURED_STATIONS.length} measured stations`);
+
+  // Erster Lauf DIESES (gefixten) Pollers setzt die MOS-Epoche auf `ts` — genau
+  // den Zeitstempel, den die gleich folgenden Inserts tragen. INSERT OR IGNORE:
+  // jeder spätere Lauf lässt die Marke unangetastet. Ein Fehler hier darf den
+  // Poll nicht verhindern; ohne Marke lehnt der MOS-Job einfach ab.
+  try {
+    const { markObsEpoch } = await import("./src/mos.mjs");
+    markObsEpoch(getObsDb(), ts);
+  } catch (e) {
+    console.warn("[obs-poller] mos epoch mark failed:", e.message);
+  }
 
   // ── LIVE_STATIONS (snapshot feed, z.B. Talamone) ──────────────────────────
   for (const st of LIVE_STATIONS) {
@@ -1058,6 +1077,61 @@ pollStationObs().catch(e => console.warn("[obs-poller] initial poll error:", e.m
 setInterval(() => {
   pollStationObs().catch(e => console.warn("[obs-poller] poll error:", e.message));
 }, OBS_POLL_MS);
+
+// ── MOS-Job (gelernte Stunden-Bias-Korrektur) ────────────────────────────────
+// Verdichtet station_obs zu einem Sample je (Station, lokaler Tag, lokale Stunde),
+// holt dazu über historical-forecast-api den Ensemble-Median, den die Modelle
+// damals vorhergesagt haben, und schreibt den stundenweisen Median der Differenz
+// nach station_mos_bias. Details und Begründungen: src/mos.mjs.
+const MOS_JOB_MS       = 24 * 60 * 60 * 1000;
+const MOS_JOB_DELAY_MS = 90_000; // hält den Boot-Pfad frei und meidet den WAL-Race
+                                 // mit dem ersten Poll (der die Epoche setzt)
+
+// Beide Stationsquellen auf eine Form bringen. MEASURED_STATIONS haben keinen
+// einheitlichen Schlüssel — station_obs nutzt dieselbe wc||icao||station-Ableitung
+// wie der Poller; sie muss hier identisch sein, sonst findet der Job keine Zeilen.
+function mosStations() {
+  return [
+    ...LIVE_STATIONS.map(s => ({ key: s.key, lat: s.lat, lon: s.lon, tz: s.tz })),
+    ...MEASURED_STATIONS.map(s => ({
+      key: s.wc || s.icao || s.station, lat: s.lat, lon: s.lon, tz: s.tz,
+    })),
+  ];
+}
+
+async function runMos(reason) {
+  const { runMosJob } = await import("./src/mos.mjs");
+  const out = await runMosJob(getObsDb(), mosStations());
+  if (!out.ok) {
+    console.warn(`[mos] ${reason}: skipped — ${out.error}`);
+  } else {
+    const summary = out.results
+      .map(r => r.ok ? `${r.station}=${r.usableHours}/${r.hours}h (n≤${r.maxN})`
+                     : `${r.station}!${r.error}`)
+      .join(" ");
+    console.log(`[mos] ${reason}: rollup ${out.rollup.rows} rows · ${summary}`);
+  }
+  return out;
+}
+
+setTimeout(() => {
+  runMos("scheduled").catch(e => console.warn("[mos] initial run error:", e.message));
+  setInterval(() => {
+    runMos("scheduled").catch(e => console.warn("[mos] run error:", e.message));
+  }, MOS_JOB_MS);
+}, MOS_JOB_DELAY_MS);
+
+// Manuelles Neuberechnen — der Nightly-Job braucht sonst bis zu 24 h, um eine
+// Änderung sichtbar zu machen. Antwortet mit dem vollen Job-Ergebnis, damit die
+// Abnahmekriterien (n_samples, Vorzeichen des Bias) direkt ablesbar sind.
+app.get("/api/admin/mos/recompute", async (req, res) => {
+  if (!adminGuard(req, res)) return;
+  try {
+    res.json(await runMos("manual"));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 app.listen(PORT, () => console.log(`WindFoil station proxy on :${PORT} (key ${KEY ? "set" : "MISSING"}, admin ${ADMIN_TOKEN && ADMIN_PASSWORD ? "ENABLED" : "disabled"})`));
 })().catch(err => { console.error("[windfoil] startup error:", err); process.exit(1); });
