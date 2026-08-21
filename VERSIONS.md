@@ -1,12 +1,12 @@
 # WindFoil — Version History
 
 ## v3.24.0 (2026-08-21)
-**Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstung pro Stunde**
+**Wing-/Kite-Größen direkt in der Chart-Zeitachse — pro foilbarer Stunde**
 - `index.html` v3.23.0 → v3.24.0: reine Frontend-Änderung, kein Backend-/DB-Change
-- Neuer `gearByHour`-Computed-Value: für jede Stunde des Forecasts wird die passende Wing-/Kite-Größe ermittelt — Foil-Modus mit eigenem Gear-Liste via `pickBestSetup`, Foil ohne Gear-Liste via Harlem-Pace-Tabelle (`WING_BRANDS`), Kite-Modus via Crazyfly-Sculp + `calcKiteWindow`; Basis jeweils `winsEffBoosted[i]` (MOS-korrigierter Wind)
-- Kompakter Chip-Streifen unterhalb des Wingfoil-/Kite-Fenster-Charts (alle 3 Stunden, passend zu den Chart-X-Ticks): zeigt die empfohlene Größe in m² (Wing) oder m (Kite) inkl. Fahrergewicht
-- Farbkodierung: grün = Wind im Optimalfenster (Score ≥ 75), gelb = Randzone (Score ≥ 40), rot = außerhalb; nur angezeigt wenn mindestens eine Stunde des Tages auswertbar ist
-- Kite-Modus: wählt die Größe mit der besten Passung (erst Optimalzone, dann Planing-Zone) aus dem ausgewählten Crazyfly-Modell, gewichtet nach Skill und Fahrergewicht
+- Neuer `gearByHour`-Computed-Value: für jede Stunde wird die passende Wing-/Kite-Größe ermittelt — Foil mit Gear-Liste via `pickBestSetup`, Foil ohne Gear-Liste via Harlem-Pace-Tabelle (`WING_BRANDS`), Kite via Crazyfly-Sculp + `calcKiteWindow`; Basis jeweils `winsEffBoosted[i]` (MOS-korrigierter Wind); nur wenn Wind tatsächlich im `[minWind, maxWind]`-Fenster liegt (kein „bester Schuss" bei zu wenig/viel Wind)
+- Größenangabe direkt in der XAxis via `FensterTick` (custom Recharts-Tick): Stundenbezeichnung alle 3 h (dy=12), Ausrüstungsgröße für **jede** foilbare Stunde in der Zeile darunter (dy=26, `interval={0}`); Leerstunden bleiben leer
+- Legende des Fenster-Charts nach oben verschoben (`verticalAlign="top"`) damit der untere Rand ausschließlich den Größenangaben gehört
+- Farbkodierung: grün = Optimalzone (Score ≥ 75), gelb = Randzone; `margin.bottom` des Charts dynamisch auf 26 px erweitert wenn Größen vorhanden
 
 ## v3.23.0 (2026-08-20)
 **Stufe 6: Transparente Darstellung — Streuungsband, Korrektur-Badge, Konfidenz**
