@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.26.0 (2026-08-21)
+**Aktive User-Anzeige in der Kopfzeile**
+- `proxy-server.js`: neuer Endpunkt `GET /api/stats/active-users` — zählt `DISTINCT userId` aus der Better-Auth-`session`-Tabelle mit `expiresAt > now`; öffentlich, gibt nur eine Zahl zurück
+- `index.html` v3.25.0 → v3.26.0: `activeUsers`-State, Fetch on mount + Poll alle 60 s; grüner Dot + Zahl in der Kopfzeile links neben der Uhr
+
 ## v3.25.0 (2026-08-21)
 **Wing-Windrange-Tabelle im Foil-Modus — konsistent mit Kite-Referenzpanel**
 - `index.html` v3.24.0 → v3.25.0: reine Frontend-Änderung

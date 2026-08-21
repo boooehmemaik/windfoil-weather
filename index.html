@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.25.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.26.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,14 +36,14 @@ const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatt
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.25.0
+// WindFoil Weather Intelligence v3.26.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
 // Changelog v3.20.0: seaBreeze align cutoff 60°→80° (Eric active from ~SW-W); active threshold 0.3→0.25; chart wind line shows winsEffBoosted (consistent with score)
 // Changelog v3.21.0: Ensemble-Median (5–6 Modelle) als Windquelle statt Einzelmodell; p10/p90-Streuung erfasst; Böen im Windverhältnis reskaliert. ACHTUNG: senkt Torbole ~25 % (löst die arome_best_max-Hüllkurve ab) — wird von MOS (Stufe 3–5) wieder ausgeglichen
 // Changelog v3.22.0: MOS-Korrektur ersetzt seaBreeze wo Messdaten existieren (Konvexkombination, keine Doppelzählung); Thermik wandert vor die Stationskorrekturen; Pelèr-Faktor blendet gegen MOS aus
-// Changelog v3.25.0: Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstungsgröße pro 3-Stunden-Slot unterhalb des Charts; foil-Modus mit eigenem Gear oder Harlem-Pace-Tabelle; Kite-Modus nach Crazyfly-Sculp + Fahrergewicht/-skill; farbkodiert grün/gelb/rot nach Fenster-Passung
+// Changelog v3.26.0: Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstungsgröße pro 3-Stunden-Slot unterhalb des Charts; foil-Modus mit eigenem Gear oder Harlem-Pace-Tabelle; Kite-Modus nach Crazyfly-Sculp + Fahrergewicht/-skill; farbkodiert grün/gelb/rot nach Fenster-Passung
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -1489,6 +1489,7 @@ function App() {
   const [live,setLive] = useState(null); // current-only real station snapshot (null = none)
   const [mos,setMos] = useState(null); // gelernte Stunden-Bias-Korrektur (null = keine Station/keine Daten)
   const [clock,setClock]       = useState("");
+  const [activeUsers,setActiveUsers] = useState(null);
   const [windUnit,setWindUnit]  = useState("kn"); // 'ms' | 'kn' | 'bf'
   const [theme,setThemeState]   = useState(()=>loadStored("wf_theme","dark")); // 'dark' | 'light'
   // Apply the palette synchronously so the style object S (built below) and all
@@ -1599,6 +1600,12 @@ function App() {
 
   useEffect(()=>{
     const t=setInterval(()=>setClock(new Date().toLocaleTimeString("de-DE")),1000);
+    return()=>clearInterval(t);
+  },[]);
+  useEffect(()=>{
+    const load=()=>fetch("/api/stats/active-users").then(r=>r.json()).then(d=>setActiveUsers(d.activeUsers)).catch(()=>{});
+    load();
+    const t=setInterval(load,60000);
     return()=>clearInterval(t);
   },[]);
 
@@ -2241,7 +2248,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.25.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.26.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2269,6 +2276,10 @@ function App() {
             style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:3,padding:"2px 8px",fontFamily:"monospace",fontSize:13,cursor:"pointer",lineHeight:1.2}}>
             {theme==="light"?"☾":"☀"}
           </button>
+          {activeUsers!=null && <span title="Eingeloggte User" style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"flex",alignItems:"center",gap:3}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:C.go,display:"inline-block"}}/>
+            {activeUsers}
+          </span>}
           <span style={{fontFamily:"monospace",fontSize:13,color:C.signal}}>{clock}</span>
         </div>
       </header>
@@ -3097,7 +3108,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.25.0</span>
+        <span>WindFoil Weather Intelligence v3.26.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

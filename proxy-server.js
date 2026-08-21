@@ -831,6 +831,18 @@ app.get("/api/station/history", async (req, res) => {
 
 app.get("/api/station/health", (_req, res) => res.json({ ok: true, keyConfigured: !!KEY }));
 
+// Count of users with at least one unexpired Better-Auth session.
+app.get("/api/stats/active-users", (_req, res) => {
+  try {
+    const row = adminDb.prepare(
+      "SELECT COUNT(DISTINCT userId) AS n FROM session WHERE expiresAt > ?"
+    ).get(new Date().toISOString());
+    res.json({ activeUsers: row?.n ?? 0 });
+  } catch (e) {
+    res.json({ activeUsers: 0 });
+  }
+});
+
 // ══ ADMIN ENDPOINTS ══════════════════════════════════════════════════════════
 // All require a valid X-Admin-Token. Only whitelisted actions — never arbitrary
 // shell. execFile (not exec) prevents shell injection.
