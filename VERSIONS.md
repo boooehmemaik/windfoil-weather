@@ -1,5 +1,15 @@
 # WindFoil — Version History
 
+## v3.27.0 (2026-08-21)
+**Meltemi-Boost für Lefkada NW und Vasiliki**
+- `index.html` v3.26.3 → v3.27.0: reine Frontend-Änderung, kein Backend-/DB-Change
+- Neue Funktion `applyMeltemBoost()` (analog zu `applyPelerBoost` für Garda): kompensiert die systematische Unterschätzung des Ionischen Meltemi durch Open-Meteo
+- Lefkada NW / Kathisma: `×2.0` Windverstärkung (offene NW-Küste, direkter Meltemi-Fetch)
+- Vasiliki / Eric-Korridor: `×1.7` Verstärkung (Trichtergeometrie der Bucht)
+- Nur aktiv: tagsüber (09–21 Uhr), wenn Windrichtung innerhalb ±80° des Spot-Regimes (315° bzw. 290°) liegt; blendet gegen MOS-Gewicht aus (B3-Guard gegen Doppelzählung)
+- API-Status-Badge zeigt „+Meltemi" bzw. „+Eric" wenn der Boost aktiv war
+- Hintergrund: Open-Meteo gibt an Kathisma ~3 m/s, während LGPZ-Airport (28 km, windgeschützt) bereits 10–12 kt misst; Strandwerte bei Meltemi real 1,5–2× über dem Airport
+
 ## v3.26.0 (2026-08-21)
 **Aktive User-Anzeige in der Kopfzeile**
 - `proxy-server.js`: neuer Endpunkt `GET /api/stats/active-users` — zählt `DISTINCT userId` aus der Better-Auth-`session`-Tabelle mit `expiresAt > now`; öffentlich, gibt nur eine Zahl zurück
