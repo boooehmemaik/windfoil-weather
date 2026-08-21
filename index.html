@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.27.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.27.1 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatt
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.27.0
+// WindFoil Weather Intelligence v3.27.1
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -45,6 +45,7 @@ const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%3
 // Changelog v3.22.0: MOS-Korrektur ersetzt seaBreeze wo Messdaten existieren (Konvexkombination, keine Doppelzählung); Thermik wandert vor die Stationskorrekturen; Pelèr-Faktor blendet gegen MOS aus
 // Changelog v3.26.3: Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstungsgröße pro 3-Stunden-Slot unterhalb des Charts; foil-Modus mit eigenem Gear oder Harlem-Pace-Tabelle; Kite-Modus nach Crazyfly-Sculp + Fahrergewicht/-skill; farbkodiert grün/gelb/rot nach Fenster-Passung
 // Changelog v3.27.0: Meltemi-Boost für Lefkada NW (Kathisma ×2.0) und Vasiliki/Eric (×1.7) — kompensiert systematische Modell-Unterschätzung des Ionian-Meltemi; blendet gegen MOS aus
+// Changelog v3.27.1: Diagramm-Zeitachse auf 06:00–23:00 eingeschränkt (Nacht entfernt)
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -2095,8 +2096,8 @@ function App() {
     // liegen sie" — das sind zwei verschiedene Fragen, die nicht vermischt werden.
     const band = dayData.ens && dayData.ens.p10[i]!=null && dayData.ens.p90[i]!=null
       ? [cvt(dayData.ens.p10[i],windUnit), cvt(dayData.ens.p90[i],windUnit)] : null;
-    return {h:l,wind:cvt(dayData.winsEffBoosted[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i],mwind:mw,mgust:mg,band};
-  }):[];
+    return {h:l,wind:cvt(dayData.winsEffBoosted[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i],mwind:mw,mgust:mg,band,hh};
+  }).filter(d=>d.hh>=6&&d.hh<=23):[];
   // Per-hour best gear/kite size — only when wind is actually within the equipment window
   const gearByHour = (() => {
     if (!dayData) return null;
@@ -2300,7 +2301,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.27.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.27.1</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2664,7 +2665,7 @@ function App() {
                     {/* Zuerst gerendert ⇒ liegt unter allen Linien. */}
                     {dayData.ens && <Area yAxisId="l" dataKey="band" name="Modell-Streuung" stroke="none" fill={C.sky} fillOpacity={0.12} isAnimationActive={false} legendType="none" />}
                     <CartesianGrid {...gr} />
-                    <XAxis dataKey="h" {...ax} interval={gearByHour?0:3} tick={gearByHour?<FensterTick ghour={gearByHour} lbls={dayData.labels}/>:undefined} />
+                    <XAxis dataKey="h" {...ax} interval={gearByHour?0:3} tick={gearByHour?<FensterTick ghour={gearByHour.slice(6)} lbls={dayData.labels.slice(6)}/>:undefined} />
                     <YAxis yAxisId="l" {...ax} />
                     <YAxis yAxisId="r" orientation="right" domain={[0,100]} {...ax} tick={{...ax.tick,fill:C.go}} />
                     <Tooltip {...TT} />
@@ -3165,7 +3166,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.27.0</span>
+        <span>WindFoil Weather Intelligence v3.27.1</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
