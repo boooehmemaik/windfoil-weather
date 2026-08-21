@@ -2082,15 +2082,17 @@ function App() {
       return best2 ? { label: `${best2.m}m²`, score: bestSc } : null;
     });
   })();
-  // Custom XAxis tick: time label + wing/kite size directly below (rendered inside the chart SVG)
+  // Custom XAxis tick: 3h time labels in top row, wing/kite size in bottom row for every foilable hour
   const FensterTick = ({x, y, payload, ghour, lbls}) => {
     const i = (lbls??[]).indexOf(payload?.value);
     const g = i >= 0 ? ghour?.[i] : null;
+    const show3h = i >= 0 && i % 3 === 0;
+    if (!show3h && !g) return null;
     const col = !g ? null : g.score >= 75 ? C.go : C.caution;
     return (
       <g transform={`translate(${x},${y})`}>
-        <text textAnchor="middle" fill={ax.tick.fill} fontSize={ax.tick.fontSize} fontFamily={ax.tick.fontFamily} dy={12}>{payload?.value}</text>
-        {g && <text textAnchor="middle" fill={col} fontSize={9} fontFamily="monospace" fontWeight="bold" dy={25}>{g.label}</text>}
+        {show3h && <text textAnchor="middle" fill={ax.tick.fill} fontSize={10} fontFamily="monospace" dy={12}>{payload?.value}</text>}
+        {g && <text textAnchor="middle" fill={col} fontSize={10} fontFamily="monospace" fontWeight="bold" dy={26}>{g.label}</text>}
       </g>
     );
   };
@@ -2590,11 +2592,11 @@ function App() {
               </div>}
               <div style={S.cwL}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={windData} margin={{top:5,right:5,bottom:gearByHour&&gearByHour.some(g=>g)?18:5,left:5}}>
+                  <ComposedChart data={windData} margin={{top:5,right:5,bottom:gearByHour&&gearByHour.some(g=>g)?26:5,left:5}}>
                     {/* Zuerst gerendert ⇒ liegt unter allen Linien. */}
                     {dayData.ens && <Area yAxisId="l" dataKey="band" name="Modell-Streuung" stroke="none" fill={C.sky} fillOpacity={0.12} isAnimationActive={false} legendType="none" />}
                     <CartesianGrid {...gr} />
-                    <XAxis dataKey="h" {...ax} interval={3} tick={gearByHour?<FensterTick ghour={gearByHour} lbls={dayData.labels}/>:undefined} />
+                    <XAxis dataKey="h" {...ax} interval={gearByHour?0:3} tick={gearByHour?<FensterTick ghour={gearByHour} lbls={dayData.labels}/>:undefined} />
                     <YAxis yAxisId="l" {...ax} />
                     <YAxis yAxisId="r" orientation="right" domain={[0,100]} {...ax} tick={{...ax.tick,fill:C.go}} />
                     <Tooltip {...TT} />
