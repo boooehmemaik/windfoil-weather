@@ -36,7 +36,7 @@ const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatt
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.26.1
+// WindFoil Weather Intelligence v3.26.2
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -2073,7 +2073,7 @@ function App() {
         const b = pickBestSetup(gear, rider.weight, rider.skill, w, spotWingMap);
         // Only show when wind is actually within this gear's window
         if (!b || w < b.win.minWind || w > b.win.maxWind) return null;
-        return { label: `${b.gear.wing}m²`, score: b.score };
+        return { label: `${b.gear.wing}m`, score: b.score };
       }
       // No personal gear — recommend from manufacturer table, only when in range
       const brand = WING_BRANDS[DEFAULT_WING_BRAND];
@@ -2086,7 +2086,7 @@ function App() {
         const sc = scoreHour(w, win);
         if (sc > bestSc) { bestSc = sc; best2 = { m: s }; }
       }
-      return best2 ? { label: `${best2.m}m²`, score: bestSc } : null;
+      return best2 ? { label: `${best2.m}m`, score: bestSc } : null;
     });
   })();
   // Custom XAxis tick: 3h time labels in top row, wing/kite size in bottom row for every foilable hour
@@ -2098,8 +2098,8 @@ function App() {
     const col = !g ? null : g.score >= 75 ? C.go : C.caution;
     return (
       <g transform={`translate(${x},${y})`}>
-        {show3h && <text textAnchor="middle" fill={ax.tick.fill} fontSize={10} fontFamily="monospace" dy={12}>{payload?.value}</text>}
-        {g && <text textAnchor="middle" fill={col} fontSize={10} fontFamily="monospace" fontWeight="bold" dy={26}>{g.label}</text>}
+        {show3h && <text textAnchor="middle" fill={ax.tick.fill} fontSize={9} fontFamily="monospace" dy={11}>{payload?.value}</text>}
+        {g && <text textAnchor="middle" fill={col} fontSize={8} fontFamily="monospace" fontWeight="bold" dy={22}>{g.label}</text>}
       </g>
     );
   };
@@ -2608,7 +2608,7 @@ function App() {
               </div>}
               <div style={S.cwL}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={windData} margin={{top:5,right:5,bottom:gearByHour&&gearByHour.some(g=>g)?26:5,left:5}}>
+                  <ComposedChart data={windData} margin={{top:5,right:5,bottom:gearByHour&&gearByHour.some(g=>g)?20:5,left:5}}>
                     {/* Zuerst gerendert ⇒ liegt unter allen Linien. */}
                     {dayData.ens && <Area yAxisId="l" dataKey="band" name="Modell-Streuung" stroke="none" fill={C.sky} fillOpacity={0.12} isAnimationActive={false} legendType="none" />}
                     <CartesianGrid {...gr} />
@@ -3113,7 +3113,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.26.1</span>
+        <span>WindFoil Weather Intelligence v3.26.2</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
