@@ -2600,7 +2600,7 @@ function App() {
                     <YAxis yAxisId="l" {...ax} />
                     <YAxis yAxisId="r" orientation="right" domain={[0,100]} {...ax} tick={{...ax.tick,fill:C.go}} />
                     <Tooltip {...TT} />
-                    <Legend wrapperStyle={{fontSize:10,fontFamily:"monospace",color:C.muted}} />
+                    <Legend verticalAlign="top" wrapperStyle={{fontSize:10,fontFamily:"monospace",color:C.muted,paddingBottom:4}} />
                     <ReferenceArea yAxisId="l" y1={cvt(dayData.win.optMin,windUnit)} y2={cvt(dayData.win.optMax,windUnit)} fill="rgba(61,220,132,0.10)" stroke="rgba(61,220,132,0.3)" />
                     <ReferenceLine yAxisId="l" y={cvt(dayData.win.minWind,windUnit)} stroke={C.caution} strokeDasharray="4 3" />
                     <Line yAxisId="l" type="monotone" dataKey="wind" name={`Wind ${unitLabel(windUnit)}`} stroke={C.sky} strokeWidth={2} dot={false} />
