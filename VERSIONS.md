@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.25.0 (2026-08-21)
+**Wing-Windrange-Tabelle im Foil-Modus — konsistent mit Kite-Referenzpanel**
+- `index.html` v3.24.0 → v3.25.0: reine Frontend-Änderung
+- Neues „🏄 Wing-Windranges"-Panel (`sport==="foil"`): iteriert über `WING_BRANDS` (Harlem Pace), zeigt für jede Größe (3–6 m²) Herstellerrange + gewichtsangepasste Range via `wingTableWindow()` (√-Skalierung auf `rider.weight`/`rider.skill`); aktive Wing-Größe grün hervorgehoben — identische Struktur wie das Crazyfly-Panel im Kite-Modus
+
 ## v3.24.0 (2026-08-21)
 **Wing-/Kite-Größen direkt in der Chart-Zeitachse — pro foilbarer Stunde**
 - `index.html` v3.23.0 → v3.24.0: reine Frontend-Änderung, kein Backend-/DB-Change

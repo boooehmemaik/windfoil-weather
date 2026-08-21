@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.24.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.25.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,14 +36,14 @@ const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatt
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.24.0
+// WindFoil Weather Intelligence v3.25.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
 // Changelog v3.20.0: seaBreeze align cutoff 60°→80° (Eric active from ~SW-W); active threshold 0.3→0.25; chart wind line shows winsEffBoosted (consistent with score)
 // Changelog v3.21.0: Ensemble-Median (5–6 Modelle) als Windquelle statt Einzelmodell; p10/p90-Streuung erfasst; Böen im Windverhältnis reskaliert. ACHTUNG: senkt Torbole ~25 % (löst die arome_best_max-Hüllkurve ab) — wird von MOS (Stufe 3–5) wieder ausgeglichen
 // Changelog v3.22.0: MOS-Korrektur ersetzt seaBreeze wo Messdaten existieren (Konvexkombination, keine Doppelzählung); Thermik wandert vor die Stationskorrekturen; Pelèr-Faktor blendet gegen MOS aus
-// Changelog v3.24.0: Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstungsgröße pro 3-Stunden-Slot unterhalb des Charts; foil-Modus mit eigenem Gear oder Harlem-Pace-Tabelle; Kite-Modus nach Crazyfly-Sculp + Fahrergewicht/-skill; farbkodiert grün/gelb/rot nach Fenster-Passung
+// Changelog v3.25.0: Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstungsgröße pro 3-Stunden-Slot unterhalb des Charts; foil-Modus mit eigenem Gear oder Harlem-Pace-Tabelle; Kite-Modus nach Crazyfly-Sculp + Fahrergewicht/-skill; farbkodiert grün/gelb/rot nach Fenster-Passung
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -2241,7 +2241,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.24.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.25.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2658,6 +2658,49 @@ function App() {
               </div>
             )}
 
+            {/* HARLEM PACE REFERENCE PANEL (foil mode only) */}
+            {sport==="foil" && (
+              <div style={S.card}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
+                  <span style={S.sec}>🏄 Wing-Windranges</span>
+                  <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>Harlem Pace · Stand 2026</span>
+                </div>
+                <div style={{fontSize:10,color:C.muted,marginBottom:10,lineHeight:1.5}}>
+                  Herstellerangaben (Referenzgewicht {WING_BRANDS[DEFAULT_WING_BRAND].refWeightKg} kg). Die zweite Spalte zeigt dein angepasstes Fenster für <b style={{color:C.text}}>{rider.weight} kg · {rider.skill}</b>.
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:8}}>
+                  {Object.entries(WING_BRANDS).map(([brandName,brand])=>(
+                    <div key={brandName} style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"10px 12px"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
+                        <b style={{fontFamily:"monospace",fontSize:12,color:C.text}}>{brandName}</b>
+                        <span style={{fontSize:9,color:C.muted}}>Freeride Foilwing</span>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"3px 8px",fontSize:10,color:C.dim,marginBottom:4,paddingLeft:6}}>
+                        <span></span><span>Hersteller</span><span>{rider.weight} kg</span>
+                      </div>
+                      {Object.entries(brand.sizes).map(([sz,data])=>{
+                        const size=Number(sz);
+                        const isActive=size===parseFloat(rider.wingSize);
+                        const adj=wingTableWindow(rider.weight,size,brandName);
+                        const adjOk=adj&&!adj.outOfRange;
+                        return(
+                          <div key={sz} style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"3px 8px",
+                            fontSize:11,color:isActive?C.go:C.muted,marginBottom:3,
+                            borderLeft:`2px solid ${isActive?C.go:"transparent"}`,paddingLeft:6}}>
+                            <span>{size} m²</span>
+                            <span style={{fontFamily:"monospace",color:C.dim}}>{data.rangeKn[0]}–{data.rangeKn[1]} kn</span>
+                            <span style={{fontFamily:"monospace",color:isActive?C.go:C.muted}}>
+                              {adjOk?`${Math.round(msToKn(adj.minWind))}–${Math.round(msToKn(adj.maxWind))} kn`:"—"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* QUICK STATS */}
             <div style={S.grid6}>
               {[
@@ -3054,7 +3097,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.24.0</span>
+        <span>WindFoil Weather Intelligence v3.25.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
