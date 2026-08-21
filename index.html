@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.26.1 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.26.2 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -43,7 +43,7 @@ const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%3
 // Changelog v3.20.0: seaBreeze align cutoff 60°→80° (Eric active from ~SW-W); active threshold 0.3→0.25; chart wind line shows winsEffBoosted (consistent with score)
 // Changelog v3.21.0: Ensemble-Median (5–6 Modelle) als Windquelle statt Einzelmodell; p10/p90-Streuung erfasst; Böen im Windverhältnis reskaliert. ACHTUNG: senkt Torbole ~25 % (löst die arome_best_max-Hüllkurve ab) — wird von MOS (Stufe 3–5) wieder ausgeglichen
 // Changelog v3.22.0: MOS-Korrektur ersetzt seaBreeze wo Messdaten existieren (Konvexkombination, keine Doppelzählung); Thermik wandert vor die Stationskorrekturen; Pelèr-Faktor blendet gegen MOS aus
-// Changelog v3.26.1: Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstungsgröße pro 3-Stunden-Slot unterhalb des Charts; foil-Modus mit eigenem Gear oder Harlem-Pace-Tabelle; Kite-Modus nach Crazyfly-Sculp + Fahrergewicht/-skill; farbkodiert grün/gelb/rot nach Fenster-Passung
+// Changelog v3.26.2: Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstungsgröße pro 3-Stunden-Slot unterhalb des Charts; foil-Modus mit eigenem Gear oder Harlem-Pace-Tabelle; Kite-Modus nach Crazyfly-Sculp + Fahrergewicht/-skill; farbkodiert grün/gelb/rot nach Fenster-Passung
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -2248,7 +2248,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.26.1</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.26.2</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
