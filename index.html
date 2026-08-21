@@ -2042,7 +2042,7 @@ function App() {
       ? [cvt(dayData.ens.p10[i],windUnit), cvt(dayData.ens.p90[i],windUnit)] : null;
     return {h:l,wind:cvt(dayData.winsEffBoosted[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i],mwind:mw,mgust:mg,band};
   }):[];
-  // Per-hour best gear/kite size for the Fenster strip (every 3 h, aligned to chart ticks)
+  // Per-hour best gear/kite size — only when wind is actually within the equipment window
   const gearByHour = (() => {
     if (!dayData) return null;
     const { winsEffBoosted, labels } = dayData;
@@ -2064,21 +2064,36 @@ function App() {
       }
       if (useGear && gear.length) {
         const b = pickBestSetup(gear, rider.weight, rider.skill, w, spotWingMap);
-        return b ? { label: `${b.gear.wing}m²`, score: b.score } : null;
+        // Only show when wind is actually within this gear's window
+        if (!b || w < b.win.minWind || w > b.win.maxWind) return null;
+        return { label: `${b.gear.wing}m²`, score: b.score };
       }
-      // No personal gear — recommend from manufacturer table
+      // No personal gear — recommend from manufacturer table, only when in range
       const brand = WING_BRANDS[DEFAULT_WING_BRAND];
       if (!brand) return null;
       const sizes = Object.keys(brand.sizes).map(Number).sort((a, b) => a - b);
       let best2 = null, bestSc = -1;
       for (const s of sizes) {
         const win = wingWindow(rider.weight, s, rider.skill, null);
+        if (w < win.minWind || w > win.maxWind) continue;
         const sc = scoreHour(w, win);
-        if (sc > bestSc) { bestSc = sc; best2 = { m: s, sc }; }
+        if (sc > bestSc) { bestSc = sc; best2 = { m: s }; }
       }
-      return best2 && bestSc > 0 ? { label: `${best2.m}m²`, score: bestSc } : null;
+      return best2 ? { label: `${best2.m}m²`, score: bestSc } : null;
     });
   })();
+  // Custom XAxis tick: time label + wing/kite size directly below (rendered inside the chart SVG)
+  const FensterTick = ({x, y, payload, ghour, lbls}) => {
+    const i = (lbls??[]).indexOf(payload?.value);
+    const g = i >= 0 ? ghour?.[i] : null;
+    const col = !g ? null : g.score >= 75 ? C.go : C.caution;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text textAnchor="middle" fill={ax.tick.fill} fontSize={ax.tick.fontSize} fontFamily={ax.tick.fontFamily} dy={12}>{payload?.value}</text>
+        {g && <text textAnchor="middle" fill={col} fontSize={9} fontFamily="monospace" fontWeight="bold" dy={25}>{g.label}</text>}
+      </g>
+    );
+  };
 
   const dirData   = dayData?dayData.labels.map((l,i)=>({idx:i,dir:dayData.dirs[i]})):[];
   const tempData  = dayData?dayData.labels.map((l,i)=>({h:l,temp:dayData.temp[i]})):[];
@@ -2575,11 +2590,11 @@ function App() {
               </div>}
               <div style={S.cwL}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={windData}>
+                  <ComposedChart data={windData} margin={{top:5,right:5,bottom:gearByHour&&gearByHour.some(g=>g)?18:5,left:5}}>
                     {/* Zuerst gerendert ⇒ liegt unter allen Linien. */}
                     {dayData.ens && <Area yAxisId="l" dataKey="band" name="Modell-Streuung" stroke="none" fill={C.sky} fillOpacity={0.12} isAnimationActive={false} legendType="none" />}
                     <CartesianGrid {...gr} />
-                    <XAxis dataKey="h" {...ax} interval={3} />
+                    <XAxis dataKey="h" {...ax} interval={3} tick={gearByHour?<FensterTick ghour={gearByHour} lbls={dayData.labels}/>:undefined} />
                     <YAxis yAxisId="l" {...ax} />
                     <YAxis yAxisId="r" orientation="right" domain={[0,100]} {...ax} tick={{...ax.tick,fill:C.go}} />
                     <Tooltip {...TT} />
@@ -2600,33 +2615,6 @@ function App() {
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-              {/* Wing / Kite size strip — best equipment per 3-hour slot */}
-              {gearByHour && gearByHour.some(g => g) && (
-                <div style={{marginTop:10,paddingTop:8,borderTop:`1px solid ${C.border2}`}}>
-                  <div style={{fontSize:9,color:C.muted,fontFamily:"monospace",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>
-                    {sport==="kite"?"🪁 Kite-Größe":"🏄 Wing-Größe"} je Stunde · {sport==="kite"?kiteRider.weight:rider.weight} kg
-                  </div>
-                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                    {gearByHour.map((g, i) => {
-                      if (i % 3 !== 0) return null;
-                      const l = dayData.labels[i];
-                      const col = !g ? C.muted : g.score>=75 ? C.go : g.score>=40 ? C.caution : C.stop;
-                      return (
-                        <div key={l} style={{textAlign:"center",minWidth:44}}>
-                          <div style={{fontSize:9,color:C.dim,fontFamily:"monospace"}}>{l.slice(0,5)}</div>
-                          <div style={{padding:"3px 5px",borderRadius:4,marginTop:2,fontFamily:"monospace",
-                            fontSize:10,fontWeight:600,
-                            background:g?`${col}18`:"transparent",
-                            color:g?col:C.muted,
-                            border:`1px solid ${g?col+"44":C.border2}`}}>
-                            {g?g.label:"—"}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* CRAZYFLY REFERENCE PANEL (kite mode only) */}
