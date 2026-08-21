@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.23.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.24.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,14 +36,14 @@ const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatt
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.23.0
+// WindFoil Weather Intelligence v3.24.0
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
 // Changelog v3.20.0: seaBreeze align cutoff 60°→80° (Eric active from ~SW-W); active threshold 0.3→0.25; chart wind line shows winsEffBoosted (consistent with score)
 // Changelog v3.21.0: Ensemble-Median (5–6 Modelle) als Windquelle statt Einzelmodell; p10/p90-Streuung erfasst; Böen im Windverhältnis reskaliert. ACHTUNG: senkt Torbole ~25 % (löst die arome_best_max-Hüllkurve ab) — wird von MOS (Stufe 3–5) wieder ausgeglichen
 // Changelog v3.22.0: MOS-Korrektur ersetzt seaBreeze wo Messdaten existieren (Konvexkombination, keine Doppelzählung); Thermik wandert vor die Stationskorrekturen; Pelèr-Faktor blendet gegen MOS aus
-// Changelog v3.23.0: Transparente Darstellung — Ensemble-p10/p90 als Streuungsband im Wind-Chart (ComposedChart/Area, bewusst nicht MOS-korrigiert); Korrektur-Badge zeigt MOS / MOS-Brise-Blend / Meeresbrise inkl. Vorzeichen; Modell-Streuung als vierter Konfidenz-Part (w:1, zieht den Score absichtlich Richtung 50) und als vierte Zelle im Stationsvergleich
+// Changelog v3.24.0: Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstungsgröße pro 3-Stunden-Slot unterhalb des Charts; foil-Modus mit eigenem Gear oder Harlem-Pace-Tabelle; Kite-Modus nach Crazyfly-Sculp + Fahrergewicht/-skill; farbkodiert grün/gelb/rot nach Fenster-Passung
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -2042,6 +2042,44 @@ function App() {
       ? [cvt(dayData.ens.p10[i],windUnit), cvt(dayData.ens.p90[i],windUnit)] : null;
     return {h:l,wind:cvt(dayData.winsEffBoosted[i],windUnit),gust:cvt(dayData.gust[i],windUnit),score:dayData.scores[i],mwind:mw,mgust:mg,band};
   }):[];
+  // Per-hour best gear/kite size for the Fenster strip (every 3 h, aligned to chart ticks)
+  const gearByHour = (() => {
+    if (!dayData) return null;
+    const { winsEffBoosted, labels } = dayData;
+    return labels.map((_, i) => {
+      const w = winsEffBoosted[i];
+      if (!w || w < 0.5) return null;
+      if (sport === "kite") {
+        const kite = CRAZYFLY_KITES.find(k => k.model === kiteRider.kiteModel);
+        if (!kite) return null;
+        let best = null, bestPri = -1;
+        for (const s of kite.sizes) {
+          const adj = calcKiteWindow(s.minKn, s.maxKn, kiteRider.skill, kiteRider.weight);
+          const inOpt = w >= adj.optMin && w <= adj.optMax;
+          const inRange = w >= adj.minWind && w <= adj.maxWind;
+          const pri = inOpt ? 2 : inRange ? 1 : 0;
+          if (pri > bestPri) { bestPri = pri; best = { m: s.m, pri }; }
+        }
+        return best && best.pri > 0 ? { label: `${best.m}m`, score: best.pri === 2 ? 88 : 50 } : null;
+      }
+      if (useGear && gear.length) {
+        const b = pickBestSetup(gear, rider.weight, rider.skill, w, spotWingMap);
+        return b ? { label: `${b.gear.wing}m²`, score: b.score } : null;
+      }
+      // No personal gear — recommend from manufacturer table
+      const brand = WING_BRANDS[DEFAULT_WING_BRAND];
+      if (!brand) return null;
+      const sizes = Object.keys(brand.sizes).map(Number).sort((a, b) => a - b);
+      let best2 = null, bestSc = -1;
+      for (const s of sizes) {
+        const win = wingWindow(rider.weight, s, rider.skill, null);
+        const sc = scoreHour(w, win);
+        if (sc > bestSc) { bestSc = sc; best2 = { m: s, sc }; }
+      }
+      return best2 && bestSc > 0 ? { label: `${best2.m}m²`, score: bestSc } : null;
+    });
+  })();
+
   const dirData   = dayData?dayData.labels.map((l,i)=>({idx:i,dir:dayData.dirs[i]})):[];
   const tempData  = dayData?dayData.labels.map((l,i)=>({h:l,temp:dayData.temp[i]})):[];
   const presData  = dayData?dayData.labels.map((l,i)=>({h:l,pres:Math.round(dayData.pres[i])})):[];
@@ -2186,7 +2224,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.23.0</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.24.0</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -2562,6 +2600,33 @@ function App() {
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
+              {/* Wing / Kite size strip — best equipment per 3-hour slot */}
+              {gearByHour && gearByHour.some(g => g) && (
+                <div style={{marginTop:10,paddingTop:8,borderTop:`1px solid ${C.border2}`}}>
+                  <div style={{fontSize:9,color:C.muted,fontFamily:"monospace",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>
+                    {sport==="kite"?"🪁 Kite-Größe":"🏄 Wing-Größe"} je Stunde · {sport==="kite"?kiteRider.weight:rider.weight} kg
+                  </div>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                    {gearByHour.map((g, i) => {
+                      if (i % 3 !== 0) return null;
+                      const l = dayData.labels[i];
+                      const col = !g ? C.muted : g.score>=75 ? C.go : g.score>=40 ? C.caution : C.stop;
+                      return (
+                        <div key={l} style={{textAlign:"center",minWidth:44}}>
+                          <div style={{fontSize:9,color:C.dim,fontFamily:"monospace"}}>{l.slice(0,5)}</div>
+                          <div style={{padding:"3px 5px",borderRadius:4,marginTop:2,fontFamily:"monospace",
+                            fontSize:10,fontWeight:600,
+                            background:g?`${col}18`:"transparent",
+                            color:g?col:C.muted,
+                            border:`1px solid ${g?col+"44":C.border2}`}}>
+                            {g?g.label:"—"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* CRAZYFLY REFERENCE PANEL (kite mode only) */}
@@ -2999,7 +3064,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.23.0</span>
+        <span>WindFoil Weather Intelligence v3.24.0</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

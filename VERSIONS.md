@@ -1,5 +1,68 @@
 # WindFoil — Version History
 
+## v3.24.0 (2026-08-21)
+**Wing-/Kite-Größen-Streifen im Fenster-Chart — beste Ausrüstung pro Stunde**
+- `index.html` v3.23.0 → v3.24.0: reine Frontend-Änderung, kein Backend-/DB-Change
+- Neuer `gearByHour`-Computed-Value: für jede Stunde des Forecasts wird die passende Wing-/Kite-Größe ermittelt — Foil-Modus mit eigenem Gear-Liste via `pickBestSetup`, Foil ohne Gear-Liste via Harlem-Pace-Tabelle (`WING_BRANDS`), Kite-Modus via Crazyfly-Sculp + `calcKiteWindow`; Basis jeweils `winsEffBoosted[i]` (MOS-korrigierter Wind)
+- Kompakter Chip-Streifen unterhalb des Wingfoil-/Kite-Fenster-Charts (alle 3 Stunden, passend zu den Chart-X-Ticks): zeigt die empfohlene Größe in m² (Wing) oder m (Kite) inkl. Fahrergewicht
+- Farbkodierung: grün = Wind im Optimalfenster (Score ≥ 75), gelb = Randzone (Score ≥ 40), rot = außerhalb; nur angezeigt wenn mindestens eine Stunde des Tages auswertbar ist
+- Kite-Modus: wählt die Größe mit der besten Passung (erst Optimalzone, dann Planing-Zone) aus dem ausgewählten Crazyfly-Modell, gewichtet nach Skill und Fahrergewicht
+
+## v3.23.0 (2026-08-20)
+**Stufe 6: Transparente Darstellung — Streuungsband, Korrektur-Badge, Konfidenz**
+- `index.html` v3.22.0 → v3.23.0: reine Frontend-Änderung (kein Backend-/DB-Change)
+- **Ensemble-Streuungsband**: Wind-Chart wird zu `ComposedChart`; p10/p90 aus dem Ensemble liegen als halbtransparente Area unter der Windlinie — bewusst das rohe (nicht MOS-korrigierte) Band, damit es "wie uneinig sind die Modelle?" beantwortet, nicht "wie systematisch liegen sie falsch?"
+- **Korrektur-Badge** (gesteuert von `dayData.thermal.source`): zeigt `mos`, `blend` oder `seabreeze` an; bei MOS wird das Vorzeichen explizit dargestellt (`+`/`−`), damit eine negative Korrektur nicht wie eine Anhebung aussieht
+- **Modell-Streuung in `computeConfidence`**: vierter Part auf Basis des Ensemble-Bands; Gewichtssumme verdoppelt (absichtlich), um die drei Stations-Parts zu halbieren; vierte Zelle im Stationsvergleich-Grid ergänzt
+- Verifiziert an drei Spots: p10 ≤ p90 überall, keine `band=null`-Stunden; Band und Windlinie laufen durch dieselbe `cvt()`
+
+## v3.22.0 (2026-08-20)
+**MOS-Pipeline Stufen 3–5: gelernte Stunden-Bias-Korrektur + thermalCorrection()**
+- `db/migrations/007_mos.sql` (neu): Tabelle `mos_bias(station_key, hour, bias_ms, samples, updated_at)` + Index. Speichert den gelernten Stunden-Bias als `median(obs − ensembleMedian_raw)`.
+- `proxy-server.js`: Nightly-Job berechnet den Bias neu (nur Stunden mit ≥5 Obs); `GET /api/station/mos` liefert die Tabelle als JSON; `fetchStationMos()` im Frontend lädt sie beim Start parallel zum Forecast.
+- **Stufe 3** — MOS-Kern: `computeMosBias` und `applyMosBias` (reine Funktionen); Migration 007.
+- **Stufe 4** — API-Endpunkt + Frontend-Abruf: `GET /api/station/mos`, `fetchStationMos()`, `loadData` holt MOS synchron mit dem Forecast.
+- **Fix (mos)**: Epoch-Zuordnung auf Pfad-Ebene korrigiert (Station-Zeit, nicht UTC), Voraussetzung für korrekte Stunden-Zuordnung.
+- **Stufe 5** — `thermalCorrection()`: ersetzt `seaBreeze()` im Hauptpfad; Konvexkombination `w·mosBias + (1−w)·sbBoost` verhindert Doppelzählung per Konstruktion (kein Tuning nötig). `mosWeight(n, km)` gewichtet nach Stichprobengröße und Distanz; `applyPelerBoost` fährt seinen Faktor gegen 1 wenn MOS die Stunde abdeckt; Kettenreihenfolge: Thermik vor Live-Station-Boost. `thermal-correction.test.mjs` (279 Zeilen, 20 000 zufällige Eingaben) beweist die Doppelzählungs-Schranke.
+
+## v3.21.0 (2026-08-20)
+**MOS-Pipeline Stufen 0–2: Ensemble-Median als neue Windquelle**
+- **Stufe 0** — `proxy-server.js`: Obs-Poller indiziert Stationszeit statt UTC — notwendige Voraussetzung für korrektes MOS-Stunden-Matching.
+- **Stufe 1** — Ensemble-Kombinierer: reine Hilfsfunktionen (`tryFetchEnsemble`, `attachEnsemble`, `applyEnsemble`) + 35 Unit-Tests; nur Windgeschwindigkeit der 11 Modell-Member (11,6 KB statt 42,3 KB für ein volles Ensemble).
+- **Stufe 2** (`index.html` v3.20.0 → v3.21.0): `attachEnsemble` + `applyEnsemble` integriert; `dayData`-Wind kommt aus dem Ensemble-Median (Fallback auf Trägermodell je Stunde ohne Ensemble-Wert); `dayScores[]`-Loop verwendet dieselbe Windquelle (schließt die Inkonsistenz aus v3.19.0 analog für den Ensemble-Pfad); `applyPelerBoost` hebt p10/p90 mit an; bewusst akzeptierte Regression: Torbole −25 % (Median liegt unter der alten `arome_best_max`-Hüllkurve; MOS-Korrektur in Stufe 3 behebt das).
+
+## v3.20.0 (2026-08-20)
+**Thermik-Boost (Eric/Meltemi) in allen Scoring-Pfaden + seaBreeze-Tuning**
+- `index.html` v3.18.1 → v3.20.0: enthält Bugfix v3.19.0 + Tuning
+- **v3.19.0 (Bugfix)**: `seaBreeze()`-Boost floss bisher nur in `effW` (Empfehlungstext) ein, fehlte in `scores[]`, `dayScore`, `session` und `dayScores[]`. Neuer `winsEffBoosted`-Array: pro Stunde `seaBreeze(dirs[i], i, month, regime)` statt eines einzigen Mittagswerts; alle Scoring-Pfade speisen sich daraus; `dayScores[]`-Loop bekommt dieselbe Behandlung; `seaBreeze` für `effW` nutzt `regime.peakHour` statt hartkodiert 14 Uhr.
+- **v3.20.0 (Tuning)**: Alignment-Cutoff 60° → 80° (Eric an Vasiliki dreht über SW-W ein, fiel mit 60° regelmäßig raus); Aktiv-Schwelle 0,30 → 0,25; Chart-Windlinie zeigt `winsEffBoosted` statt `wins` (war bisher inkonsistent zur grünen Score-Linie).
+
+## v3.18.1 (2026-08-20)
+**Kitesurfing-Modus, Crazyfly Sculp, Spot Chioggia, Hilfeseite**
+- `index.html` v3.18.0 → v3.18.1 (Note: Code-Header blieb v3.17.0 — wegen Versionskollision rückwirkend als v3.18.1 eingetragen)
+- Sport-Toggle Wingfoiling/Kitesurfing im Header, `localStorage`-persistent; „Foil-Modus" → „Wingfoil-Modus" umbenannt
+- `calcKiteWindow()`: passt Crazyfly-Sculp-Herstellerranges (7–14 m²) per √-Gewichtsskalierung auf Fahrergewicht und Skill an; Referenzpanel zeigt beide Werte
+- Neuer Spot Chioggia (45.2271, 12.3046) mit Garbin-Regime (SW 225°, Peak 14 Uhr)
+- `help.html` (neu): deutsche Hilfeseite, 7 Abschnitte
+
+## v3.18.0 (2026-08-11)
+**Passwort-Reset per E-Mail (AuthGate + nodemailer)**
+- `src/AuthGate.jsx` 1.0.0 → 1.1.0: Reset-Flow via `?token=`-URL-Parameter; Formular für neues Passwort, Info/Error-States
+- `src/auth.mjs`: Reset-Token-Endpunkte (`POST /api/auth/reset-request`, `POST /api/auth/reset-confirm`)
+- `package.json`: `nodemailer ^9.0.5` hinzugefügt
+- `windfoil.env.example`: SMTP-Konfiguration dokumentiert
+
+## v3.17.2 (2026-08-11)
+**Spot Lefkada NW / Kathisma hinzugefügt**
+- `index.html`: neuer Spot Lefkada NW / Kathisma in der Spot-Liste
+
+## v3.17.1 (2026-08-11)
+**Bug-fixes: calcWindow maxWind, Timezone-Stunden, Proxy-Validierung**
+- `index.html`: `calcWindow` — `maxWind`-Formel korrigiert (sm²-Effekt entfernt); war für `skill=advanced/pro` kleiner als `optMax`, Score-Band kollabierte oder invertierte sich
+- `index.html`: `runStationComparison` — `nowH` aus UTC-Offset des Spots statt Browser-Lokalzeit, Konfidenz-Vergleich bei Zeitzonendifferenzen korrekt
+- `index.html`: `fmtW` — `cvt(ms,"ms")` → `cvt(ms, unit)` explizit; `nearbyStations` — Status „Teils live" wenn nur Teil der Stationen live
+- `proxy-server.js`: `/history` — `lat`/`lon` zu Float geparst + Bereichsprüfung, `days`-NaN-Guard
+
 ## v3.17.0 (2026-08-06)
 **Obs-basiertes Feedback — Wing + Zeitfenster statt geschätzter Knoten**
 - `db/migrations/006_station_obs.sql` (neu): Tabelle `station_obs` (station_key, ts, wind_ms, gust_ms, lat, lon) + Index. Rolling-Log aller 10-Minuten-Polling-Werte.
