@@ -655,19 +655,41 @@ app.get("/api/station/mos", async (req, res) => {
   const key = live ? st.key : (st.wc || st.icao || st.station);
 
   try {
-    // Gecacht wird NUR der stationsabhängige Teil. `km` hängt an der Anfrage, und
-    // eine Station bedient mehrere Spots: LGPZ deckt 40 km ab, Vasiliki liegt
-    // 35.5 km entfernt, Preveza-Stadt 3.8 km. Läge km im Cache, bekäme der zweite
-    // Spot die Distanz des ersten — und in Stufe 5 damit dessen Vertrauensgewicht.
     const ck = `mos:${key}`;
     let m = cacheGet(ck), cached = true;
     if (!m) {
       cached = false;
       const { getMosBias } = await import("./src/mos.mjs");
       m = getMosBias(getObsDb(), key);
-      // Kein Ergebnis heisst "der Job hatte noch nichts zu lernen" — kein Fehler.
       if (!m) return res.json({ ok: false, error: "no_mos_data", station: key });
-      cacheSet(ck, m, 60 * 60_000); // Bias ändert sich höchstens einmal je Nacht
+
+      // Neural-Bias-Vorhersagen einmischen (falls trainiert)
+      const { getNeuralHourlyBias, getMeltemProb,
+              MELTEMI_STATION_KEY } = await import("./src/neural_mos.mjs");
+      const db = getObsDb();
+      const neuralBias = getNeuralHourlyBias(db, key);
+      if (neuralBias) {
+        for (let h = 0; h < 24; h++) {
+          if (m.hours[h] && neuralBias[h] != null)
+            m.hours[h].neuralBiasMs = neuralBias[h];
+        }
+        m.neuralActive = true;
+      }
+
+      // Meltemi-Wahrscheinlichkeit: live aus latestFcFeatures wenn vorhanden,
+      // sonst aus app_meta (letzter Nightly-Job-Wert)
+      if (key === MELTEMI_STATION_KEY) {
+        const fcFeat = latestFcFeatures.get(key);
+        const prob = fcFeat ? getMeltemProb(db, fcFeat, key) : null;
+        if (prob != null) {
+          m.meltemProb = prob;
+        } else {
+          const row = db.prepare("SELECT value FROM app_meta WHERE key='meltemi_prob'").get();
+          if (row) { try { m.meltemProb = JSON.parse(row.value).prob; } catch {} }
+        }
+      }
+
+      cacheSet(ck, m, 60 * 60_000);
     }
     res.json({
       ok: true, ...m, cached,
@@ -1042,8 +1064,46 @@ function getObsDb() {
     obsDb._pruneObs = obsDb.prepare(
       `DELETE FROM station_obs WHERE ts < ?`
     );
+    obsDb._insertMlSample = obsDb.prepare(
+      `INSERT OR IGNORE INTO ml_samples
+         (station_key, ts, hour_local, month, obs_wind_ms, obs_gust_ms,
+          fc_wind_ms, fc_dir_deg, fc_pressure_hpa, fc_temp_c, fc_cape, bias_ms)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
+    );
+    obsDb._pruneMlSamples = obsDb.prepare(
+      `DELETE FROM ml_samples WHERE ts < ?`
+    );
   }
   return obsDb;
+}
+
+// Letztes Forecast-Feature-Set je Station (für Meltemi-Klassifikator-Inferenz).
+const latestFcFeatures = new Map();
+
+// Holt den aktuellen Stundenwert aus Open-Meteo für die gegebene Koordinate.
+// Gibt {wind, dir, pressure, temp, cape} zurück oder null bei Fehler.
+async function fetchCurrentFcFeatures(lat, lon) {
+  try {
+    const p = new URLSearchParams({
+      latitude: lat, longitude: lon,
+      hourly: 'windspeed_10m,winddirection_10m,surface_pressure,temperature_2m,cape',
+      wind_speed_unit: 'ms', forecast_days: 1, timezone: 'UTC',
+    });
+    const r = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${p}`, 8000);
+    const j = await r.json();
+    if (!j?.hourly?.time) return null;
+    const h   = j.hourly;
+    const nowH = new Date().getUTCHours();
+    const idx  = h.time.findIndex(t => parseInt(t.slice(11,13),10) === nowH);
+    if (idx < 0) return null;
+    return {
+      wind:     h.windspeed_10m[idx],
+      dir:      h.winddirection_10m?.[idx] ?? null,
+      pressure: h.surface_pressure?.[idx]  ?? null,
+      temp:     h.temperature_2m?.[idx]    ?? null,
+      cape:     h.cape?.[idx]              ?? null,
+    };
+  } catch { return null; }
 }
 
 async function pollStationObs() {
@@ -1076,6 +1136,18 @@ async function pollStationObs() {
       }
       getObsDb()._insertObs.run(st.key, ts, snap.wind, snap.gust ?? null, st.lat, st.lon);
       console.log(`[obs-poller] ${st.key}: wind=${snap.wind} m/s gust=${snap.gust ?? "n/a"}`);
+      // ML-Sample: Forecast-Features parallel holen und neben der Beobachtung speichern
+      fetchCurrentFcFeatures(st.lat, st.lon).then(fc => {
+        if (!fc || fc.wind == null) return;
+        const { hour: h, day } = localPartsTZ(Date.now() / 1000, st.tz);
+        const mo = parseInt(day.slice(5,7), 10);
+        const bias = fc.wind != null ? Math.round((snap.wind - fc.wind) * 100) / 100 : null;
+        getObsDb()._insertMlSample.run(
+          st.key, ts, h, mo, snap.wind, snap.gust ?? null,
+          fc.wind, fc.dir, fc.pressure, fc.temp, fc.cape, bias
+        );
+        latestFcFeatures.set(st.key, { ...fc, hour_local: h, month: mo, ts });
+      }).catch(() => {});
     } catch (e) {
       console.warn(`[obs-poller] ${st.key} error:`, e.message);
     }
@@ -1116,18 +1188,36 @@ async function pollStationObs() {
       }
       getObsDb()._insertObs.run(stKey, ts, wind, gust ?? null, st.lat, st.lon);
       console.log(`[obs-poller] ${stKey}: wind=${wind} m/s gust=${gust ?? "n/a"} (localHour=${localHour} ${st.tz})`);
+      // ML-Sample: Forecast-Features parallel holen und neben der Beobachtung speichern
+      fetchCurrentFcFeatures(st.lat, st.lon).then(fc => {
+        if (!fc || fc.wind == null) return;
+        const mo = parseInt(localDate.slice(5,7), 10);
+        const bias = fc.wind != null ? Math.round((wind - fc.wind) * 100) / 100 : null;
+        getObsDb()._insertMlSample.run(
+          stKey, ts, localHour, mo, wind, gust ?? null,
+          fc.wind, fc.dir, fc.pressure, fc.temp, fc.cape, bias
+        );
+        latestFcFeatures.set(stKey, { ...fc, hour_local: localHour, month: mo, ts });
+      }).catch(() => {});
     } catch (e) {
       console.warn(`[obs-poller] ${stKey} error:`, e.message);
     }
   }
 
-  // ── Prune: Einträge älter als 14 Tage löschen ─────────────────────────────
+  // ── Prune: station_obs älter 14 Tage, ml_samples älter 90 Tage ───────────
   try {
     const pruneResult = getObsDb()._pruneObs.run(prune14d);
     if (pruneResult.changes > 0)
       console.log(`[obs-poller] pruned ${pruneResult.changes} obs older than 14d`);
   } catch (e) {
     console.warn("[obs-poller] prune error:", e.message);
+  }
+  try {
+    const prune90d = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const r = getObsDb()._pruneMlSamples.run(prune90d);
+    if (r.changes > 0) console.log(`[obs-poller] pruned ${r.changes} ml_samples older than 90d`);
+  } catch (e) {
+    console.warn("[obs-poller] ml_samples prune error:", e.message);
   }
 }
 
@@ -1176,6 +1266,40 @@ async function runMos(reason) {
       .join(" ");
     console.log(`[mos] ${reason}: rollup ${out.rollup.rows} rows · ${summary}`);
   }
+
+  // ── Neural MOS + Meltemi-Klassifikator ─────────────────────────────────────
+  try {
+    const { trainNeuralMos, trainMeltemClassifier, getMeltemProb,
+            MELTEMI_STATION_KEY } = await import("./src/neural_mos.mjs");
+    const db = getObsDb();
+
+    for (const st of mosStations()) {
+      const nr = trainNeuralMos(db, st.key);
+      console.log(`[neural-mos] ${st.key}: ${nr.ok ? `trained n=${nr.n}` : nr.reason}`);
+    }
+
+    // Meltemi-Klassifikator nur für LGPZ
+    const cr = trainMeltemClassifier(db, MELTEMI_STATION_KEY);
+    console.log(`[meltemi-clf] ${cr.ok ? `trained n=${cr.n} pos=${cr.pos}` : cr.reason}`);
+
+    // Sofortige Inferenz mit aktuellen Features → in app_meta cachen
+    const lgpzFc = latestFcFeatures.get(MELTEMI_STATION_KEY);
+    if (lgpzFc) {
+      const prob = getMeltemProb(db, lgpzFc, MELTEMI_STATION_KEY);
+      if (prob != null) {
+        const now = new Date().toISOString();
+        db.prepare(`INSERT INTO app_meta(key,value,updated_at) VALUES(?,?,?)
+          ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at`)
+          .run('meltemi_prob', JSON.stringify({ prob, ts: now }), now);
+        console.log(`[meltemi-clf] prob=${prob} (cached)`);
+      }
+    }
+  } catch (e) {
+    console.warn("[neural-mos] training error:", e.message);
+  }
+
+  // MOS-Cache invalidieren, damit die nächste API-Anfrage neue Werte sieht
+  for (const st of mosStations()) cache.delete(`mos:${st.key}`);
   return out;
 }
 

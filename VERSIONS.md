@@ -1,5 +1,16 @@
 # WindFoil — Version History
 
+## v3.28.0 (2026-08-26)
+**Neural MOS + Meltemi-Klassifikator (Deep Learning Stufe 1 & 2)**
+- `db/migrations/008_ml_samples.sql`: Neue Tabelle `ml_samples` — bei jedem Stationspoll werden Beobachtung + Open-Meteo-Forecast-Features als Paar gespeichert (90 Tage Retention)
+- `src/neural_mos.mjs`: MLP-Klasse (reines JS, keine npm-Deps) mit Adam-Optimizer; `featureVector()` (9 Features: Wind, sin/cos Richtung, Druck, Temperatur, CAPE, sin/cos Stunde/Monat)
+- **Neural MOS** (`trainNeuralMos`): Regression MLP 9→16→1, lernt Modell-Bias aus ml_samples, speichert per-Stunde-Vorhersagen in `app_meta`; `thermalCorrection()` nutzt `neuralBiasMs` wenn vorhanden (Source: "neural_mos"/"neural_blend")
+- **Meltemi-Klassifikator** (`trainMeltemClassifier`): Binary-Classification MLP 9→12→1 für LGPZ, Schwellwert 7 m/s; `getMeltemProb()` läuft live bei jedem MOS-API-Aufruf auf aktuellen Forecast-Features
+- Poller: speichert nach jedem Obs-Insert asynchron Forecast-Features via Open-Meteo; 90-Tage-Prune für ml_samples
+- Nightly MOS-Job: trainiert Neural-MOS + Meltemi-Clf nach dem linearen MOS; MOS-Cache wird danach geleert
+- `/api/station/mos`: gibt zusätzlich `neuralBiasMs` je Stunde + `meltemProb` (0–1) zurück
+- `index.html` v3.28.0: Meltemi-Wahrscheinlichkeit als farbkodiertes Badge (grün ≥60%, gelb ≥35%); Quell-Label "Neural-MOS" in der Forecast-Zeile; Aktivierung erst ab `NEURAL_MIN_SAMPLES=60` Paaren
+
 ## v3.27.0 (2026-08-21)
 **Meltemi-Boost für Lefkada NW und Vasiliki**
 - `index.html` v3.26.3 → v3.27.0: reine Frontend-Änderung, kein Backend-/DB-Change
