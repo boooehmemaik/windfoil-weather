@@ -860,6 +860,40 @@ app.get("/api/station/history", async (req, res) => {
 
 app.get("/api/station/health", (_req, res) => res.json({ ok: true, keyConfigured: !!KEY }));
 
+// History: letzte N Tage Beobachtungen + MOS-Bias-Profil + ML-Paare (Maik/Tom).
+// Benötigt eingeloggte Session (requireAuth), gibt nur eigene Beobachtungsdaten zurück.
+app.get("/api/station/history", async (req, res, next) => {
+  const { requireAuth } = await import("./src/auth.middleware.mjs");
+  requireAuth(req, res, async () => {
+    try {
+      const days  = Math.min(parseInt(req.query.days) || 5, 14);
+      const db    = getObsDb();
+      const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+
+      const obs = db.prepare(
+        `SELECT station_key, ts, wind_ms, gust_ms FROM station_obs
+         WHERE ts >= ? ORDER BY station_key, ts`
+      ).all(cutoff);
+
+      const mos = db.prepare(
+        `SELECT station_key, hour_local, bias_ms, bias_shrunk_ms,
+                obs_median_ms, pred_median_ms, n_samples
+         FROM station_mos_bias ORDER BY station_key, hour_local`
+      ).all();
+
+      const ml = db.prepare(
+        `SELECT station_key, ts, obs_wind_ms, fc_wind_ms, bias_ms, hour_local
+         FROM ml_samples WHERE fc_lead_hours=0 AND ts >= ?
+         AND obs_wind_ms IS NOT NULL ORDER BY station_key, ts`
+      ).all(cutoff);
+
+      res.json({ ok: true, days, obs, mos, ml });
+    } catch (e) {
+      next(e);
+    }
+  });
+});
+
 // Count of users with at least one unexpired Better-Auth session.
 app.get("/api/stats/active-users", (_req, res) => {
   try {

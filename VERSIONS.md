@@ -1,5 +1,14 @@
 # WindFoil — Version History
 
+## v3.28.5 (2026-09-11)
+**Verlauf-Seite für Maik + Tom — 3 Charts: Windverlauf, Obs vs. Modell, MOS-Bias**
+- `index.html` v3.28.5: Neue `HistoryView`-Komponente (full-screen Overlay) — Stationsauswahl (LGPZ, Torbole, Talamone, Ulcinj, LGKL), 3 Recharts-Charts; nur sichtbar für `HISTORY_EMAILS`-Whitelist; "Verlauf"-Button im Header neben "Abmelden"
+- Chart 1: Beobachteter Wind letzte 5 Tage (aus `station_obs`, Zeitreihe)
+- Chart 2: Stundenprofil Beobachtung vs. Open-Meteo Ensemble-Median (aus `station_mos_bias.obs_median_ms / pred_median_ms`)
+- Chart 3: MOS-Korrektur pro Stunde (Balkendiagramm `bias_shrunk_ms`, blau=positiv/Modell unterschätzt, rot=negativ/Modell überschätzt)
+- Footer: zeigt wie viele ml_samples-Paare bereits vorhanden sind und ob Neural MOS trainiert werden kann (≥60)
+- `proxy-server.js`: Neuer Endpunkt `GET /api/station/history?days=5` — requireAuth, gibt `station_obs` (5 Tage), `station_mos_bias` und `ml_samples` lead=0 zurück
+
 ## v3.28.4 (2026-09-11)
 **Neural-MOS: lead=24/48 auch für Training nutzen — 3× mehr Daten, vorlaufzeitspezifische Predictions**
 - `src/neural_mos.mjs` v2.0.0: `featureVector()` hat jetzt 10 Features (neu: `fc_lead_hours/48 → [0, 0.5, 1.0]`); `N_FEATURES=10`; `MLP.fromJSON()` verwirft Modelle mit falscher Eingabedimension (kein Crash bei alten 9-Feature-Gewichten)
