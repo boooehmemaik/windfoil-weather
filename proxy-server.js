@@ -1254,10 +1254,22 @@ async function pollStationObs() {
         const { now: fc, ahead } = fcResult;
         const mo = parseInt(localDate.slice(5,7), 10);
         const bias = fc.fc_wind_ms != null ? Math.round((wind - fc.fc_wind_ms) * 100) / 100 : null;
-        getObsDb()._insertMlSample.run(
-          stKey, ts, localHour, mo, wind, gust ?? null,
+        const db = getObsDb();
+        // lead=0: Beobachtung + aktueller Forecast
+        db._insertMlSample.run(
+          stKey, ts, 0, localHour, mo, wind, gust ?? null,
           fc.fc_wind_ms, fc.fc_dir_deg, fc.fc_pressure_hpa, fc.fc_temp_c, fc.fc_cape, bias
         );
+        // lead=24/48: Forecast für t+24h und t+48h
+        for (const a of ahead) {
+          if (!a?.targetTs || a.fc_wind_ms == null) continue;
+          const { hour: ah, day: ad } = localPartsTZ(new Date(a.targetTs).getTime() / 1000, st.tz);
+          const am = parseInt(ad.slice(5,7), 10);
+          db._insertMlSample.run(
+            stKey, a.targetTs, a.leadHours, ah, am, null, null,
+            a.fc_wind_ms, a.fc_dir_deg, a.fc_pressure_hpa, a.fc_temp_c, a.fc_cape, null
+          );
+        }
         latestFcFeatures.set(stKey, { ...fc, hour_local: localHour, month: mo, ts });
         storeFcArchive(stKey, ts, ahead);
       }).catch(() => {});

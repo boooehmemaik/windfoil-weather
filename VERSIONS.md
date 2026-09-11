@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.28.3 (2026-09-11)
+**fc_lead_hours in ml_samples — t+24h/t+48h Forecast-Paare bei jedem Poll speichern**
+- `proxy-server.js`: Beide Poller-Blöcke (LIVE + MEASURED) fügen jetzt bei jedem Poll drei ml_samples-Rows ein: lead=0 (Beobachtung + aktueller Forecast), lead=24 und lead=48 (nur Forecast-Features, obs_wind_ms=null); Parameter-Reihenfolge des _insertMlSample-Prepared-Statements jetzt korrekt 13-stellig mit fc_lead_hours als 3. Param
+- Motivation: Bisher wurden lead=24/48-Rows nicht gespeichert und fc_lead_hours fehlte im Insert — Neural-MOS konnte keine vorlaufzeitabhängige Korrektur lernen. Jetzt sammeln alle Stationen lead-aware Paare für bessere t+1/t+2-Genauigkeit
+
 ## v3.28.2 (2026-09-11)
 **Lead-Time-Dämpfung für t+1/t+2-Genauigkeit + forecast_archive**
 - `index.html` v3.28.2: Neue Konstanten `MOS_LEAD_DAMP=[1.00,0.75,0.55,0.40]` und `MELTEMI_LEAD_DAMP=[1.00,0.80,0.62,0.48]`; `thermalCorrection()` erhält `leadDay`-Parameter und skaliert das MOS-Gewicht entsprechend; `applyMeltemBoost()` leitet `leadDay` pro Stunde aus den Zeitstempel-Daten ab
