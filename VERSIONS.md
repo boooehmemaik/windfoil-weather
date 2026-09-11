@@ -1,5 +1,11 @@
 # WindFoil — Version History
 
+## v3.28.6 (2026-09-11)
+**History-Button + Spot-Tabs: LefkadaNW, Vasiliki, SurfParkBouka, Talamone**
+- `index.html` v3.28.6: "Verlauf"-Button → "History"; Titel "Verlauf & MOS-Performance" → "History & MOS-Performance"
+- `HISTORY_SPOTS`-Konstante: feste Tab-Liste mit Spot-Name → Station-Key-Mapping (LefkadaNW/Vasiliki→LGPZ, SurfParkBouka→LGKL, Talamone→talamone); LefkadaNW und Vasiliki zeigen dieselben LGPZ-Messdaten mit unterschiedlicher Labelung
+- Tabs werden jetzt statisch aus `HISTORY_SPOTS` gerendert statt dynamisch aus API-Antwort
+
 ## v3.28.5 (2026-09-11)
 **Verlauf-Seite für Maik + Tom — 3 Charts: Windverlauf, Obs vs. Modell, MOS-Bias**
 - `index.html` v3.28.5: Neue `HistoryView`-Komponente (full-screen Overlay) — Stationsauswahl (LGPZ, Torbole, Talamone, Ulcinj, LGKL), 3 Recharts-Charts; nur sichtbar für `HISTORY_EMAILS`-Whitelist; "Verlauf"-Button im Header neben "Abmelden"

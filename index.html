@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.28.5 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.28.6 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatt
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.28.5
+// WindFoil Weather Intelligence v3.28.6
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -51,7 +51,8 @@ const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%3
 // Changelog v3.28.2: Lead-Time-Dämpfung — MOS_LEAD_DAMP + MELTEMI_LEAD_DAMP (t+1/t+2 genauer); forecast_archive-Tabelle für zukünftigen vorlaufzeitabhängigen MOS
 // Changelog v3.28.3: fc_lead_hours in ml_samples — beide Poller speichern jetzt lead=0/24/48-Rows für vorlaufzeitabhängiges Neural-MOS-Training
 // Changelog v3.28.4: Neural-MOS trainiert auf lead=0/24/48 (3× mehr Daten); featureVector hat fc_lead_hours als 10. Feature; thermalCorrection wählt neuralBiasMs/24/48 je nach leadDay
-// Changelog v3.28.5: Verlauf-Seite (nur Maik+Tom): 3 Charts — Windverlauf 5 Tage, Obs vs. Ensemble-Modell, MOS-Bias pro Stunde; /api/station/history Endpunkt (requireAuth)
+// Changelog v3.28.5: History-Seite (nur Maik+Tom): 3 Charts — Windverlauf 5 Tage, Obs vs. Ensemble-Modell, MOS-Bias pro Stunde; /api/station/history Endpunkt (requireAuth)
+// Changelog v3.28.6: History-Button (war: Verlauf); Spot-Tabs: LefkadaNW/Vasiliki (→LGPZ), SurfParkBouka (→LGKL), Talamone (direkt)
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -1199,11 +1200,19 @@ function applyTheme(name){
 // ── History View (nur für Maik + Tom) ────────────────────────────────────────
 const HISTORY_EMAILS = ['booehmemaik@gmail.com', 'genrich@live.de'];
 
+const HISTORY_SPOTS = [
+  { label: 'LefkadaNW',     key: 'LGPZ'      },
+  { label: 'Vasiliki',      key: 'LGPZ'      },
+  { label: 'SurfParkBouka', key: 'LGKL'      },
+  { label: 'Talamone',      key: 'talamone'  },
+];
+
 function HistoryView({ onClose }) {
-  const [data, setData]     = useState(null);
-  const [busy, setBusy]     = useState(true);
-  const [err,  setErr]      = useState('');
-  const [st,   setSt]       = useState('LGPZ');
+  const [data, setData]       = useState(null);
+  const [busy, setBusy]       = useState(true);
+  const [err,  setErr]        = useState('');
+  const [spotIdx, setSpotIdx] = useState(0);
+  const curSpot = HISTORY_SPOTS[spotIdx];
 
   useEffect(() => {
     setBusy(true);
@@ -1223,10 +1232,9 @@ function HistoryView({ onClose }) {
   const BIAS_P = '#38bdf8';
   const BIAS_N = '#f87171';
 
-  const stations = data ? [...new Set(data.obs.map(r=>r.station_key))] : [];
-  const stObs  = data ? data.obs.filter(r=>r.station_key===st) : [];
-  const stMos  = data ? data.mos.filter(r=>r.station_key===st) : [];
-  const stMl   = data ? data.ml.filter(r=>r.station_key===st)  : [];
+  const stObs  = data ? data.obs.filter(r=>r.station_key===curSpot.key) : [];
+  const stMos  = data ? data.mos.filter(r=>r.station_key===curSpot.key) : [];
+  const stMl   = data ? data.ml.filter(r=>r.station_key===curSpot.key)  : [];
 
   // Chart 1: Windverlauf letzte 5 Tage
   const obsData = stObs.map(r => ({
@@ -1253,7 +1261,6 @@ function HistoryView({ onClose }) {
   const gr = { stroke: LINE };
   const tt = { contentStyle: { background: '#1a2332', border: `1px solid ${LINE}`, fontSize: 12 }, labelStyle: { color: FOAM } };
 
-  const ST_LABELS = { LGPZ:'Lefkada (LGPZ)', torbole:'Torbole', talamone:'Talamone', ulcinj:'Ulcinj', LGKL:'Gialova (LGKL)' };
 
   const tick = { fill: MUTED, fontSize: 11 };
   const chartH = 200;
@@ -1263,14 +1270,14 @@ function HistoryView({ onClose }) {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 20px',
           background:'#0b0f17', borderBottom:`1px solid ${LINE}`, position:'sticky', top:0, zIndex:10 }}>
-        <span style={{ fontSize:14, fontWeight:700, color:FOAM, letterSpacing:'.05em' }}>Verlauf & MOS-Performance</span>
+        <span style={{ fontSize:14, fontWeight:700, color:FOAM, letterSpacing:'.05em' }}>History & MOS-Performance</span>
         <div style={{ display:'flex', gap:6, marginLeft:8 }}>
-          {(stations.length ? stations : ['LGPZ','torbole','talamone','ulcinj']).map(k => (
-            <button key={k} onClick={()=>setSt(k)}
-              style={{ padding:'3px 10px', borderRadius:6, border:`1px solid ${st===k?ACT:LINE}`,
-                background: st===k?ACT:'transparent', color: st===k?'#000':MUTED,
-                fontSize:12, cursor:'pointer', fontWeight: st===k?700:400 }}>
-              {ST_LABELS[k]||k}
+          {HISTORY_SPOTS.map((sp, i) => (
+            <button key={sp.label} onClick={()=>setSpotIdx(i)}
+              style={{ padding:'3px 10px', borderRadius:6, border:`1px solid ${i===spotIdx?ACT:LINE}`,
+                background: i===spotIdx?ACT:'transparent', color: i===spotIdx?'#000':MUTED,
+                fontSize:12, cursor:'pointer', fontWeight: i===spotIdx?700:400 }}>
+              {sp.label}
             </button>
           ))}
         </div>
@@ -1487,7 +1494,7 @@ function AuthGate({children}){
                 border:`1px solid ${histOpen?CA.lift:CA.line}`,
                 background:histOpen?CA.lift:'transparent',
                 color:histOpen?'#fff':CA.foam,fontSize:13,fontWeight:600}}>
-              Verlauf
+              History
             </button>
           )}
           <button onClick={doSignOut}
@@ -2525,7 +2532,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.28.5</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.28.6</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -3397,7 +3404,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.5</span>
+        <span>WindFoil Weather Intelligence v3.28.6</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
