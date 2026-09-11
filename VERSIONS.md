@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.28.7 (2026-09-11)
+**Fix: History-Seite leer — Endpunkt-Konflikt mit altem Weatherbit-Handler**
+- `proxy-server.js`: ML/MOS-History-Endpunkt von `/api/station/history` auf `/api/station/obs-history` umbenannt — der alte Weatherbit-Endpunkt (`/api/station/history?lat=..&lon=..`) hat in Express alle Requests abgefangen, bevor der neue Handler dran kam
+- `index.html`: Frontend ruft jetzt `/api/station/obs-history?days=5` auf
+
 ## v3.28.6 (2026-09-11)
 **History-Button + Spot-Tabs: LefkadaNW, Vasiliki, SurfParkBouka, Talamone**
 - `index.html` v3.28.6: "Verlauf"-Button → "History"; Titel "Verlauf & MOS-Performance" → "History & MOS-Performance"

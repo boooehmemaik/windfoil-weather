@@ -860,9 +860,10 @@ app.get("/api/station/history", async (req, res) => {
 
 app.get("/api/station/health", (_req, res) => res.json({ ok: true, keyConfigured: !!KEY }));
 
-// History: letzte N Tage Beobachtungen + MOS-Bias-Profil + ML-Paare (Maik/Tom).
-// Benötigt eingeloggte Session (requireAuth), gibt nur eigene Beobachtungsdaten zurück.
-app.get("/api/station/history", async (req, res, next) => {
+// obs-history: letzte N Tage Beobachtungen + MOS-Bias-Profil + ML-Paare (Maik/Tom).
+// Benötigt eingeloggte Session (requireAuth). Separater Pfad um Konflikt mit dem
+// Weatherbit-basierten /api/station/history?lat=..&lon=.. zu vermeiden.
+app.get("/api/station/obs-history", async (req, res, next) => {
   const { requireAuth } = await import("./src/auth.middleware.mjs");
   requireAuth(req, res, async () => {
     try {

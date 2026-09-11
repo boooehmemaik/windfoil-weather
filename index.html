@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.28.6 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.28.7 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatt
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.28.6
+// WindFoil Weather Intelligence v3.28.7
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -53,6 +53,7 @@ const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%3
 // Changelog v3.28.4: Neural-MOS trainiert auf lead=0/24/48 (3× mehr Daten); featureVector hat fc_lead_hours als 10. Feature; thermalCorrection wählt neuralBiasMs/24/48 je nach leadDay
 // Changelog v3.28.5: History-Seite (nur Maik+Tom): 3 Charts — Windverlauf 5 Tage, Obs vs. Ensemble-Modell, MOS-Bias pro Stunde; /api/station/history Endpunkt (requireAuth)
 // Changelog v3.28.6: History-Button (war: Verlauf); Spot-Tabs: LefkadaNW/Vasiliki (→LGPZ), SurfParkBouka (→LGKL), Talamone (direkt)
+// Changelog v3.28.7: Fix History leer — /api/station/history kollidierte mit altem Weatherbit-Endpunkt; umbenannt auf /api/station/obs-history
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -1216,7 +1217,7 @@ function HistoryView({ onClose }) {
 
   useEffect(() => {
     setBusy(true);
-    fetch('/api/station/history?days=5', { credentials: 'include' })
+    fetch('/api/station/obs-history?days=5', { credentials: 'include' })
       .then(r => r.json())
       .then(d => { setData(d); setBusy(false); })
       .catch(() => { setErr('Fehler beim Laden.'); setBusy(false); });
@@ -2532,7 +2533,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.28.6</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.28.7</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -3404,7 +3405,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.6</span>
+        <span>WindFoil Weather Intelligence v3.28.7</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>
