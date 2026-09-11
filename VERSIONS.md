@@ -1,5 +1,14 @@
 # WindFoil — Version History
 
+## v3.28.4 (2026-09-11)
+**Neural-MOS: lead=24/48 auch für Training nutzen — 3× mehr Daten, vorlaufzeitspezifische Predictions**
+- `src/neural_mos.mjs` v2.0.0: `featureVector()` hat jetzt 10 Features (neu: `fc_lead_hours/48 → [0, 0.5, 1.0]`); `N_FEATURES=10`; `MLP.fromJSON()` verwirft Modelle mit falscher Eingabedimension (kein Crash bei alten 9-Feature-Gewichten)
+- `loadMlSamplesAllLeads()`: neue Query — jointed lead=24/48-Rows retrospektiv mit ihrer später eingetroffenen Beobachtung (lead=0 gleicher ts) um Bias nachträglich zu berechnen; Neural-MOS-Training nutzt alle drei Lead-Buckets (~3× mehr Trainingspaare)
+- `trainNeuralMos()`: generiert drei Prediction-Arrays pro Station: `neural_mos_pred:{s}` (lead=0), `neural_mos_pred24:{s}` (lead=24), `neural_mos_pred48:{s}` (lead=48); Meltemi-Klassifikator bleibt auf lead=0 (Ist-Zustand)
+- `getNeuralHourlyBias(db, key, leadHours=0)`: neuer `leadHours`-Parameter wählt die passende App-Meta-Zeile
+- `proxy-server.js`: `/api/station/mos` gibt jetzt `m.hours[h].neuralBiasMs`, `.neuralBiasMs24`, `.neuralBiasMs48` zurück
+- `index.html` v3.28.4: `thermalCorrection()` wählt neuronalen Bias je nach `leadDay` — leadDay=0 → `neuralBiasMs`, leadDay=1 → `neuralBiasMs24`, leadDay=2 → `neuralBiasMs48`; Fallback auf linear wenn lead-spezifisches Array noch nicht trainiert
+
 ## v3.28.3 (2026-09-11)
 **fc_lead_hours in ml_samples — t+24h/t+48h Forecast-Paare bei jedem Poll speichern**
 - `proxy-server.js`: Beide Poller-Blöcke (LIVE + MEASURED) fügen jetzt bei jedem Poll drei ml_samples-Rows ein: lead=0 (Beobachtung + aktueller Forecast), lead=24 und lead=48 (nur Forecast-Features, obs_wind_ms=null); Parameter-Reihenfolge des _insertMlSample-Prepared-Statements jetzt korrekt 13-stellig mit fc_lead_hours als 3. Param

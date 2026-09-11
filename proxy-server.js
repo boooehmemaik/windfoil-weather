@@ -666,15 +666,19 @@ app.get("/api/station/mos", async (req, res) => {
       m = getMosBias(getObsDb(), key);
       if (!m) return res.json({ ok: false, error: "no_mos_data", station: key });
 
-      // Neural-Bias-Vorhersagen einmischen (falls trainiert)
+      // Neural-Bias-Vorhersagen einmischen (falls trainiert) — je Vorlaufzeit
       const { getNeuralHourlyBias, getMeltemProb,
               MELTEMI_STATION_KEY } = await import("./src/neural_mos.mjs");
       const db = getObsDb();
-      const neuralBias = getNeuralHourlyBias(db, key);
-      if (neuralBias) {
+      const nb0  = getNeuralHourlyBias(db, key, 0);
+      const nb24 = getNeuralHourlyBias(db, key, 24);
+      const nb48 = getNeuralHourlyBias(db, key, 48);
+      if (nb0 || nb24 || nb48) {
         for (let h = 0; h < 24; h++) {
-          if (m.hours[h] && neuralBias[h] != null)
-            m.hours[h].neuralBiasMs = neuralBias[h];
+          if (!m.hours[h]) continue;
+          if (nb0?.[h]  != null) m.hours[h].neuralBiasMs   = nb0[h];
+          if (nb24?.[h] != null) m.hours[h].neuralBiasMs24 = nb24[h];
+          if (nb48?.[h] != null) m.hours[h].neuralBiasMs48 = nb48[h];
         }
         m.neuralActive = true;
       }

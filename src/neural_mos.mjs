@@ -1,22 +1,25 @@
 // ============================================================================
 // WindFoil — Neural MOS + Meltemi-Klassifikator (reines JS, keine npm-Deps)
-// File version: 1.0.0  |  App target: v3.28.0
+// File version: 2.0.0  |  App target: v3.28.4
 // ----------------------------------------------------------------------------
 // Zwei Modelle auf einer gemeinsamen MLP-Architektur:
 //
 //   (a) Neural MOS — Regression: lernt den stundenweisen Modell-Bias aus
 //       mehreren Forecast-Features statt nur aus dem Windwert (wie der lineare
-//       MOS). Ergebnis: pro Stunde eine neural_bias_ms-Korrektur.
+//       MOS). Ergebnis: pro Stunde und pro Vorlaufzeit (0/24/48h) eine
+//       neural_bias_ms-Korrektur.
 //
 //   (b) Meltemi-Klassifikator — Binary Classification: für LGPZ-Stationen
 //       wird aus den Forecast-Features die Wahrscheinlichkeit berechnet, dass
 //       der beobachtete Wind den Meltemi-Schwellwert überschreitet (≥7 m/s
 //       am Flughafen ≙ wahrscheinlich ≥12 m/s am Strand Kathisma).
 //
-// Architektur: 9 Inputs → 16 Hidden (ReLU) → 1 Output (linear/sigmoid)
+// Architektur: 10 Inputs → 16 Hidden (ReLU) → 1 Output (linear/sigmoid)
+//   Feature 10 (neu): fc_lead_hours / 48 → [0, 0.5, 1.0]
 // Optimizer:   Adam (lr=0.001, β1=0.9, β2=0.999)
 // Training:    200 Epochen, Batch 32, Shuffle je Epoche
 // Gewichte:    in app_meta als JSON (key: neural_mos:{station} / meltemi_clf:{station})
+// Predictions: neural_mos_pred:{s} (lead=0), neural_mos_pred24:{s}, neural_mos_pred48:{s}
 // ============================================================================
 
 export const NEURAL_MIN_SAMPLES = 60;   // darunter kein Training — zu wenig Daten
@@ -24,20 +27,20 @@ export const MELTEMI_THRESHOLD_MS = 7.0; // LGPZ-obs ≥ 7 m/s → "Meltemi star
 export const MELTEMI_STATION_KEY = 'LGPZ';
 
 // ── Normalisierung ───────────────────────────────────────────────────────────
-// Alle Features auf [-1, 1] bringen; zyklische Größen als sin/cos kodiert.
-const WIND_MAX   = 20;   // m/s
-const PRESS_MIN  = 970, PRESS_MAX  = 1040; // hPa
-const TEMP_MIN   = -5,  TEMP_MAX   = 45;   // °C
-const CAPE_MAX   = 2000;                    // J/kg
+const WIND_MAX   = 20;
+const PRESS_MIN  = 970, PRESS_MAX  = 1040;
+const TEMP_MIN   = -5,  TEMP_MAX   = 45;
+const CAPE_MAX   = 2000;
 
 function norm(v, lo, hi) { return hi === lo ? 0 : 2 * (v - lo) / (hi - lo) - 1; }
 
 export function featureVector(sample) {
-  const dir = sample.fc_dir_deg ?? 180;
-  const rad = dir * Math.PI / 180;
-  const h   = sample.hour_local ?? 12;
-  const mo  = (sample.month ?? 7) - 1; // 0-indexed
+  const dir  = sample.fc_dir_deg ?? 180;
+  const rad  = dir * Math.PI / 180;
+  const h    = sample.hour_local ?? 12;
+  const mo   = (sample.month ?? 7) - 1;
   const cape = Math.min(sample.fc_cape ?? 0, CAPE_MAX);
+  const lead = (sample.fc_lead_hours ?? 0) / 48; // 0→0, 24→0.5, 48→1.0
   return new Float64Array([
     norm(sample.fc_wind_ms ?? 0,  0, WIND_MAX),
     Math.sin(rad),
@@ -48,22 +51,21 @@ export function featureVector(sample) {
     Math.sin(2 * Math.PI * h  / 24),
     Math.cos(2 * Math.PI * h  / 24),
     Math.sin(2 * Math.PI * mo / 12),
+    lead,
   ]);
 }
-const N_FEATURES = 9;
+const N_FEATURES = 10;
 
 // ── MLP ─────────────────────────────────────────────────────────────────────
 class MLP {
   constructor(n_h = 16) {
     const ni = N_FEATURES, no = 1;
-    // Xavier/He init
     const s1 = Math.sqrt(2 / ni), s2 = Math.sqrt(2 / n_h);
     this.W1 = Float64Array.from({ length: ni * n_h }, () => (Math.random()*2-1) * s1);
     this.b1 = new Float64Array(n_h);
     this.W2 = Float64Array.from({ length: n_h * no }, () => (Math.random()*2-1) * s2);
     this.b2 = new Float64Array(no);
     this.n_h = n_h;
-    // Adam state
     const nparams = this.W1.length + n_h + this.W2.length + no;
     this.m = new Float64Array(nparams);
     this.v = new Float64Array(nparams);
@@ -75,14 +77,13 @@ class MLP {
     for (let j = 0; j < this.n_h; j++) {
       let s = this.b1[j];
       for (let i = 0; i < N_FEATURES; i++) s += x[i] * this.W1[i * this.n_h + j];
-      h[j] = s > 0 ? s : 0; // ReLU
+      h[j] = s > 0 ? s : 0;
     }
     let out = this.b2[0];
     for (let j = 0; j < this.n_h; j++) out += h[j] * this.W2[j];
     return { h, out };
   }
 
-  // Returns loss (MSE or BCE) and accumulates gradients into gW1,gb1,gW2,gb2
   _backward(x, h, out, target, task, g) {
     let grad_out, loss;
     if (task === 'cls') {
@@ -119,7 +120,6 @@ class MLP {
   train(samples, { epochs = 200, batchSize = 32, task = 'reg' } = {}) {
     const results = [];
     for (let ep = 0; ep < epochs; ep++) {
-      // Fisher-Yates shuffle
       for (let i = samples.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [samples[i], samples[j]] = [samples[j], samples[i]];
@@ -140,7 +140,6 @@ class MLP {
           n++;
         }
         epochLoss += bLoss;
-        // Average gradients and apply Adam
         const bs = batch.length;
         for (let i = 0; i < g.W1.length; i++) g.W1[i] /= bs;
         for (let i = 0; i < g.b1.length; i++) g.b1[i] /= bs;
@@ -165,7 +164,7 @@ class MLP {
 
   toJSON() {
     return {
-      n_h: this.n_h, t: this.t,
+      n_h: this.n_h, t: this.t, n_features: N_FEATURES,
       W1: Array.from(this.W1), b1: Array.from(this.b1),
       W2: Array.from(this.W2), b2: Array.from(this.b2),
       m: Array.from(this.m),   v: Array.from(this.v),
@@ -173,7 +172,10 @@ class MLP {
   }
 
   static fromJSON(j) {
-    const net = new MLP(j.n_h ?? 16);
+    const n_h = j.n_h ?? 16;
+    // Verwerfe Modelle mit falscher Eingabedimension (z.B. alte 9-Feature-Gewichte)
+    if (j.W1?.length !== N_FEATURES * n_h) return null;
+    const net = new MLP(n_h);
     net.W1 = new Float64Array(j.W1); net.b1 = new Float64Array(j.b1);
     net.W2 = new Float64Array(j.W2); net.b2 = new Float64Array(j.b2);
     net.m  = new Float64Array(j.m);  net.v  = new Float64Array(j.v);
@@ -197,12 +199,43 @@ function saveModel(db, metaKey, model) {
     .run(metaKey, json, now);
 }
 
+function savePred(db, metaKey, hourlyBias) {
+  const now = new Date().toISOString();
+  db.prepare(`INSERT INTO app_meta(key, value, updated_at) VALUES (?,?,?)
+    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at`)
+    .run(metaKey, JSON.stringify(hourlyBias), now);
+}
+
 // ── Trainings-Samples aus DB laden ──────────────────────────────────────────
-function loadMlSamples(db, stationKey, { minSamples = NEURAL_MIN_SAMPLES } = {}) {
+// Für Neural MOS: lead=0 direkt + lead=24/48 retrospektiv (join mit späterer Obs)
+function loadMlSamplesAllLeads(db, stationKey, { minSamples = NEURAL_MIN_SAMPLES } = {}) {
+  const rows = db.prepare(`
+    SELECT fc_lead_hours, hour_local, month, obs_wind_ms, fc_wind_ms, fc_dir_deg,
+           fc_pressure_hpa, fc_temp_c, fc_cape, bias_ms
+    FROM ml_samples
+    WHERE station_key=? AND fc_lead_hours=0 AND fc_wind_ms IS NOT NULL AND bias_ms IS NOT NULL
+    UNION ALL
+    SELECT a.fc_lead_hours, a.hour_local, a.month, b.obs_wind_ms, a.fc_wind_ms, a.fc_dir_deg,
+           a.fc_pressure_hpa, a.fc_temp_c, a.fc_cape,
+           ROUND((b.obs_wind_ms - a.fc_wind_ms) * 100) / 100
+    FROM ml_samples a
+    JOIN ml_samples b ON b.station_key=a.station_key
+                     AND b.ts=a.ts
+                     AND b.fc_lead_hours=0
+                     AND b.obs_wind_ms IS NOT NULL
+    WHERE a.station_key=? AND a.fc_lead_hours > 0 AND a.fc_wind_ms IS NOT NULL
+  `).all(stationKey, stationKey);
+  if (rows.length < minSamples) return null;
+  return rows;
+}
+
+// Für Meltemi-Klassifikator: nur lead=0 mit Beobachtung
+function loadMlSamplesLead0(db, stationKey, { minSamples = NEURAL_MIN_SAMPLES } = {}) {
   const rows = db.prepare(
     `SELECT hour_local, month, obs_wind_ms, fc_wind_ms, fc_dir_deg,
             fc_pressure_hpa, fc_temp_c, fc_cape, bias_ms
-     FROM ml_samples WHERE station_key=? AND fc_wind_ms IS NOT NULL
+     FROM ml_samples WHERE station_key=? AND fc_lead_hours=0
+       AND fc_wind_ms IS NOT NULL AND obs_wind_ms IS NOT NULL
      ORDER BY ts`
   ).all(stationKey);
   if (rows.length < minSamples) return null;
@@ -211,7 +244,7 @@ function loadMlSamples(db, stationKey, { minSamples = NEURAL_MIN_SAMPLES } = {})
 
 // ── Neuronales MOS: Training ─────────────────────────────────────────────────
 export function trainNeuralMos(db, stationKey) {
-  const rows = loadMlSamples(db, stationKey);
+  const rows = loadMlSamplesAllLeads(db, stationKey);
   if (!rows) return { ok: false, reason: 'too_few_samples' };
 
   const samples = rows
@@ -219,47 +252,45 @@ export function trainNeuralMos(db, stationKey) {
     .map(r => ({ x: featureVector(r), y: r.bias_ms }));
   if (samples.length < NEURAL_MIN_SAMPLES) return { ok: false, reason: 'too_few_valid' };
 
-  // Warm-start: lade bestehende Gewichte wenn vorhanden
   const metaKey = `neural_mos:${stationKey}`;
   let model = loadModel(db, metaKey) ?? new MLP(16);
 
   const lossLog = model.train(samples, { epochs: 200, batchSize: 32, task: 'reg' });
   saveModel(db, metaKey, model);
 
-  // Per-Stunde-Vorhersage: Median-Features je Stunde → Neural-Bias
+  // Per-Stunde-Vorhersage für jede Vorlaufzeit (0, 24, 48h)
   const byHour = new Array(24).fill(null).map(() => []);
   for (const r of rows) byHour[r.hour_local]?.push(r);
 
-  const hourlyBias = [];
-  for (let h = 0; h < 24; h++) {
-    const hr = byHour[h];
-    if (!hr.length) { hourlyBias.push(null); continue; }
-    // Repräsentatives Sample: Median-Werte dieser Stunde
-    const repr = {
-      hour_local: h,
-      month: hr[Math.floor(hr.length/2)].month,
-      fc_wind_ms:      _median(hr.map(r=>r.fc_wind_ms).filter(Number.isFinite)),
-      fc_dir_deg:      _circMedian(hr.map(r=>r.fc_dir_deg).filter(Number.isFinite)),
-      fc_pressure_hpa: _median(hr.map(r=>r.fc_pressure_hpa).filter(Number.isFinite)),
-      fc_temp_c:       _median(hr.map(r=>r.fc_temp_c).filter(Number.isFinite)),
-      fc_cape:         _median(hr.map(r=>r.fc_cape).filter(Number.isFinite)),
-    };
-    hourlyBias.push(Math.round(model.predict(featureVector(repr), 'reg') * 100) / 100);
+  for (const lead of [0, 24, 48]) {
+    const hourlyBias = [];
+    for (let h = 0; h < 24; h++) {
+      const hr = byHour[h];
+      if (!hr.length) { hourlyBias.push(null); continue; }
+      const repr = {
+        fc_lead_hours: lead,
+        hour_local: h,
+        month: hr[Math.floor(hr.length/2)].month,
+        fc_wind_ms:      _median(hr.map(r=>r.fc_wind_ms).filter(Number.isFinite)),
+        fc_dir_deg:      _circMedian(hr.map(r=>r.fc_dir_deg).filter(Number.isFinite)),
+        fc_pressure_hpa: _median(hr.map(r=>r.fc_pressure_hpa).filter(Number.isFinite)),
+        fc_temp_c:       _median(hr.map(r=>r.fc_temp_c).filter(Number.isFinite)),
+        fc_cape:         _median(hr.map(r=>r.fc_cape).filter(Number.isFinite)),
+      };
+      hourlyBias.push(Math.round(model.predict(featureVector(repr), 'reg') * 100) / 100);
+    }
+    const predKey = lead === 0
+      ? `neural_mos_pred:${stationKey}`
+      : `neural_mos_pred${lead}:${stationKey}`;
+    savePred(db, predKey, hourlyBias);
   }
-
-  // Speichern (JSON in app_meta)
-  const predKey = `neural_mos_pred:${stationKey}`;
-  const now = new Date().toISOString();
-  db.prepare(`INSERT INTO app_meta(key, value, updated_at) VALUES (?,?,?)
-    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at`)
-    .run(predKey, JSON.stringify(hourlyBias), now);
 
   return { ok: true, n: samples.length, lossLog };
 }
 
 // ── Meltemi-Klassifikator: Training ─────────────────────────────────────────
 export function trainMeltemClassifier(db, stationKey = MELTEMI_STATION_KEY) {
-  const rows = loadMlSamples(db, stationKey, { minSamples: NEURAL_MIN_SAMPLES });
+  const rows = loadMlSamplesLead0(db, stationKey, { minSamples: NEURAL_MIN_SAMPLES });
   if (!rows) return { ok: false, reason: 'too_few_samples' };
 
   const pos = rows.filter(r => r.obs_wind_ms >= MELTEMI_THRESHOLD_MS).length;
@@ -267,7 +298,7 @@ export function trainMeltemClassifier(db, stationKey = MELTEMI_STATION_KEY) {
   if (pos < 5 || neg < 5) return { ok: false, reason: 'too_few_positive_or_negative' };
 
   const samples = rows.map(r => ({
-    x: featureVector(r),
+    x: featureVector(r),  // fc_lead_hours defaults to 0 for Meltemi (always current)
     y: r.obs_wind_ms >= MELTEMI_THRESHOLD_MS ? 1 : 0,
   }));
 
@@ -280,8 +311,11 @@ export function trainMeltemClassifier(db, stationKey = MELTEMI_STATION_KEY) {
 }
 
 // ── Inference ────────────────────────────────────────────────────────────────
-export function getNeuralHourlyBias(db, stationKey) {
-  const row = db.prepare("SELECT value FROM app_meta WHERE key=?").get(`neural_mos_pred:${stationKey}`);
+export function getNeuralHourlyBias(db, stationKey, leadHours = 0) {
+  const key = leadHours === 0
+    ? `neural_mos_pred:${stationKey}`
+    : `neural_mos_pred${leadHours}:${stationKey}`;
+  const row = db.prepare("SELECT value FROM app_meta WHERE key=?").get(key);
   if (!row) return null;
   try { return JSON.parse(row.value); } catch { return null; }
 }
@@ -289,7 +323,7 @@ export function getNeuralHourlyBias(db, stationKey) {
 export function getMeltemProb(db, fcFeatures, stationKey = MELTEMI_STATION_KEY) {
   const model = loadModel(db, `meltemi_clf:${stationKey}`);
   if (!model) return null;
-  const x = featureVector(fcFeatures);
+  const x = featureVector(fcFeatures); // fc_lead_hours=0 by default → Meltemi jetzt
   const p = model.predict(x, 'cls');
   return Math.round(p * 100) / 100;
 }
