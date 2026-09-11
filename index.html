@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.28.7 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.28.8 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatt
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.28.7
+// WindFoil Weather Intelligence v3.28.8
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -54,6 +54,7 @@ const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%3
 // Changelog v3.28.5: History-Seite (nur Maik+Tom): 3 Charts — Windverlauf 5 Tage, Obs vs. Ensemble-Modell, MOS-Bias pro Stunde; /api/station/history Endpunkt (requireAuth)
 // Changelog v3.28.6: History-Button (war: Verlauf); Spot-Tabs: LefkadaNW/Vasiliki (→LGPZ), SurfParkBouka (→LGKL), Talamone (direkt)
 // Changelog v3.28.7: Fix History leer — /api/station/history kollidierte mit altem Weatherbit-Endpunkt; umbenannt auf /api/station/obs-history
+// Changelog v3.28.8: History-Charts in Knoten — ms2kn-Konvertierung für alle drei Charts; YAxis + Tooltip auf kn
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -1237,26 +1238,28 @@ function HistoryView({ onClose }) {
   const stMos  = data ? data.mos.filter(r=>r.station_key===curSpot.key) : [];
   const stMl   = data ? data.ml.filter(r=>r.station_key===curSpot.key)  : [];
 
+  const ms2kn = ms => ms != null ? Math.round(ms * 1.94384 * 10) / 10 : null;
+
   // Chart 1: Windverlauf letzte 5 Tage
   const obsData = stObs.map(r => ({
     t:   new Date(r.ts).getTime(),
     lbl: new Date(r.ts).toLocaleDateString('de-DE',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),
-    obs: r.wind_ms != null ? Math.round(r.wind_ms * 10) / 10 : null,
+    obs: ms2kn(r.wind_ms),
   }));
 
   // Chart 2: Obs vs. Modell (MOS-Profil: obs_median vs pred_median pro Stunde)
   const mosData = stMos.map(r => ({
     h:    r.hour_local,
-    obs:  r.obs_median_ms  != null ? Math.round(r.obs_median_ms  * 10) / 10 : null,
-    pred: r.pred_median_ms != null ? Math.round(r.pred_median_ms * 10) / 10 : null,
+    obs:  ms2kn(r.obs_median_ms),
+    pred: ms2kn(r.pred_median_ms),
     n:    r.n_samples,
   }));
 
   // Chart 3: MOS-Bias pro Stunde (Korrektur die wir anwenden)
   const biasData = stMos.map(r => ({
     h:    r.hour_local,
-    bias: r.bias_shrunk_ms != null ? Math.round(r.bias_shrunk_ms * 100) / 100 : 0,
-    mad:  r.bias_ms != null ? Math.round(r.bias_ms * 100) / 100 : 0,
+    bias: r.bias_shrunk_ms != null ? Math.round(r.bias_shrunk_ms * 1.94384 * 100) / 100 : 0,
+    mad:  r.bias_ms        != null ? Math.round(r.bias_ms        * 1.94384 * 100) / 100 : 0,
   }));
 
   const gr = { stroke: LINE };
@@ -1306,8 +1309,8 @@ function HistoryView({ onClose }) {
                 <LineChart data={obsData} margin={{top:4,right:8,bottom:4,left:0}}>
                   <CartesianGrid {...gr} strokeDasharray="3 3" />
                   <XAxis dataKey="lbl" tick={{...tick,fontSize:9}} interval={Math.floor(obsData.length/8)} angle={-30} textAnchor="end" height={40}/>
-                  <YAxis tick={tick} unit=" m/s" width={52} domain={['auto','auto']}/>
-                  <Tooltip {...tt} formatter={v=>[v!=null?v+' m/s':'–','Wind']}/>
+                  <YAxis tick={tick} unit=" kn" width={52} domain={['auto','auto']}/>
+                  <Tooltip {...tt} formatter={v=>[v!=null?v+' kn':'–','Wind']}/>
                   <Line type="monotone" dataKey="obs" stroke={OBS} dot={false} strokeWidth={1.5} name="Beobachtung" connectNulls={false}/>
                 </LineChart>
               </ResponsiveContainer>
@@ -1329,9 +1332,9 @@ function HistoryView({ onClose }) {
                 <LineChart data={mosData} margin={{top:4,right:8,bottom:4,left:0}}>
                   <CartesianGrid {...gr} strokeDasharray="3 3" />
                   <XAxis dataKey="h" tick={tick} tickFormatter={h=>`${h}:00`}/>
-                  <YAxis tick={tick} unit=" m/s" width={52} domain={['auto','auto']}/>
+                  <YAxis tick={tick} unit=" kn" width={52} domain={['auto','auto']}/>
                   <Tooltip {...tt} labelFormatter={h=>`${h}:00 Uhr`}
-                    formatter={(v,n)=>[v!=null?v+' m/s':'–', n==='obs'?'Beobachtet':'Ensemble-Modell']}/>
+                    formatter={(v,n)=>[v!=null?v+' kn':'–', n==='obs'?'Beobachtet':'Ensemble-Modell']}/>
                   <Legend wrapperStyle={{fontSize:12,color:MUTED}}/>
                   <Line type="monotone" dataKey="obs"  stroke={OBS} dot={false} strokeWidth={2} name="obs"/>
                   <Line type="monotone" dataKey="pred" stroke={MOD} dot={false} strokeWidth={2} name="pred" strokeDasharray="5 3"/>
@@ -1355,10 +1358,10 @@ function HistoryView({ onClose }) {
                 <BarChart data={biasData} margin={{top:4,right:8,bottom:4,left:0}}>
                   <CartesianGrid {...gr} strokeDasharray="3 3" />
                   <XAxis dataKey="h" tick={tick} tickFormatter={h=>`${h}:00`}/>
-                  <YAxis tick={tick} unit=" m/s" width={52} domain={['auto','auto']}/>
+                  <YAxis tick={tick} unit=" kn" width={52} domain={['auto','auto']}/>
                   <ReferenceLine y={0} stroke={LINE} strokeWidth={1}/>
                   <Tooltip {...tt} labelFormatter={h=>`${h}:00 Uhr`}
-                    formatter={(v,n)=>[v!=null?v+' m/s':'–', n==='bias'?'Korrektur (shrunk)':'Roher Bias']}/>
+                    formatter={(v,n)=>[v!=null?v+' kn':'–', n==='bias'?'Korrektur (shrunk)':'Roher Bias']}/>
                   <Bar dataKey="bias" name="bias" radius={[3,3,0,0]}>
                     {biasData.map((d,i)=>(
                       <Cell key={i} fill={d.bias >= 0 ? BIAS_P : BIAS_N}/>
@@ -2533,7 +2536,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.28.7</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.28.8</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -3405,7 +3408,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.7</span>
+        <span>WindFoil Weather Intelligence v3.28.8</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.28.8 (2026-09-11)
+**History-Charts in Knoten**
+- `index.html` v3.28.8: Alle Windwerte in `HistoryView` von m/s auf Knoten umgerechnet (`ms2kn = ms × 1.94384`); YAxis-Unit und Tooltip-Formatter auf "kn" geändert — gilt für Chart 1 (Windverlauf), Chart 2 (Obs vs. Modell) und Chart 3 (MOS-Bias)
+
 ## v3.28.7 (2026-09-11)
 **Fix: History-Seite leer — Endpunkt-Konflikt mit altem Weatherbit-Handler**
 - `proxy-server.js`: ML/MOS-History-Endpunkt von `/api/station/history` auf `/api/station/obs-history` umbenannt — der alte Weatherbit-Endpunkt (`/api/station/history?lat=..&lon=..`) hat in Express alle Requests abgefangen, bevor der neue Handler dran kam
