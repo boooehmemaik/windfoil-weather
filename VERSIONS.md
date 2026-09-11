@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.28.9 (2026-09-11)
+**History-Boost pro Spot — LefkadaNW und Vasiliki zeigen unterschiedliche Werte**
+- `index.html` v3.28.9: `HISTORY_SPOTS` bekommt `boost`-Faktor je Spot (LefkadaNW ×2.0, Vasiliki ×1.7, Bouka/Talamone ×1.0); `ms2kn()` multipliziert Beobachtungswerte mit dem Spot-Boost vor der kn-Umrechnung — alle drei Charts (Windverlauf, Obs/Modell, MOS-Bias) zeigen dadurch spot-spezifische Werte
+
 ## v3.28.8 (2026-09-11)
 **History-Charts in Knoten**
 - `index.html` v3.28.8: Alle Windwerte in `HistoryView` von m/s auf Knoten umgerechnet (`ms2kn = ms × 1.94384`); YAxis-Unit und Tooltip-Formatter auf "kn" geändert — gilt für Chart 1 (Windverlauf), Chart 2 (Obs vs. Modell) und Chart 3 (MOS-Bias)
