@@ -55,7 +55,7 @@ const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%3
 // Changelog v3.28.6: History-Button (war: Verlauf); Spot-Tabs: LefkadaNW/Vasiliki (→LGPZ), SurfParkBouka (→LGKL), Talamone (direkt)
 // Changelog v3.28.7: Fix History leer — /api/station/history kollidierte mit altem Weatherbit-Endpunkt; umbenannt auf /api/station/obs-history
 // Changelog v3.28.8: History-Charts in Knoten — ms2kn-Konvertierung für alle drei Charts; YAxis + Tooltip auf kn
-// Changelog v3.28.9: History-Boost pro Spot — LefkadaNW ×2.0, Vasiliki ×1.7 auf LGPZ-Rohdaten angewendet
+// Changelog v3.28.9: History-Leer-Meldung für neue Stationen (LGKL) mit Obs-Zähler und Zeitschätzung
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -1328,7 +1328,7 @@ function HistoryView({ onClose }) {
               </span>}
             </h3>
             {stMos.length === 0
-              ? <p style={{color:MUTED,fontSize:13}}>Kein MOS-Profil für diese Station.</p>
+              ? <p style={{color:MUTED,fontSize:13}}>MOS-Profil noch nicht verfügbar — {stObs.length} Beobachtungen bisher. Wird nach ~2–4 Wochen Datenbasis vom Nightly-Job berechnet.</p>
               : (
               <ResponsiveContainer width="100%" height={chartH}>
                 <LineChart data={mosData} margin={{top:4,right:8,bottom:4,left:0}}>
@@ -1354,7 +1354,7 @@ function HistoryView({ onClose }) {
               </span>
             </h3>
             {biasData.length === 0
-              ? <p style={{color:MUTED,fontSize:13}}>Kein MOS-Profil für diese Station.</p>
+              ? <p style={{color:MUTED,fontSize:13}}>MOS-Bias noch nicht verfügbar — folgt automatisch sobald das MOS-Profil berechnet ist.</p>
               : (
               <ResponsiveContainer width="100%" height={chartH}>
                 <BarChart data={biasData} margin={{top:4,right:8,bottom:4,left:0}}>
