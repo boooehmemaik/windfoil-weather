@@ -1069,28 +1069,56 @@ function getObsDb() {
     );
     obsDb._insertMlSample = obsDb.prepare(
       `INSERT OR IGNORE INTO ml_samples
-         (station_key, ts, hour_local, month, obs_wind_ms, obs_gust_ms,
+         (station_key, ts, fc_lead_hours, hour_local, month, obs_wind_ms, obs_gust_ms,
           fc_wind_ms, fc_dir_deg, fc_pressure_hpa, fc_temp_c, fc_cape, bias_ms)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
     );
     obsDb._pruneMlSamples = obsDb.prepare(
       `DELETE FROM ml_samples WHERE ts < ?`
+    );
+    obsDb._insertFcArchive = obsDb.prepare(
+      `INSERT OR IGNORE INTO forecast_archive
+         (station_key, issued_at, target_ts, lead_hours,
+          fc_wind_ms, fc_dir_deg, fc_pressure_hpa, fc_temp_c, fc_cape)
+       VALUES (?,?,?,?,?,?,?,?,?)`
+    );
+    obsDb._pruneFcArchive = obsDb.prepare(
+      `DELETE FROM forecast_archive WHERE issued_at < ?`
     );
   }
   return obsDb;
 }
 
+// Speichert t+24h/t+48h Forecast-Snapshots in forecast_archive.
+function storeFcArchive(stKey, issuedAt, ahead) {
+  if (!ahead || !ahead.length) return;
+  try {
+    const db = getObsDb();
+    for (const a of ahead) {
+      if (!a.targetTs || a.fc_wind_ms == null) continue;
+      db._insertFcArchive.run(
+        stKey, issuedAt, a.targetTs, a.leadHours,
+        a.fc_wind_ms, a.fc_dir_deg, a.fc_pressure_hpa, a.fc_temp_c, a.fc_cape
+      );
+    }
+  } catch (e) {
+    console.warn(`[fc-archive] ${stKey} insert error:`, e.message);
+  }
+}
+
 // Letztes Forecast-Feature-Set je Station (für Meltemi-Klassifikator-Inferenz).
 const latestFcFeatures = new Map();
 
-// Holt den aktuellen Stundenwert aus Open-Meteo für die gegebene Koordinate.
-// Gibt {wind, dir, pressure, temp, cape} zurück oder null bei Fehler.
+// Holt den aktuellen Stundenwert + t+24h/t+48h-Prognosen aus Open-Meteo.
+// Gibt { now, ahead } zurück, wobei ahead[0]=t+24h, ahead[1]=t+48h.
+// now: {wind, dir, pressure, temp, cape, targetTs}
+// ahead: Array von {leadHours, fc_wind_ms, fc_dir_deg, ... targetTs}
 async function fetchCurrentFcFeatures(lat, lon) {
   try {
     const p = new URLSearchParams({
       latitude: lat, longitude: lon,
       hourly: 'windspeed_10m,winddirection_10m,surface_pressure,temperature_2m,cape',
-      wind_speed_unit: 'ms', forecast_days: 1, timezone: 'UTC',
+      wind_speed_unit: 'ms', forecast_days: 3, timezone: 'UTC',
     });
     const ctrl = new AbortController();
     const tid  = setTimeout(() => ctrl.abort(), 8000);
@@ -1098,17 +1126,29 @@ async function fetchCurrentFcFeatures(lat, lon) {
                 .finally(() => clearTimeout(tid));
     const j = await r.json();
     if (!j?.hourly?.time) return null;
-    const h   = j.hourly;
-    const nowH = new Date().getUTCHours();
-    const idx  = h.time.findIndex(t => parseInt(t.slice(11,13),10) === nowH);
-    if (idx < 0) return null;
-    return {
-      wind:     h.windspeed_10m[idx],
-      dir:      h.winddirection_10m?.[idx] ?? null,
-      pressure: h.surface_pressure?.[idx]  ?? null,
-      temp:     h.temperature_2m?.[idx]    ?? null,
-      cape:     h.cape?.[idx]              ?? null,
-    };
+    const h    = j.hourly;
+    const nowMs = Date.now();
+    const nowH  = new Date().getUTCHours();
+    const idx0  = h.time.findIndex(t => parseInt(t.slice(11,13),10) === nowH
+                                     && Math.abs(new Date(t+'Z').getTime() - nowMs) < 3600000);
+    if (idx0 < 0) return null;
+
+    const pick = idx => idx >= 0 && idx < h.time.length ? {
+      fc_wind_ms:      h.windspeed_10m[idx]      ?? null,
+      fc_dir_deg:      h.winddirection_10m?.[idx] ?? null,
+      fc_pressure_hpa: h.surface_pressure?.[idx]  ?? null,
+      fc_temp_c:       h.temperature_2m?.[idx]    ?? null,
+      fc_cape:         h.cape?.[idx]              ?? null,
+      targetTs:        h.time[idx] ? h.time[idx] + 'Z' : null,
+    } : null;
+
+    const now   = pick(idx0);
+    const ahead = [24, 48].map(lh => {
+      const f = pick(idx0 + lh);
+      return f ? { leadHours: lh, ...f } : null;
+    }).filter(Boolean);
+
+    return { now, ahead };
   } catch { return null; }
 }
 
@@ -1142,17 +1182,31 @@ async function pollStationObs() {
       }
       getObsDb()._insertObs.run(st.key, ts, snap.wind, snap.gust ?? null, st.lat, st.lon);
       console.log(`[obs-poller] ${st.key}: wind=${snap.wind} m/s gust=${snap.gust ?? "n/a"}`);
-      // ML-Sample: Forecast-Features parallel holen und neben der Beobachtung speichern
-      fetchCurrentFcFeatures(st.lat, st.lon).then(fc => {
-        if (!fc || fc.wind == null) return;
+      // ML-Sample + Forecast-Archive: Forecast-Features parallel holen
+      fetchCurrentFcFeatures(st.lat, st.lon).then(fcResult => {
+        if (!fcResult?.now) return;
+        const { now: fc, ahead } = fcResult;
         const { hour: h, day } = localPartsTZ(Date.now() / 1000, st.tz);
         const mo = parseInt(day.slice(5,7), 10);
-        const bias = fc.wind != null ? Math.round((snap.wind - fc.wind) * 100) / 100 : null;
-        getObsDb()._insertMlSample.run(
-          st.key, ts, h, mo, snap.wind, snap.gust ?? null,
-          fc.wind, fc.dir, fc.pressure, fc.temp, fc.cape, bias
+        const bias = fc.fc_wind_ms != null ? Math.round((snap.wind - fc.fc_wind_ms) * 100) / 100 : null;
+        const db = getObsDb();
+        // lead=0: Beobachtung + aktueller Forecast
+        db._insertMlSample.run(
+          st.key, ts, 0, h, mo, snap.wind, snap.gust ?? null,
+          fc.fc_wind_ms, fc.fc_dir_deg, fc.fc_pressure_hpa, fc.fc_temp_c, fc.fc_cape, bias
         );
+        // lead=24/48: Forecast für t+24h und t+48h (obs kommt später via lead=0-Record)
+        for (const a of ahead) {
+          if (!a?.targetTs || a.fc_wind_ms == null) continue;
+          const { hour: ah, day: ad } = localPartsTZ(new Date(a.targetTs).getTime() / 1000, st.tz);
+          const am = parseInt(ad.slice(5,7), 10);
+          db._insertMlSample.run(
+            st.key, a.targetTs, a.leadHours, ah, am, null, null,
+            a.fc_wind_ms, a.fc_dir_deg, a.fc_pressure_hpa, a.fc_temp_c, a.fc_cape, null
+          );
+        }
         latestFcFeatures.set(st.key, { ...fc, hour_local: h, month: mo, ts });
+        storeFcArchive(st.key, ts, ahead);
       }).catch(() => {});
     } catch (e) {
       console.warn(`[obs-poller] ${st.key} error:`, e.message);
@@ -1194,16 +1248,18 @@ async function pollStationObs() {
       }
       getObsDb()._insertObs.run(stKey, ts, wind, gust ?? null, st.lat, st.lon);
       console.log(`[obs-poller] ${stKey}: wind=${wind} m/s gust=${gust ?? "n/a"} (localHour=${localHour} ${st.tz})`);
-      // ML-Sample: Forecast-Features parallel holen und neben der Beobachtung speichern
-      fetchCurrentFcFeatures(st.lat, st.lon).then(fc => {
-        if (!fc || fc.wind == null) return;
+      // ML-Sample + Forecast-Archive: Forecast-Features parallel holen
+      fetchCurrentFcFeatures(st.lat, st.lon).then(fcResult => {
+        if (!fcResult?.now) return;
+        const { now: fc, ahead } = fcResult;
         const mo = parseInt(localDate.slice(5,7), 10);
-        const bias = fc.wind != null ? Math.round((wind - fc.wind) * 100) / 100 : null;
+        const bias = fc.fc_wind_ms != null ? Math.round((wind - fc.fc_wind_ms) * 100) / 100 : null;
         getObsDb()._insertMlSample.run(
           stKey, ts, localHour, mo, wind, gust ?? null,
-          fc.wind, fc.dir, fc.pressure, fc.temp, fc.cape, bias
+          fc.fc_wind_ms, fc.fc_dir_deg, fc.fc_pressure_hpa, fc.fc_temp_c, fc.fc_cape, bias
         );
         latestFcFeatures.set(stKey, { ...fc, hour_local: localHour, month: mo, ts });
+        storeFcArchive(stKey, ts, ahead);
       }).catch(() => {});
     } catch (e) {
       console.warn(`[obs-poller] ${stKey} error:`, e.message);
@@ -1224,6 +1280,13 @@ async function pollStationObs() {
     if (r.changes > 0) console.log(`[obs-poller] pruned ${r.changes} ml_samples older than 90d`);
   } catch (e) {
     console.warn("[obs-poller] ml_samples prune error:", e.message);
+  }
+  try {
+    const prune90d = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const r = getObsDb()._pruneFcArchive.run(prune90d);
+    if (r.changes > 0) console.log(`[obs-poller] pruned ${r.changes} fc_archive rows older than 90d`);
+  } catch (e) {
+    console.warn("[obs-poller] fc_archive prune error:", e.message);
   }
 }
 

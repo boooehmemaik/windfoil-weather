@@ -1,5 +1,12 @@
 # WindFoil — Version History
 
+## v3.28.2 (2026-09-11)
+**Lead-Time-Dämpfung für t+1/t+2-Genauigkeit + forecast_archive**
+- `index.html` v3.28.2: Neue Konstanten `MOS_LEAD_DAMP=[1.00,0.75,0.55,0.40]` und `MELTEMI_LEAD_DAMP=[1.00,0.80,0.62,0.48]`; `thermalCorrection()` erhält `leadDay`-Parameter und skaliert das MOS-Gewicht entsprechend; `applyMeltemBoost()` leitet `leadDay` pro Stunde aus den Zeitstempel-Daten ab
+- `db/migrations/009_forecast_archive.sql`: Neue Tabelle `forecast_archive` — speichert t+24h/t+48h Forecast-Snapshots bei jedem Poll; Index auf `(station_key, target_ts, lead_hours)` für späteren Bias-Vergleich
+- `proxy-server.js`: `fetchCurrentFcFeatures()` gibt jetzt `{now, ahead}` zurück (ahead: t+24h + t+48h); beide Poller-Abschnitte (LIVE + MEASURED) nutzen die neue Signatur; neue Hilfsfunktion `storeFcArchive()`; 90-Tage-Prune auch für `forecast_archive`; `_insertFcArchive` + `_pruneFcArchive` prepared statements in `getObsDb()`
+- Motivation: MOS-Bias wurde bisher ohne Berücksichtigung der Vorlaufzeit auf alle 7 Tage gleich angewandt — bei Tag 3–7 oft kontraproduktiv. Die Dämpfung reduziert den MOS-Einfluss linear: t+1 noch 75%, t+2 noch 55% des t+0-Gewichts
+
 ## v3.28.1 (2026-09-11)
 **Bugfix ml_samples + LGKL-Station für Gialova**
 - `proxy-server.js`: `fetchCurrentFcFeatures` nutzte `fetchWithTimeout` (nur in index.html definiert) → ReferenceError schluckte alle ml_samples-Einträge still. Fix: AbortController mit 8 s Timeout direkt via `fetch()`
