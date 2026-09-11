@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.28.10 (2026-09-11)
+**History Chart 1: Forecast-Linie neben Beobachtung**
+- `index.html` v3.28.10: Chart 1 (Windverlauf) zeigt jetzt zwei Linien — grün: Beobachtet, orange gestrichelt: Open-Meteo Forecast (fc_wind_ms aus ml_samples lead=0, gematcht per Timestamp); Legend ergänzt
+
 ## v3.28.9 (2026-09-11)
 **History: bessere Leer-Meldung für neue Stationen ohne MOS-Daten**
 - `index.html` v3.28.9: Charts 2+3 zeigen bei fehlenden MOS-Daten jetzt den aktuellen Obs-Zähler + Zeitschätzung statt generischem "Kein MOS-Profil" (relevant für LGKL/SurfParkBouka, die erst kürzlich hinzugefügt wurden)
