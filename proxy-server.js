@@ -393,6 +393,9 @@ const MEASURED_STATIONS = [
   // a regional-gradient proxy for the "Eric" bay, not an in-bay reading. Wide
   // radius so the whole south-Lefkada corner matches; the caption shows the km.
   { type: "metar", icao: "LGPZ", tz: "Europe/Athens", lat: 38.9254, lon: 20.7653, radiusKm: 40, label: "Aktion/Preveza (LGPZ, ~34 km)" },
+  // Kalamata Airport (LGKL) covers Gialova / Navarino Bay (~32 km NE).
+  // Messenian Gulf coast — afternoon sea breeze from SW, same exposure as Gialova.
+  { type: "metar", icao: "LGKL", tz: "Europe/Athens", lat: 37.0683, lon: 22.0253, radiusKm: 40, label: "Kalamata (LGKL, ~32 km)" },
 ];
 const KN_PER_MS = 1.94384; // feed is in knots; we return m/s to match the forecast contract
 
@@ -1089,7 +1092,10 @@ async function fetchCurrentFcFeatures(lat, lon) {
       hourly: 'windspeed_10m,winddirection_10m,surface_pressure,temperature_2m,cape',
       wind_speed_unit: 'ms', forecast_days: 1, timezone: 'UTC',
     });
-    const r = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${p}`, 8000);
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`, { signal: ctrl.signal })
+                .finally(() => clearTimeout(tid));
     const j = await r.json();
     if (!j?.hourly?.time) return null;
     const h   = j.hourly;

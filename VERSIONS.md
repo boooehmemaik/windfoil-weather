@@ -1,5 +1,11 @@
 # WindFoil — Version History
 
+## v3.28.1 (2026-09-11)
+**Bugfix ml_samples + LGKL-Station für Gialova**
+- `proxy-server.js`: `fetchCurrentFcFeatures` nutzte `fetchWithTimeout` (nur in index.html definiert) → ReferenceError schluckte alle ml_samples-Einträge still. Fix: AbortController mit 8 s Timeout direkt via `fetch()`
+- `proxy-server.js`: METAR-Station Kalamata (LGKL, 32 km von Gialova) in `MEASURED_STATIONS` aufgenommen — Gialova / Navarino Bay hat jetzt MOS-Daten und wird vom Poller mitgeloggt
+- LGPZ MOS nach 21 Tagen: h12–h20 +0.9–1.4 m/s (Modell unterschätzt Nachmittags-Meltemi konsistent); Talamone h12–h15 +1.3–1.4 m/s (Thermik), h0–h5 −0.3–0.6 m/s (ruhige Nacht); Torbole h14–h15 +2.3 m/s (Ora)
+
 ## v3.28.0 (2026-08-26)
 **Neural MOS + Meltemi-Klassifikator (Deep Learning Stufe 1 & 2)**
 - `db/migrations/008_ml_samples.sql`: Neue Tabelle `ml_samples` — bei jedem Stationspoll werden Beobachtung + Open-Meteo-Forecast-Features als Paar gespeichert (90 Tage Retention)
