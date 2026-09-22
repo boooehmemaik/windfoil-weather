@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.28.11 (2026-09-22)
+**Fix: lead=24/48-Inserts und talamone-ml_samples — localPartsTZ {date} vs {day} Bug**
+- `proxy-server.js`: `localPartsTZ()` gibt `{date, hour}` zurück, die `for (const a of ahead)`-Schleifen in LIVE- und MEASURED-Block destructurierten aber `{hour: ah, day: ad}` — `ad` war `undefined`, `ad.slice()` warf `TypeError`, `.catch(()=>{})` schluckte ihn. Effekt: **alle lead=24/48-Rows wurden nie gespeichert** (0 Rows seit 11 Tagen), talamone bekam auch keine lead=0-Rows weil der Fehler vor dem INSERT auftrat, `forecast_archive` blieb leer, `latestFcFeatures` wurde nie gesetzt. Fix: `{ hour: h, date: day }` und `{ hour: ah, date: ad }` in beiden Pollerblöcken
+- Betroffene Zeitraum: v3.28.3 bis v3.28.10 (2026-09-11 bis 2026-09-22) — lead=0-Rows für MEASURED_STATIONS sind vollständig, nur lead=24/48 fehlen rückwirkend
+
 ## v3.28.10 (2026-09-11)
 **History Chart 1: Forecast-Linie neben Beobachtung**
 - `index.html` v3.28.10: Chart 1 (Windverlauf) zeigt jetzt zwei Linien — grün: Beobachtet, orange gestrichelt: Open-Meteo Forecast (fc_wind_ms aus ml_samples lead=0, gematcht per Timestamp); Legend ergänzt

@@ -1225,7 +1225,7 @@ async function pollStationObs() {
       fetchCurrentFcFeatures(st.lat, st.lon).then(fcResult => {
         if (!fcResult?.now) return;
         const { now: fc, ahead } = fcResult;
-        const { hour: h, day } = localPartsTZ(Date.now() / 1000, st.tz);
+        const { hour: h, date: day } = localPartsTZ(Date.now() / 1000, st.tz);
         const mo = parseInt(day.slice(5,7), 10);
         const bias = fc.fc_wind_ms != null ? Math.round((snap.wind - fc.fc_wind_ms) * 100) / 100 : null;
         const db = getObsDb();
@@ -1237,7 +1237,7 @@ async function pollStationObs() {
         // lead=24/48: Forecast für t+24h und t+48h (obs kommt später via lead=0-Record)
         for (const a of ahead) {
           if (!a?.targetTs || a.fc_wind_ms == null) continue;
-          const { hour: ah, day: ad } = localPartsTZ(new Date(a.targetTs).getTime() / 1000, st.tz);
+          const { hour: ah, date: ad } = localPartsTZ(new Date(a.targetTs).getTime() / 1000, st.tz);
           const am = parseInt(ad.slice(5,7), 10);
           db._insertMlSample.run(
             st.key, a.targetTs, a.leadHours, ah, am, null, null,
@@ -1302,7 +1302,7 @@ async function pollStationObs() {
         // lead=24/48: Forecast für t+24h und t+48h
         for (const a of ahead) {
           if (!a?.targetTs || a.fc_wind_ms == null) continue;
-          const { hour: ah, day: ad } = localPartsTZ(new Date(a.targetTs).getTime() / 1000, st.tz);
+          const { hour: ah, date: ad } = localPartsTZ(new Date(a.targetTs).getTime() / 1000, st.tz);
           const am = parseInt(ad.slice(5,7), 10);
           db._insertMlSample.run(
             stKey, a.targetTs, a.leadHours, ah, am, null, null,
