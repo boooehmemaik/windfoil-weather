@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.28.14 (2026-09-29)
+**BILINGUAL DE/EN — Sprachtoggle neben Dark-Mode**
+- `index.html` v3.28.14: Vollständige DE/EN-Zweisprachigkeit — `TRANSLATIONS`-Objekt mit ~150 Schlüsseln, `t(key, vars)`-Hilfsfunktion, `langState`-State mit `wf_lang`-Persistenz, Toggle-Button `DE | EN` im Header neben Dark-Mode-Toggle; alle UI-Texte (Header, Profil, Score/Tages-Ansicht, Thermik-/Konfidenz-Labels, Modale, History-View, Footer, Charts) übersetzt; Admin-Panel bleibt Deutsch; Boot-Message und `<html lang>`-Attribut werden schon vor React-Mount gesetzt
+
 ## v3.28.13 (2026-09-29)
 **SAVED_SPOTS: GFS · ICON-D2 für Mitteleuropa-Spots**
 - `index.html` v3.28.13: Beschreibung für Ammersee Eching und Hollerner See auf "GFS · ICON-D2" korrigiert — beide Spots liegen in Mitteleuropa wo beide Modelle verfügbar sind
