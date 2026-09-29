@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.28.12 (2026-09-29)
+**SAVED_SPOTS: Ammersee Eching + Hollerner See im Location-Picker**
+- `index.html` v3.28.12: Zwei neue gespeicherte Spots im Location-Picker hinzugefügt — Ammersee Eching (48.0619°N, 11.1207°E, ICON-D2 · Thermik/Föhn) und Hollerner See bei Eching/München (48.2989°N, 11.6178°E, ICON-D2 · Thermik); Subtitle-Text jetzt per-Spot via `desc`-Feld statt hardcoded
+
 ## v3.28.11 (2026-09-22)
 **Fix: lead=24/48-Inserts und talamone-ml_samples — localPartsTZ {date} vs {day} Bug**
 - `proxy-server.js`: `localPartsTZ()` gibt `{date, hour}` zurück, die `for (const a of ahead)`-Schleifen in LIVE- und MEASURED-Block destructurierten aber `{hour: ah, day: ad}` — `ad` war `undefined`, `ad.slice()` warf `TypeError`, `.catch(()=>{})` schluckte ihn. Effekt: **alle lead=24/48-Rows wurden nie gespeichert** (0 Rows seit 11 Tagen), talamone bekam auch keine lead=0-Rows weil der Fehler vor dem INSERT auftrat, `forecast_archive` blieb leer, `latestFcFeatures` wurde nie gesetzt. Fix: `{ hour: h, date: day }` und `{ hour: ah, date: ad }` in beiden Pollerblöcken
