@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.28.12 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.28.13 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -36,7 +36,7 @@ const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatt
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.28.12
+// WindFoil Weather Intelligence v3.28.13
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -59,6 +59,7 @@ const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%3
 // Changelog v3.28.10: History Chart 1 zeigt Forecast-Linie (fc_wind_ms aus ml_samples lead=0) neben Beobachtung
 // Changelog v3.28.11: Fix silent Bug — localPartsTZ gibt {date} zurück, Poller destructurierte {day} → TypeError schluckte alle lead=24/48-Inserts + talamone-Inserts
 // Changelog v3.28.12: SAVED_SPOTS — Ammersee Eching (48.0619/11.1207) + Hollerner See (48.2989/11.6178) im Location-Picker
+// Changelog v3.28.13: SAVED_SPOTS Beschreibung — GFS · ICON-D2 für Ammersee Eching + Hollerner See (Mitteleuropa)
 
 // Changelog v2.2.0: Wind units – kn, BF, m/s switchable (display only; internals stay m/s)
 
@@ -2545,7 +2546,7 @@ function App() {
           </svg>
           <div>
             <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.28.12</div>
+            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>Weather Intelligence · v3.28.13</div>
           </div>
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -3342,8 +3343,8 @@ function App() {
               {(()=>{
                 const SAVED_SPOTS=[
                   {lat:45.2271134,lon:12.3046255,name:"Chioggia",          desc:"AROME-HD · Garbìn/Bora"},
-                  {lat:48.0619,   lon:11.1207,   name:"Ammersee Eching",   desc:"ICON-D2 · Thermik/Föhn"},
-                  {lat:48.2989,   lon:11.6178,   name:"Hollerner See",     desc:"ICON-D2 · Thermik"},
+                  {lat:48.0619,   lon:11.1207,   name:"Ammersee Eching",   desc:"GFS · ICON-D2 · Thermik/Föhn"},
+                  {lat:48.2989,   lon:11.6178,   name:"Hollerner See",     desc:"GFS · ICON-D2 · Thermik"},
                 ];
                 return(
                   <div style={{marginBottom:14}}>
@@ -3419,7 +3420,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.12</span>
+        <span>WindFoil Weather Intelligence v3.28.13</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>Standort: {loc.name}</span>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>❓ Hilfe</a>

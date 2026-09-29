@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.28.13 (2026-09-29)
+**SAVED_SPOTS: GFS · ICON-D2 für Mitteleuropa-Spots**
+- `index.html` v3.28.13: Beschreibung für Ammersee Eching und Hollerner See auf "GFS · ICON-D2" korrigiert — beide Spots liegen in Mitteleuropa wo beide Modelle verfügbar sind
+
 ## v3.28.12 (2026-09-29)
 **SAVED_SPOTS: Ammersee Eching + Hollerner See im Location-Picker**
 - `index.html` v3.28.12: Zwei neue gespeicherte Spots im Location-Picker hinzugefügt — Ammersee Eching (48.0619°N, 11.1207°E, ICON-D2 · Thermik/Föhn) und Hollerner See bei Eching/München (48.2989°N, 11.6178°E, ICON-D2 · Thermik); Subtitle-Text jetzt per-Spot via `desc`-Feld statt hardcoded
