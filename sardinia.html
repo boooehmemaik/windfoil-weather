@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sardinien Wingfoil-Map · WindFoil</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:#0a0e14;color:#d8e4f0;font-family:'Barlow',sans-serif;min-height:100vh}
+    a{color:#3a9ad9;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* ── Header ── */
+    .hdr{background:rgba(10,14,20,.97);border-bottom:1px solid #1e2d3d;padding:8px 20px;
+      display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+    .hdr-logo{display:flex;align-items:center;gap:10}
+    .hdr-title{font-family:monospace;font-weight:900;font-size:15px;letter-spacing:.15em;color:#d8e4f0}
+    .hdr-sub{font-family:monospace;font-size:9px;color:#5a7a96;letter-spacing:.1em}
+    .hdr-links{display:flex;gap:10;align-items:center;flex-wrap:wrap}
+    .hdr-btn{background:transparent;border:1px solid #243040;color:#5a7a96;border-radius:3px;
+      padding:2px 10px;font-family:monospace;font-size:10px;cursor:pointer;text-decoration:none;
+      display:inline-flex;align-items:center;transition:border-color .15s,color .15s}
+    .hdr-btn:hover{border-color:#3a9ad9;color:#3a9ad9;text-decoration:none}
+    .hdr-btn.active{background:#f07820;border-color:#f07820;color:#fff}
+
+    /* ── Winner banner ── */
+    #winner-bar{background:linear-gradient(90deg,rgba(61,220,132,.12),rgba(61,220,132,.05));
+      border-bottom:1px solid rgba(61,220,132,.25);padding:10px 20px;
+      display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:44px}
+    #winner-bar .label{font-family:monospace;font-size:10px;color:#5a7a96;text-transform:uppercase;letter-spacing:.08em}
+    #winner-bar .spot{font-weight:700;font-size:15px;color:#3ddc84}
+    #winner-bar .why{font-size:12px;color:#8ab5d0}
+
+    /* ── Map ── */
+    #map{width:100%;height:420px;background:#111820}
+
+    /* ── Main content ── */
+    .main{padding:20px;max-width:1100px;margin:0 auto}
+
+    /* ── Section title ── */
+    .sec-title{font-family:monospace;font-size:10px;color:#5a7a96;text-transform:uppercase;
+      letter-spacing:.1em;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #1e2d3d}
+
+    /* ── Spot grid ── */
+    .spots-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+    @media(max-width:900px){.spots-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:500px){.spots-grid{grid-template-columns:1fr}}
+
+    /* ── Spot card ── */
+    .spot-card{background:#111820;border:1px solid #1e2d3d;border-radius:8px;overflow:hidden;
+      transition:border-color .2s;cursor:pointer}
+    .spot-card:hover{border-color:#3a9ad9}
+    .spot-card.best{border-color:#3ddc84;box-shadow:0 0 14px rgba(61,220,132,.18)}
+    .spot-head{padding:10px 12px 8px;border-bottom:1px solid #1e2d3d;
+      display:flex;align-items:center;justify-content:space-between;gap:6}
+    .spot-name{font-weight:700;font-size:13px}
+    .spot-coords{font-family:monospace;font-size:9px;color:#5a7a96}
+    .spot-desc{font-size:10px;color:#5a7a96;margin-top:2px}
+    .spot-best-badge{background:#3ddc84;color:#0a0e14;font-size:9px;font-weight:700;
+      border-radius:3px;padding:2px 6px;white-space:nowrap}
+
+    /* ── Day tabs inside card ── */
+    .day-tabs{display:flex;border-bottom:1px solid #1e2d3d}
+    .day-tab{flex:1;padding:6px 4px;text-align:center;font-family:monospace;font-size:9px;
+      color:#5a7a96;cursor:pointer;border-right:1px solid #1e2d3d;transition:background .15s,color .15s}
+    .day-tab:last-child{border-right:none}
+    .day-tab.active{background:#151d28;color:#d8e4f0}
+    .day-tab .score-mini{display:block;font-size:13px;font-weight:700;margin-bottom:1px}
+
+    /* ── Day detail ── */
+    .day-detail{padding:12px}
+    .score-row{display:flex;align-items:center;gap:8;margin-bottom:8px}
+    .score-big{font-size:38px;font-weight:700;line-height:1}
+    .score-label{font-family:monospace;font-size:9px;color:#5a7a96;text-transform:uppercase}
+    .score-bar-wrap{flex:1;background:#1e2d3d;border-radius:4px;height:6px;overflow:hidden}
+    .score-bar-fill{height:6px;border-radius:4px;transition:width .4s ease}
+
+    /* ── Wind info row ── */
+    .wind-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+    .wind-stat{background:#151d28;border-radius:4px;padding:7px 9px}
+    .wind-stat-label{font-family:monospace;font-size:9px;color:#5a7a96;text-transform:uppercase}
+    .wind-stat-val{font-size:16px;font-weight:700;color:#d8e4f0;margin-top:2px}
+    .wind-stat-unit{font-size:10px;color:#5a7a96;font-weight:400}
+
+    /* ── Wind direction arrow ── */
+    .dir-row{display:flex;align-items:center;gap:6px;margin-top:8px}
+    .dir-label{font-family:monospace;font-size:9px;color:#5a7a96;text-transform:uppercase}
+    .dir-val{font-size:12px;color:#3a9ad9;font-weight:700}
+    .dir-arrow{display:inline-block;transition:transform .3s}
+
+    /* ── Hour sparkline bars ── */
+    .spark{display:flex;align-items:flex-end;gap:1px;height:30px;margin-top:8px}
+    .spark-bar{flex:1;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s}
+
+    /* ── Loading / error state ── */
+    .loading{padding:20px;text-align:center;font-family:monospace;font-size:11px;color:#5a7a96}
+    .spin{display:inline-block;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Recommendation section ── */
+    .rec-box{background:#151d28;border:1px solid #1e2d3d;border-radius:8px;padding:16px;margin-bottom:24px}
+    .rec-title{font-weight:700;font-size:14px;margin-bottom:8px}
+    .rec-table{width:100%;border-collapse:collapse;font-family:monospace;font-size:11px}
+    .rec-table th{text-align:left;padding:5px 8px;color:#5a7a96;font-size:9px;text-transform:uppercase;border-bottom:1px solid #1e2d3d}
+    .rec-table td{padding:6px 8px;border-bottom:1px solid rgba(30,45,61,.6)}
+    .rec-table tr:last-child td{border-bottom:none}
+    .rank-1{color:#3ddc84;font-weight:700}
+    .rank-2{color:#f5b942}
+    .rank-3{color:#5a7a96}
+    .rank-4{color:#5a7a96}
+
+    /* ── Footer ── */
+    .ftr{background:#111820;border-top:1px solid #1e2d3d;padding:10px 20px;
+      text-align:center;font-family:monospace;font-size:9px;color:#5a7a96;
+      display:flex;justify-content:center;gap:24;flex-wrap:wrap;align-items:center}
+
+    /* ── Leaflet marker overrides ── */
+    .leaflet-score-marker{display:flex;align-items:center;justify-content:center;
+      width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.2);
+      font-weight:700;font-size:14px;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+    .leaflet-popup-content-wrapper{background:#151d28;border:1px solid #243040;color:#d8e4f0;font-family:'Barlow',sans-serif;border-radius:6px}
+    .leaflet-popup-tip{background:#243040}
+    .leaflet-popup-content{font-size:12px;line-height:1.6;margin:12px 16px}
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header class="hdr">
+  <div class="hdr-logo">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="WindFoil">
+      <path d="M5 11.5h11.5a2.7 2.7 0 1 0-2.7-2.7" stroke="#f07820" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M5 20.5h15a2.7 2.7 0 1 1-2.7 2.7" stroke="#f07820" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3" stroke="#5a7a96" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="hdr-title">WINDFOIL</div>
+      <div class="hdr-sub">Sardinien · Wingfoil Spots</div>
+    </div>
+  </div>
+  <div class="hdr-links">
+    <a href="/" class="hdr-btn">← Hauptseite</a>
+    <a href="/help.html" class="hdr-btn">❓ Hilfe</a>
+    <span id="hdr-clock" style="font-family:monospace;font-size:13px;color:#f07820"></span>
+  </div>
+</header>
+
+<!-- ── WINNER BANNER ── -->
+<div id="winner-bar">
+  <div>
+    <div class="label">⭐ Bester Spot heute</div>
+    <div class="spot" id="winner-name"><span class="spin">⟳</span> lade…</div>
+  </div>
+  <div id="winner-why" class="why"></div>
+</div>
+
+<!-- ── MAP ── -->
+<div id="map"></div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+  <!-- Forecast cards -->
+  <div class="sec-title">🗺 3-Tage-Forecast · 4 Offshore-Messpunkte (~200 m vor der Küste)</div>
+  <div class="spots-grid" id="spots-grid">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- Ranking table -->
+  <div class="sec-title">🏆 Gesamt-Ranking (3-Tage-Score, Wingfoiling Ø)</div>
+  <div class="rec-box">
+    <div id="rec-loading" class="loading"><span class="spin">⟳</span> Berechne Ranking…</div>
+    <table class="rec-table" id="rec-table" style="display:none">
+      <thead>
+        <tr>
+          <th>#</th><th>Spot</th>
+          <th>Heute</th><th>Tag 2</th><th>Tag 3</th>
+          <th>Ø Score</th><th>Ø Wind (kn)</th><th>Hauptrichtung</th><th>Bewertung</th>
+        </tr>
+      </thead>
+      <tbody id="rec-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Info -->
+  <div class="rec-box" style="font-size:11px;color:#5a7a96;line-height:1.8">
+    <b style="color:#d8e4f0">ℹ️ Methodik</b><br>
+    Messpunkte liegen ca. 200 m offshore in der für Wingfoiling relevanten Windzone.
+    Score 0–100 basiert auf dem Rider-Standardprofil (75 kg · 6 m² Wing · Intermediate).
+    Score ≥70 = 🟢 optimal · 40–69 = 🟡 bedingt · &lt;40 = 🔴 ungünstig.
+    Winddaten: Open-Meteo AROME-HD (1.5 km). Böenindex zeigt das Max-/Mittel-Verhältnis.
+    <br><br>
+    <b style="color:#d8e4f0">📍 Spots</b><br>
+    <b>Porto Pollo</b> — Klassiker-Spot Nordostküste. Maestrale (NW-Mistral) dominant, zuverlässig ab Frühling. Flaches Wasser in der Bucht, Flachwasser-Training möglich.<br>
+    <b>Stintino / La Pelosa</b> — Nordwestspitze. Flaches türkisfarbenes Wasser. Maestrale und Libeccio. Einsteigerfreundlich bei moderatem Wind.<br>
+    <b>Putzu Idu</b> — Westküste, Oristano. Weitläufige offene Lagune. Thermische Westwinde nachmittags. Gut für Freeriding und Kurse.<br>
+    <b>Chia / Torre di Chia</b> — Südküste. Wärmste Wassertemperaturen. Mistral vom Westen, Levante aus dem Osten. Sehr schöne Umgebung.
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer class="ftr">
+  <span>WindFoil Weather Intelligence</span>
+  <span>Open-Meteo · AROME-HD 1.5km</span>
+  <a href="/">← Hauptseite</a>
+  <a href="/help.html">❓ Hilfe</a>
+  <a href="https://paypal.me/boehmemaik" target="_blank" rel="noopener">♥ Spenden</a>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// Sardinia Wingfoil Map — WindFoil Weather Intelligence
+// 4 offshore measurement points · 3-day forecast · scoring
+// ═══════════════════════════════════════════════════════════
+
+// ── Clock ──────────────────────────────────────────────────
+function tickClock(){
+  const el=document.getElementById('hdr-clock');
+  if(el) el.textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tickClock,1000); tickClock();
+
+// ── Spots (~200 m offshore, koordinaten leicht ins Meer versetzt) ──
+const SPOTS = [
+  {
+    id: 'porto_pollo',
+    name: 'Porto Pollo',
+    emoji: '🌊',
+    desc: 'Maestrale · Nordostküste',
+    // Shore: 41.130°N 9.327°E — versetzt ~250m nach W ins Meer
+    lat: 41.130, lon: 9.320,
+    shoreNote: 'NW-Exposition, Mistral-Spot',
+    color: '#3a9ad9',
+  },
+  {
+    id: 'stintino',
+    name: 'Stintino',
+    emoji: '⛵',
+    desc: 'Libeccio · Nordwestspitze',
+    // Shore: 40.934°N 8.233°E — versetzt ~250m nach W
+    lat: 40.934, lon: 8.226,
+    shoreNote: 'Flaches Wasser, Maestrale',
+    color: '#f07820',
+  },
+  {
+    id: 'putzu_idu',
+    name: 'Putzu Idu',
+    emoji: '💨',
+    desc: 'Thermik-W · Westküste',
+    // Shore: 40.013°N 8.384°E — versetzt ~250m nach W
+    lat: 40.013, lon: 8.377,
+    shoreNote: 'Nachmittags-Thermik, Lagune',
+    color: '#f5b942',
+  },
+  {
+    id: 'chia',
+    name: 'Chia',
+    emoji: '🌅',
+    desc: 'Mistral + Levante · Süd',
+    // Shore: 38.882°N 8.877°E — versetzt ~200m nach S
+    lat: 38.876, lon: 8.877,
+    shoreNote: 'Warmwasser, Südexposition',
+    color: '#a78bfa',
+  },
+];
+
+// ── Scoring (identisch zur Hauptapp) ──────────────────────
+const msToKn = ms => ms * 1.94384;
+const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const compass = deg => deg == null ? "?" : COMPASS16[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+
+// Default rider: 75 kg, 6 m² wing, 1200 cm² foil, intermediate
+function calcWindow(weight, wingM2, foilCm2, skill) {
+  const sm = {beginner:1.3, intermediate:1.15, advanced:1.0, pro:0.9}[skill] ?? 1.1;
+  const load = weight / wingM2, foilF = 1800 / foilCm2;
+  const minW = Math.max(2.5, (3.5 + load * 0.15 + foilF * 0.8) * sm * 0.85);
+  return {
+    minWind:  Math.round(minW * 10) / 10,
+    optMin:   Math.round(minW * 1.08 * 10) / 10,
+    optMax:   Math.round(minW * 2.6 * 10) / 10,
+    maxWind:  Math.round(minW * 2.6 * (1 + (2 - sm) * 0.3) * 10) / 10,
+  };
+}
+const DEFAULT_WIN = calcWindow(75, 6, 1200, 'intermediate');
+
+function scoreHour(w, win) {
+  if (w < win.minWind) return Math.max(0, Math.round((w / win.minWind) * 30));
+  if (w < win.optMin)  return Math.round(30 + ((w - win.minWind) / (win.optMin - win.minWind)) * 30);
+  if (w <= win.optMax) return 100;
+  if (w <= win.maxWind) return Math.round(100 - ((w - win.optMax) / (win.maxWind - win.optMax)) * 50);
+  return Math.max(0, Math.round(50 - (w - win.maxWind) * 10));
+}
+function scoreDay(winds, start = 0) {
+  const hrs = [];
+  for (let h = 9; h <= 18; h++) if (winds[start + h] !== undefined) hrs.push(scoreHour(winds[start + h], DEFAULT_WIN));
+  return hrs.length ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : 0;
+}
+function scoreColor(s) {
+  if (s >= 70) return '#3ddc84';
+  if (s >= 40) return '#f5b942';
+  return '#e84040';
+}
+function scoreEmoji(s) {
+  if (s >= 70) return '🟢';
+  if (s >= 40) return '🟡';
+  return '🔴';
+}
+
+// ── Fetch forecast (Open-Meteo) ──────────────────────────
+async function fetchForecast(lat, lon) {
+  const params = new URLSearchParams({
+    latitude: lat, longitude: lon,
+    hourly: 'windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m',
+    wind_speed_unit: 'ms', forecast_days: 4, timezone: 'auto',
+    models: 'meteofrance_arome_france_hd',
+  });
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// ── Compute day stats ─────────────────────────────────────
+function dayStats(fc, dayIdx) {
+  const h = fc.hourly;
+  const start = dayIdx * 24;
+  const winds = h.windspeed_10m, gusts = h.windgusts_10m, dirs = h.winddirection_10m;
+  const slice_w = winds.slice(start + 9, start + 19).filter(v => v != null);
+  const slice_g = gusts.slice(start + 9, start + 19).filter(v => v != null);
+  const slice_d = dirs.slice(start + 9, start + 19).filter(v => v != null);
+  const avgWind = slice_w.length ? slice_w.reduce((a,b)=>a+b,0)/slice_w.length : 0;
+  const maxGust = slice_g.length ? Math.max(...slice_g) : 0;
+  // Dominant direction: circular mean
+  let sx = 0, sy = 0;
+  slice_d.forEach(d => { sx += Math.cos(d * Math.PI/180); sy += Math.sin(d * Math.PI/180); });
+  const avgDir = slice_d.length ? ((Math.atan2(sy/slice_d.length, sx/slice_d.length) * 180/Math.PI) + 360) % 360 : 0;
+  const score = scoreDay(winds, start);
+  // Hourly scores for sparkline (9-18)
+  const spark = [];
+  for (let h2 = 9; h2 <= 18; h2++) spark.push(scoreHour(winds[start + h2] ?? 0, DEFAULT_WIN));
+  return { avgWind, maxGust, avgDir, score, spark, avgWindKn: msToKn(avgWind) };
+}
+
+// ── Day label ─────────────────────────────────────────────
+function dayLabel(fc, dayIdx) {
+  const t = fc.hourly?.time?.[dayIdx * 24];
+  if (!t) return `Tag ${dayIdx + 1}`;
+  const d = new Date(t);
+  if (dayIdx === 0) return 'Heute';
+  if (dayIdx === 1) return 'Morgen';
+  return d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' });
+}
+
+// ── Wind arrow SVG ────────────────────────────────────────
+function windArrowSvg(deg, color = '#3a9ad9', size = 20) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" style="display:inline-block;vertical-align:middle;transform:rotate(${deg}deg)">
+    <polygon points="10,2 14,16 10,13 6,16" fill="${color}" opacity=".85"/>
+  </svg>`;
+}
+
+// ── Build spot card HTML ──────────────────────────────────
+function buildCard(spot, forecasts, bestId) {
+  const isBest = spot.id === bestId;
+  const days = [0, 1, 2].map(d => dayStats(forecasts[spot.id], d));
+  const labels = [0, 1, 2].map(d => dayLabel(forecasts[spot.id], d));
+
+  const tabsHtml = days.map((ds, i) => `
+    <div class="day-tab ${i === 0 ? 'active' : ''}" onclick="switchDay('${spot.id}', ${i})" id="tab-${spot.id}-${i}">
+      <span class="score-mini" style="color:${scoreColor(ds.score)}">${ds.score}</span>
+      ${labels[i]}
+    </div>`).join('');
+
+  const detailHtml = days.map((ds, i) => {
+    const sparkHtml = ds.spark.map(s => {
+      const pct = Math.max(4, s);
+      return `<div class="spark-bar" style="background:${scoreColor(s)};height:${pct}%;opacity:.8"></div>`;
+    }).join('');
+
+    return `<div class="day-detail" id="detail-${spot.id}-${i}" style="${i === 0 ? '' : 'display:none'}">
+      <div class="score-row" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div>
+          <div class="score-big" style="color:${scoreColor(ds.score)}">${ds.score}</div>
+          <div class="score-label">Foil-Score</div>
+        </div>
+        <div style="flex:1">
+          <div style="background:#1e2d3d;border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
+            <div style="width:${ds.score}%;height:6px;border-radius:4px;background:${scoreColor(ds.score)}"></div>
+          </div>
+          <div style="font-family:monospace;font-size:9px;color:#5a7a96">9–18 Uhr Fenster</div>
+        </div>
+      </div>
+      <div class="wind-row">
+        <div class="wind-stat">
+          <div class="wind-stat-label">Ø Wind</div>
+          <div class="wind-stat-val">${ds.avgWindKn.toFixed(1)}<span class="wind-stat-unit"> kn</span></div>
+        </div>
+        <div class="wind-stat">
+          <div class="wind-stat-label">Max Böe</div>
+          <div class="wind-stat-val">${msToKn(ds.maxGust).toFixed(1)}<span class="wind-stat-unit"> kn</span></div>
+        </div>
+      </div>
+      <div class="dir-row">
+        ${windArrowSvg(ds.avgDir, '#3a9ad9', 18)}
+        <span class="dir-label">Windrichtung:</span>
+        <span class="dir-val">${compass(ds.avgDir)} (${Math.round(ds.avgDir)}°)</span>
+      </div>
+      <div class="spark" title="Stündlicher Score 9–18 Uhr">${sparkHtml}</div>
+      <div style="font-family:monospace;font-size:9px;color:#5a7a96;margin-top:3px">▲ Score-Profil 9–18 Uhr</div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="spot-card ${isBest ? 'best' : ''}" id="card-${spot.id}">
+      <div class="spot-head">
+        <div>
+          <div class="spot-name">${spot.emoji} ${spot.name}</div>
+          <div class="spot-desc">${spot.desc}</div>
+          <div class="spot-coords">${spot.lat.toFixed(3)}°N ${spot.lon.toFixed(3)}°E</div>
+        </div>
+        ${isBest ? '<div class="spot-best-badge">⭐ BEST</div>' : ''}
+      </div>
+      <div class="day-tabs">${tabsHtml}</div>
+      ${detailHtml}
+    </div>`;
+}
+
+// ── Day-switcher (called from onclick) ────────────────────
+function switchDay(spotId, dayIdx) {
+  for (let i = 0; i < 3; i++) {
+    const tab = document.getElementById(`tab-${spotId}-${i}`);
+    const det = document.getElementById(`detail-${spotId}-${i}`);
+    if (tab) tab.classList.toggle('active', i === dayIdx);
+    if (det) det.style.display = i === dayIdx ? '' : 'none';
+  }
+}
+
+// ── Leaflet map setup ─────────────────────────────────────
+const map = L.map('map', {
+  center: [40.1, 9.07],
+  zoom: 8,
+  zoomControl: true,
+  attributionControl: true,
+});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 18,
+}).addTo(map);
+
+// Placeholder markers (score shown after data loads)
+const mapMarkers = {};
+SPOTS.forEach(spot => {
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="leaflet-score-marker" style="background:${spot.color};border-color:${spot.color}20">…</div>`,
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
+  const m = L.marker([spot.lat, spot.lon], { icon }).addTo(map);
+  m.bindPopup(`<b>${spot.emoji} ${spot.name}</b><br><span style="color:#5a7a96;font-size:10px">${spot.desc}</span><br><span style="font-family:monospace;font-size:9px;color:#5a7a96">${spot.lat.toFixed(4)}°N ${spot.lon.toFixed(4)}°E</span><br><i style="color:#5a7a96;font-size:10px">Lade Forecast…</i>`);
+  mapMarkers[spot.id] = m;
+});
+
+// ── Main data-loading orchestrator ───────────────────────
+async function loadAll() {
+  const grid = document.getElementById('spots-grid');
+  grid.innerHTML = SPOTS.map(() => `<div class="loading"><span class="spin">⟳</span></div>`).join('');
+
+  const results = {};
+  await Promise.all(SPOTS.map(async (spot) => {
+    try {
+      results[spot.id] = await fetchForecast(spot.lat, spot.lon);
+    } catch (e) {
+      results[spot.id] = null;
+    }
+  }));
+
+  // Compute 3-day average scores for ranking
+  const ranking = SPOTS.map(spot => {
+    if (!results[spot.id]) return { spot, avg: 0, days: [0,0,0], winds: [0,0,0], dirs: [0,0,0] };
+    const days = [0,1,2].map(d => dayStats(results[spot.id], d));
+    const avg = Math.round(days.reduce((a, ds) => a + ds.score, 0) / 3);
+    return {
+      spot,
+      avg,
+      days: days.map(d => d.score),
+      winds: days.map(d => d.avgWindKn),
+      dirs: days.map(d => d.avgDir),
+    };
+  }).sort((a, b) => b.avg - a.avg);
+
+  const bestId = ranking[0].spot.id;
+
+  // Update winner bar
+  const winner = ranking[0];
+  document.getElementById('winner-name').textContent = `${winner.spot.emoji} ${winner.spot.name} — Score ${winner.avg}`;
+  document.getElementById('winner-why').innerHTML = `
+    ${scoreEmoji(winner.avg)} Bester 3-Tage-Ø Score ·
+    Ø ${winner.winds[0].toFixed(1)} kn heute ·
+    ${compass(winner.dirs[0])} Hauptrichtung ·
+    ${winner.spot.shoreNote}`;
+
+  // Update map markers
+  SPOTS.forEach(spot => {
+    if (!results[spot.id]) return;
+    const s = dayStats(results[spot.id], 0).score;
+    const col = scoreColor(s);
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="leaflet-score-marker" style="background:${col}22;border:2px solid ${col};color:${col}">${s}</div>`,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+    });
+    mapMarkers[spot.id].setIcon(icon);
+    const ds = dayStats(results[spot.id], 0);
+    mapMarkers[spot.id].bindPopup(`
+      <b>${spot.emoji} ${spot.name}</b>${spot.id === bestId ? ' ⭐' : ''}<br>
+      <span style="color:${col};font-size:13px;font-weight:700">Score ${s}</span>
+      <span style="color:#5a7a96;font-size:10px"> (Heute 9–18 Uhr)</span><br>
+      <span style="font-size:11px">Ø <b>${ds.avgWindKn.toFixed(1)} kn</b> · ${windArrowSvg(ds.avgDir,'#3a9ad9',14)} <b>${compass(ds.avgDir)}</b></span><br>
+      <span style="font-family:monospace;font-size:9px;color:#5a7a96">${spot.lat.toFixed(4)}°N ${spot.lon.toFixed(4)}°E · ${spot.desc}</span>
+    `);
+    if (spot.id === bestId) mapMarkers[spot.id].openPopup();
+  });
+
+  // Build cards
+  grid.innerHTML = SPOTS.map(spot => buildCard(spot, results, bestId)).join('');
+
+  // Best card highlighted at top on mobile via scroll
+  const bestCard = document.getElementById(`card-${bestId}`);
+  if (bestCard) bestCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // Build ranking table
+  buildRankingTable(ranking, results);
+}
+
+// ── Ranking table ─────────────────────────────────────────
+function buildRankingTable(ranking, results) {
+  document.getElementById('rec-loading').style.display = 'none';
+  const tbl = document.getElementById('rec-table');
+  tbl.style.display = '';
+  const rankClass = ['rank-1','rank-2','rank-3','rank-4'];
+  const rankLabel = [
+    '🥇 Bester Spot — ideal für heutige Session',
+    '🥈 Gut — lohnend bei gutem Timing',
+    '🥉 Mittel — nur bei optimalem Wetter',
+    '⬇️ Weniger empfehlenswert',
+  ];
+  document.getElementById('rec-body').innerHTML = ranking.map((r, i) => {
+    const dLabels = results[r.spot.id] ? [0,1,2].map(d => dayLabel(results[r.spot.id], d)) : ['Tag 1','Tag 2','Tag 3'];
+    return `<tr>
+      <td class="${rankClass[i]}">${i+1}</td>
+      <td class="${rankClass[i]}">${r.spot.emoji} <b>${r.spot.name}</b></td>
+      <td><span style="color:${scoreColor(r.days[0])}">${r.days[0]}</span></td>
+      <td><span style="color:${scoreColor(r.days[1])}">${r.days[1]}</span></td>
+      <td><span style="color:${scoreColor(r.days[2])}">${r.days[2]}</span></td>
+      <td class="${rankClass[i]}" style="font-size:14px"><b>${r.avg}</b></td>
+      <td>${r.winds[0].toFixed(1)} kn</td>
+      <td>${windArrowSvg(r.dirs[0],'#3a9ad9',14)} ${compass(r.dirs[0])}</td>
+      <td style="font-size:10px;color:#8ab5d0">${rankLabel[i]}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Start ─────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
