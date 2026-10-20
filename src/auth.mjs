@@ -84,7 +84,7 @@ export const auth = betterAuth({
   // The app is reachable via MyFritz on a non-standard port and self-signed SSL.
   // List every origin allowed to call the auth endpoints.
   trustedOrigins: [
-    'https://maik.surf:8505',
+    'https://maik.surf',
     'https://ik3acymjxllpensn.myfritz.net:8505',
     'https://192.168.99.113:8505',
     'http://localhost:5173',
