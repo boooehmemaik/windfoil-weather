@@ -129,9 +129,8 @@
       display:flex;justify-content:center;gap:24;flex-wrap:wrap;align-items:center}
 
     /* ── Leaflet marker overrides ── */
-    .leaflet-score-marker{display:flex;align-items:center;justify-content:center;
-      width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.2);
-      font-weight:700;font-size:14px;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+    .lm-dot{position:absolute;left:2px;top:46px;width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.85);box-shadow:0 1px 5px rgba(0,0,0,.7)}
+    .lm-badge{position:absolute;right:0;top:0;background:rgba(10,14,20,.88);border-radius:5px;padding:2px 7px;font-weight:700;font-size:13px;font-family:'Barlow',sans-serif;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.6);line-height:1.6;cursor:pointer;border-width:1.5px;border-style:solid}
     .leaflet-popup-content-wrapper{background:#151d28;border:1px solid #243040;color:#d8e4f0;font-family:'Barlow',sans-serif;border-radius:6px}
     .leaflet-popup-tip{background:#243040}
     .leaflet-popup-content{font-size:12px;line-height:1.6;margin:12px 16px}
@@ -488,9 +487,9 @@ const mapMarkers = {};
 SPOTS.forEach(spot => {
   const icon = L.divIcon({
     className: '',
-    html: `<div class="leaflet-score-marker" style="background:${spot.color};border-color:${spot.color}20">…</div>`,
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
+    html: `<div style="position:relative;width:20px;height:20px"><div style="width:16px;height:16px;border-radius:50%;background:${spot.color};border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 6px rgba(0,0,0,.6);margin:2px"></div></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
   });
   const m = L.marker([spot.lat, spot.lon], { icon }).addTo(map);
   m.bindPopup(`<b>${spot.emoji} ${spot.name}</b><br><span style="color:#5a7a96;font-size:10px">${spot.desc}</span><br><span style="font-family:monospace;font-size:9px;color:#5a7a96">${spot.lat.toFixed(4)}°N ${spot.lon.toFixed(4)}°E</span><br><i style="color:#5a7a96;font-size:10px">Lade Forecast…</i>`);
@@ -543,9 +542,13 @@ async function loadAll() {
     const col = scoreColor(s);
     const icon = L.divIcon({
       className: '',
-      html: `<div class="leaflet-score-marker" style="background:${col}22;border:2px solid ${col};color:${col}">${s}</div>`,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22],
+      html: `<div style="position:relative;width:90px;height:64px;pointer-events:none">
+        <svg style="position:absolute;top:0;left:0;width:90px;height:64px;overflow:visible;pointer-events:none"><line x1="10" y1="54" x2="70" y2="16" stroke="${col}" stroke-width="1.5" stroke-opacity="0.75"/></svg>
+        <div class="lm-dot" style="background:${col}"></div>
+        <div class="lm-badge" style="color:${col};border-color:${col}">${s}</div>
+      </div>`,
+      iconSize: [90, 64],
+      iconAnchor: [10, 54],
     });
     mapMarkers[spot.id].setIcon(icon);
     const ds = dayStats(results[spot.id], 0);
