@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de" id="htmlRoot"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.28.14 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.28.15 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -10,7 +10,8 @@
 #boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0e14;color:#5a7a96;font-family:monospace;gap:14px;z-index:9999}
 #boot .ring{width:42px;height:42px;border:3px solid #243040;border-top-color:#f07820;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select,button,textarea{font-size:inherit}}</style>
+input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select,button,textarea{font-size:inherit}}
+@media(max-width:600px){.wf-hdr-sardinia{display:none!important}}</style>
 <script type="importmap">{"imports":{"react":"vendor/react-esm-shim.js","react-dom":"vendor/react-esm-shim.js"}}</script></head>
 <body><div id="boot"><div class="ring"></div><div id="bootMsg">WindFoil wird geladen…</div></div><div id="root"></div>
   <script>
@@ -58,7 +59,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.28.14",
+    version_label: "Weather Intelligence · v3.28.15",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -365,7 +366,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.28.14",
+    version_label: "Weather Intelligence · v3.28.15",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -675,9 +676,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// Changelog v3.28.14: Bilingual DE/EN — Sprachtoggle neben Dark-Mode
-// WindFoil Weather Intelligence v3.28.14
-// Changelog v3.28.14: Bilingual DE/EN — Sprachtoggle neben Dark-Mode
+// WindFoil Weather Intelligence v3.28.15
+// Changelog v3.28.15: Header zweizeilig — Spenden + Uhr in Zeile 1, Controls in Zeile 2; Sardinien-Link mobil ausgeblendet
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -3173,7 +3173,9 @@ function App() {
 
   const S={
     wrap:{fontFamily:"'Barlow',sans-serif",background:C.bg,color:C.text,minHeight:"100vh",fontSize:14},
-    hdr:{background:C.headerBg,borderBottom:`1px solid ${C.border}`,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:6,position:"sticky",top:0,zIndex:100},
+    hdr:{background:C.headerBg,borderBottom:`1px solid ${C.border}`,padding:"8px 14px",display:"flex",flexDirection:"column",gap:4,position:"sticky",top:0,zIndex:100},
+    hdrRow1:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8},
+    hdrRow2:{display:"flex",alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap",gap:6},
     locBar:{background:C.panel,borderBottom:`2px solid ${C.sky}`,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8},
     riderBar:{background:C.panel,borderBottom:`1px solid ${C.border}`,borderTop:`2px solid ${C.signal}`,padding:"14px 20px"},
     main:{padding:"14px clamp(10px,3vw,18px) calc(40px + env(safe-area-inset-bottom))",maxWidth:1200,margin:"0 auto"},
@@ -3193,18 +3195,30 @@ function App() {
     <div style={S.wrap}>
       {/* HEADER */}
       <header style={S.hdr}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <svg width="38" height="38" viewBox="0 0 32 32" fill="none" style={{display:"block",flexShrink:0}} aria-label="WindFoil">
-            <path d="M5 11.5h11.5a2.7 2.7 0 1 0-2.7-2.7" stroke={C.signal} strokeWidth="2.6" strokeLinecap="round"/>
-            <path d="M5 20.5h15a2.7 2.7 0 1 1-2.7 2.7" stroke={C.signal} strokeWidth="2.6" strokeLinecap="round"/>
-            <path d="M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3" stroke={C.muted} strokeWidth="2.4" strokeLinecap="round"/>
-          </svg>
-          <div>
-            <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-            <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>{t('version_label')}</div>
+        {/* Row 1: logo + Spenden + clock */}
+        <div style={S.hdrRow1}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <svg width="38" height="38" viewBox="0 0 32 32" fill="none" style={{display:"block",flexShrink:0}} aria-label="WindFoil">
+              <path d="M5 11.5h11.5a2.7 2.7 0 1 0-2.7-2.7" stroke={C.signal} strokeWidth="2.6" strokeLinecap="round"/>
+              <path d="M5 20.5h15a2.7 2.7 0 1 1-2.7 2.7" stroke={C.signal} strokeWidth="2.6" strokeLinecap="round"/>
+              <path d="M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3" stroke={C.muted} strokeWidth="2.4" strokeLinecap="round"/>
+            </svg>
+            <div>
+              <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
+              <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>{t('version_label')}</div>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <a href="https://paypal.me/boehmemaik" target="_blank" rel="noopener noreferrer"
+              title={t('footer_support_title')}
+              style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:3,padding:"2px 8px",fontFamily:"monospace",fontSize:11,cursor:"pointer",textDecoration:"none",lineHeight:"1.6"}}>
+              {t('footer_donate')}
+            </a>
+            <span style={{fontFamily:"monospace",fontSize:13,color:C.signal,minWidth:44,textAlign:"right"}}>{clock}</span>
           </div>
         </div>
-        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+        {/* Row 2: controls */}
+        <div style={S.hdrRow2}>
           <span style={{display:"flex",gap:6,fontSize:9,fontFamily:"monospace"}}>
             <span title="Forecast API">FC:{apiStatus.forecast}</span>
             <span title="Historical API">ERA5:{apiStatus.historical}</span>
@@ -3237,12 +3251,12 @@ function App() {
             <span style={{width:6,height:6,borderRadius:"50%",background:C.go,display:"inline-block"}}/>
             {activeUsers}
           </span>}
-          <a href="https://paypal.me/boehmemaik" target="_blank" rel="noopener noreferrer"
-            title={t('footer_support_title')}
+          <a href="/sardinia.html"
+            title="Sardinien Wingfoil-Map"
+            className="wf-hdr-sardinia"
             style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:3,padding:"2px 8px",fontFamily:"monospace",fontSize:11,cursor:"pointer",textDecoration:"none",lineHeight:"1.6"}}>
-            {t('footer_donate')}
+            🏝 Sardinien
           </a>
-          <span style={{fontFamily:"monospace",fontSize:13,color:C.signal}}>{clock}</span>
         </div>
       </header>
 
@@ -4079,9 +4093,10 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.14</span>
+        <span>WindFoil Weather Intelligence v3.28.15</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
+        <a href="/sardinia.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sardinien</a>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>{t('footer_help')}</a>
         <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
           title="Admin"
