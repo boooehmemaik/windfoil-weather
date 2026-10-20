@@ -16,17 +16,26 @@
     a:hover{text-decoration:underline}
 
     /* ── Header ── */
-    .hdr{background:rgba(10,14,20,.97);border-bottom:1px solid #1e2d3d;padding:8px 20px;
-      display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
-    .hdr-logo{display:flex;align-items:center;gap:10}
+    .hdr{background:rgba(10,14,20,.97);border-bottom:1px solid #1e2d3d;padding:8px 14px;
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+      position:sticky;top:0;z-index:200;overflow:hidden}
+    .hdr-logo{display:flex;align-items:center;gap:8px;flex-shrink:0;min-width:0}
     .hdr-title{font-family:monospace;font-weight:900;font-size:15px;letter-spacing:.15em;color:#d8e4f0}
     .hdr-sub{font-family:monospace;font-size:9px;color:#5a7a96;letter-spacing:.1em}
-    .hdr-links{display:flex;gap:10;align-items:center;flex-wrap:wrap}
+    .hdr-links{display:flex;gap:6px;align-items:center;flex-shrink:0}
     .hdr-btn{background:transparent;border:1px solid #243040;color:#5a7a96;border-radius:3px;
-      padding:2px 10px;font-family:monospace;font-size:10px;cursor:pointer;text-decoration:none;
-      display:inline-flex;align-items:center;transition:border-color .15s,color .15s}
+      padding:2px 8px;font-family:monospace;font-size:10px;cursor:pointer;text-decoration:none;
+      display:inline-flex;align-items:center;transition:border-color .15s,color .15s;white-space:nowrap}
     .hdr-btn:hover{border-color:#3a9ad9;color:#3a9ad9;text-decoration:none}
     .hdr-btn.active{background:#f07820;border-color:#f07820;color:#fff}
+    #hdr-clock{font-family:monospace;font-size:13px;color:#f07820}
+    @media(max-width:480px){
+      .hdr-sub{display:none}
+      #hdr-clock{display:none}
+      .hdr-btn-help{display:none}
+      .hdr-logo svg{width:26px;height:26px}
+      .hdr-title{font-size:13px}
+    }
 
     /* ── Winner banner ── */
     #winner-bar{background:linear-gradient(90deg,rgba(61,220,132,.12),rgba(61,220,132,.05));
@@ -47,7 +56,7 @@
       letter-spacing:.1em;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #1e2d3d}
 
     /* ── Spot grid ── */
-    .spots-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+    .spots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
     @media(max-width:900px){.spots-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:500px){.spots-grid{grid-template-columns:1fr}}
 
@@ -145,8 +154,8 @@
   </div>
   <div class="hdr-links">
     <a href="/" class="hdr-btn">← Hauptseite</a>
-    <a href="/help.html" class="hdr-btn">❓ Hilfe</a>
-    <span id="hdr-clock" style="font-family:monospace;font-size:13px;color:#f07820"></span>
+    <a href="/help.html" class="hdr-btn hdr-btn-help">❓ Hilfe</a>
+    <span id="hdr-clock"></span>
   </div>
 </header>
 
@@ -166,7 +175,7 @@
 <div class="main">
 
   <!-- Forecast cards -->
-  <div class="sec-title">🗺 3-Tage-Forecast · 4 Offshore-Messpunkte (~200 m vor der Küste)</div>
+  <div class="sec-title">🗺 3-Tage-Forecast · 6 Offshore-Messpunkte (~200 m vor der Küste)</div>
   <div class="spots-grid" id="spots-grid">
     <!-- filled by JS -->
   </div>
@@ -199,7 +208,9 @@
     <b>Porto Pollo</b> — Klassiker-Spot Nordostküste. Maestrale (NW-Mistral) dominant, zuverlässig ab Frühling. Flaches Wasser in der Bucht, Flachwasser-Training möglich.<br>
     <b>Stintino / La Pelosa</b> — Nordwestspitze. Flaches türkisfarbenes Wasser. Maestrale und Libeccio. Einsteigerfreundlich bei moderatem Wind.<br>
     <b>Putzu Idu</b> — Westküste, Oristano. Weitläufige offene Lagune. Thermische Westwinde nachmittags. Gut für Freeriding und Kurse.<br>
-    <b>Chia / Torre di Chia</b> — Südküste. Wärmste Wassertemperaturen. Mistral vom Westen, Levante aus dem Osten. Sehr schöne Umgebung.
+    <b>Chia / Torre di Chia</b> — Südküste. Wärmste Wassertemperaturen. Mistral vom Westen, Levante aus dem Osten. Sehr schöne Umgebung.<br>
+    <b>Cala Gonone</b> — Nordostküste, Golf von Orosei. Levante (Ostwind) und lokale Thermiksysteme. Felsige Steilküste, tiefes Wasser direkt am Spot. Weniger überlaufen.<br>
+    <b>Villasimius</b> — Südostspitze Sardiniens. Scirocco (SO) mit langer Fetch aus dem Mittelmeer und Maestrale-Querung. Kristallklares Wasser, Naturschutzgebiet.
   </div>
 </div>
 
@@ -266,6 +277,26 @@ const SPOTS = [
     lat: 38.876, lon: 8.877,
     shoreNote: 'Warmwasser, Südexposition',
     color: '#a78bfa',
+  },
+  {
+    id: 'cala_gonone',
+    name: 'Cala Gonone',
+    emoji: '🏔',
+    desc: 'Levante · Nordostküste',
+    // Shore: 40.283°N 9.622°E — versetzt ~250m nach O ins Meer
+    lat: 40.283, lon: 9.629,
+    shoreNote: 'Ostexposition, Levante-Wind',
+    color: '#3ddc84',
+  },
+  {
+    id: 'villasimius',
+    name: 'Villasimius',
+    emoji: '🐠',
+    desc: 'Mistral + Scirocco · Südost',
+    // Shore: 39.118°N 9.526°E — versetzt ~250m nach O/S ins Meer
+    lat: 39.118, lon: 9.533,
+    shoreNote: 'Südostspitze, Scirocco-Fetch',
+    color: '#f472b6',
   },
 ];
 
@@ -544,11 +575,13 @@ function buildRankingTable(ranking, results) {
   document.getElementById('rec-loading').style.display = 'none';
   const tbl = document.getElementById('rec-table');
   tbl.style.display = '';
-  const rankClass = ['rank-1','rank-2','rank-3','rank-4'];
+  const rankClass = ['rank-1','rank-2','rank-3','rank-4','rank-4','rank-4'];
   const rankLabel = [
     '🥇 Bester Spot — ideal für heutige Session',
     '🥈 Gut — lohnend bei gutem Timing',
     '🥉 Mittel — nur bei optimalem Wetter',
+    '⬇️ Weniger empfehlenswert',
+    '⬇️ Weniger empfehlenswert',
     '⬇️ Weniger empfehlenswert',
   ];
   document.getElementById('rec-body').innerHTML = ranking.map((r, i) => {
