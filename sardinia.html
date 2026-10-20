@@ -345,17 +345,29 @@ function scoreEmoji(s) {
 
 // ── Fetch forecast (Open-Meteo) ──────────────────────────
 async function fetchForecast(lat, lon) {
-  const params = new URLSearchParams({
+  const windParams = new URLSearchParams({
     latitude: lat, longitude: lon,
-    hourly: 'windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m,weathercode',
+    hourly: 'windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m',
     wind_speed_unit: 'ms', forecast_days: 4, timezone: 'auto',
     models: 'meteofrance_arome_france_hd',
   });
-  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
-    signal: AbortSignal.timeout(10000),
+  // weathercode fetched separately — AROME covers France only, returns null for Sardinia
+  const wxParams = new URLSearchParams({
+    latitude: lat, longitude: lon,
+    hourly: 'weathercode',
+    forecast_days: 4, timezone: 'auto',
   });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  const [windR, wxR] = await Promise.all([
+    fetch(`https://api.open-meteo.com/v1/forecast?${windParams}`, { signal: AbortSignal.timeout(10000) }),
+    fetch(`https://api.open-meteo.com/v1/forecast?${wxParams}`, { signal: AbortSignal.timeout(10000) }),
+  ]);
+  if (!windR.ok) throw new Error(`HTTP ${windR.status}`);
+  const fc = await windR.json();
+  if (wxR.ok) {
+    const wx = await wxR.json();
+    if (fc.hourly && wx.hourly?.weathercode) fc.hourly.weathercode = wx.hourly.weathercode;
+  }
+  return fc;
 }
 
 // ── WMO weather-code → icon ───────────────────────────────
