@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de" id="htmlRoot"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.28.15 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.28.16 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -59,7 +59,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.28.15",
+    version_label: "Weather Intelligence · v3.28.16",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -253,6 +253,12 @@ const TRANSLATIONS = {
     auth_server_err: "Server nicht erreichbar.",
     auth_logged_as: "Eingeloggt als",
     auth_signout: "Abmelden",
+    auth_pw_forgot: "Passwort vergessen?",
+    auth_pw_reset_email_label: "Deine E-Mail-Adresse",
+    auth_pw_reset_btn: "Reset-Link senden",
+    auth_pw_reset_ok: "E-Mail wurde gesendet. Bitte prüfe deinen Posteingang.",
+    auth_pw_reset_err: "Fehler beim Senden. Bitte prüfe die E-Mail-Adresse.",
+    auth_pw_reset_cancel: "Abbrechen",
     // Feedback modal
     fb_modal_label: "Session-Feedback",
     fb_planed_q: "Bist du aufs Foil gekommen?",
@@ -366,7 +372,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.28.15",
+    version_label: "Weather Intelligence · v3.28.16",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -560,6 +566,12 @@ const TRANSLATIONS = {
     auth_server_err: "Server unreachable.",
     auth_logged_as: "Signed in as",
     auth_signout: "Sign out",
+    auth_pw_forgot: "Forgot password?",
+    auth_pw_reset_email_label: "Your e-mail address",
+    auth_pw_reset_btn: "Send reset link",
+    auth_pw_reset_ok: "E-mail sent. Please check your inbox.",
+    auth_pw_reset_err: "Error sending. Please check the e-mail address.",
+    auth_pw_reset_cancel: "Cancel",
     // Feedback modal
     fb_modal_label: "Session feedback",
     fb_planed_q: "Did you get on the foil?",
@@ -676,8 +688,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.28.15
-// Changelog v3.28.15: Header zweizeilig — Spenden + Uhr in Zeile 1, Controls in Zeile 2; Sardinien-Link mobil ausgeblendet
+// WindFoil Weather Intelligence v3.28.16
+// Changelog v3.28.16: Header zweizeilig — Spenden + Uhr in Zeile 1, Controls in Zeile 2; Sardinien-Link mobil ausgeblendet
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -2053,6 +2065,10 @@ function AuthGate({children}){
   const [pw,setPw]=useState('');
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState('');
+  const [resetOpen,setResetOpen]=useState(false);
+  const [resetEmail,setResetEmail]=useState('');
+  const [resetBusy,setResetBusy]=useState(false);
+  const [resetMsg,setResetMsg]=useState(''); // '' | 'ok' | 'err'
 
   useEffect(()=>{
     fetch('/api/auth/get-session',{credentials:'include'})
@@ -2078,6 +2094,17 @@ function AuthGate({children}){
     setSess(false);setEmail('');setPw('');setErr('');
   }
 
+  async function requestReset(){
+    setResetBusy(true);setResetMsg('');
+    try{
+      const r=await fetch('/api/auth/request-password-reset',{method:'POST',
+        credentials:'include',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email:resetEmail})});
+      setResetMsg(r.ok?'ok':'err');
+    }catch{setResetMsg('err');}
+    finally{setResetBusy(false);}
+  }
+
   const INP={width:'100%',boxSizing:'border-box',background:CA.p2,color:CA.foam,
     border:`1px solid ${CA.line}`,borderRadius:10,padding:'11px 12px',fontSize:16};
 
@@ -2101,7 +2128,7 @@ function AuthGate({children}){
           {mode==='signup'?t('auth_sub_signup'):t('auth_sub_signin')}</p>
         <div style={{display:'flex',gap:6,background:CA.p2,padding:4,borderRadius:11,marginBottom:18}}>
           {['signin','signup'].map(m=>(
-            <button key={m} onClick={()=>{setMode(m);setErr('');}}
+            <button key={m} onClick={()=>{setMode(m);setErr('');setResetOpen(false);setResetMsg('');}}
               style={{flex:1,padding:9,border:'none',borderRadius:8,cursor:'pointer',
                 background:mode===m?CA.panel:'transparent',
                 color:mode===m?CA.foam:CA.haze,fontWeight:600,fontSize:13}}>
@@ -2122,13 +2149,57 @@ function AuthGate({children}){
           <input style={INP} type="email" value={email} onChange={e=>setEmail(e.target.value)}
             autoComplete="email" placeholder="mail@example.com"/>
         </div>
-        <div style={{marginBottom:20}}>
+        <div style={{marginBottom:mode==='signin'&&!resetOpen?8:20}}>
           <label style={{display:'block',fontSize:12,color:CA.haze,marginBottom:6}}>
             {t('auth_pw_label')}</label>
           <input style={INP} type="password" value={pw} onChange={e=>setPw(e.target.value)}
             autoComplete={mode==='signup'?'new-password':'current-password'}
             onKeyDown={e=>e.key==='Enter'&&submit()}/>
         </div>
+        {mode==='signin'&&!resetOpen&&(
+          <div style={{textAlign:'right',marginBottom:16}}>
+            <button onClick={()=>{setResetOpen(true);setResetEmail(email);setResetMsg('');}}
+              style={{background:'none',border:'none',padding:0,cursor:'pointer',
+                color:CA.lift,fontSize:13,textDecoration:'underline',textUnderlineOffset:3}}>
+              {t('auth_pw_forgot')}
+            </button>
+          </div>
+        )}
+        {mode==='signin'&&resetOpen&&(
+          <div style={{background:CA.p2,border:`1px solid ${CA.line}`,borderRadius:12,
+              padding:'14px 14px 16px',marginBottom:16}}>
+            <label style={{display:'block',fontSize:12,color:CA.haze,marginBottom:6}}>
+              {t('auth_pw_reset_email_label')}
+            </label>
+            <input style={{...INP,marginBottom:10}} type="email" value={resetEmail}
+              onChange={e=>{setResetEmail(e.target.value);setResetMsg('');}}
+              placeholder="mail@example.com"
+              onKeyDown={e=>e.key==='Enter'&&!resetBusy&&requestReset()}/>
+            {resetMsg==='ok'&&(
+              <p style={{fontSize:13,color:CA.foam,margin:'0 0 10px',
+                  background:`${C.go}22`,border:`1px solid ${C.go}44`,
+                  borderRadius:8,padding:'8px 10px'}}>
+                {t('auth_pw_reset_ok')}
+              </p>
+            )}
+            {resetMsg==='err'&&(
+              <p style={{fontSize:13,color:CA.coral,margin:'0 0 10px'}}>{t('auth_pw_reset_err')}</p>
+            )}
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={requestReset} disabled={resetBusy||!resetEmail}
+                style={{flex:1,padding:'10px 0',border:'none',borderRadius:9,cursor:'pointer',
+                  background:CA.lift,color:'#fff',fontWeight:700,fontSize:13,
+                  opacity:(resetBusy||!resetEmail)?0.5:1}}>
+                {resetBusy?t('auth_btn_loading'):t('auth_pw_reset_btn')}
+              </button>
+              <button onClick={()=>{setResetOpen(false);setResetMsg('');}}
+                style={{padding:'10px 14px',border:`1px solid ${CA.line}`,borderRadius:9,
+                  cursor:'pointer',background:'transparent',color:CA.haze,fontSize:13}}>
+                {t('auth_pw_reset_cancel')}
+              </button>
+            </div>
+          </div>
+        )}
         <button onClick={submit} disabled={busy}
           style={{width:'100%',padding:13,border:'none',borderRadius:11,cursor:'pointer',
             background:CA.lift,color:'#fff',fontWeight:700,fontSize:14,opacity:busy?0.5:1}}>
@@ -4093,7 +4164,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.15</span>
+        <span>WindFoil Weather Intelligence v3.28.16</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
         <a href="/sardinia.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sardinien</a>
