@@ -60,6 +60,22 @@ async function mountWindfoil(app) {
   app.use((req, res, next) =>
     req.path.startsWith('/api/auth') ? next() : json(req, res, next));
 
+  // Rate-limit for password reset — 5 requests per 15 min per IP
+  const resetHits = new Map();
+  app.post('/api/auth/request-password-reset', (req, res, next) => {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const now = Date.now();
+    const window = 15 * 60_000;
+    const max = 5;
+    const hits = (resetHits.get(ip) || []).filter(t => now - t < window);
+    if (hits.length >= max) {
+      return res.status(429).json({ error: 'Zu viele Anfragen. Bitte 15 Minuten warten.' });
+    }
+    hits.push(now);
+    resetHits.set(ip, hits);
+    next();
+  });
+
   // Better Auth handler (Express v4 wildcard).
   app.all('/api/auth/*', toNodeHandler(auth));
 

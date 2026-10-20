@@ -427,6 +427,15 @@ function windArrowSvg(deg, color = '#3a9ad9', size = 20) {
 // ── Build spot card HTML ──────────────────────────────────
 function buildCard(spot, forecasts, bestId) {
   const isBest = spot.id === bestId;
+  if (!forecasts[spot.id]) return `
+    <div class="card" id="card-${spot.id}" style="border-color:${spot.color}40">
+      <div class="card-hdr" style="border-color:${spot.color}">
+        <span style="color:${spot.color}">${spot.emoji} ${spot.name}</span>
+      </div>
+      <div style="padding:20px;text-align:center;color:#5a7a96;font-size:11px;font-family:monospace">
+        ⚠ Forecast nicht verfügbar
+      </div>
+    </div>`;
   const days = [0, 1, 2].map(d => dayStats(forecasts[spot.id], d));
   const labels = [0, 1, 2].map(d => dayLabel(forecasts[spot.id], d));
 
