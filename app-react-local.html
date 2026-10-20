@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de" id="htmlRoot"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.28.16 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.28.17 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -59,7 +59,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.28.16",
+    version_label: "Weather Intelligence · v3.28.17",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -372,7 +372,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.28.16",
+    version_label: "Weather Intelligence · v3.28.17",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -688,8 +688,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.28.16
-// Changelog v3.28.16: Header zweizeilig — Spenden + Uhr in Zeile 1, Controls in Zeile 2; Sardinien-Link mobil ausgeblendet
+// WindFoil Weather Intelligence v3.28.17
+// Changelog v3.28.17: Header zweizeilig — Spenden + Uhr in Zeile 1, Controls in Zeile 2; Sardinien-Link mobil ausgeblendet
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -2069,6 +2069,31 @@ function AuthGate({children}){
   const [resetEmail,setResetEmail]=useState('');
   const [resetBusy,setResetBusy]=useState(false);
   const [resetMsg,setResetMsg]=useState(''); // '' | 'ok' | 'err'
+  // Own theme state so the login screen and the authenticated header bar
+  // both re-render when the palette switches.
+  const [agTheme,setAgTheme]=useState(()=>loadStored('wf_theme','dark'));
+
+  // Keep in sync when App (a child) changes the theme via localStorage.
+  useEffect(()=>{
+    function onStorage(e){
+      if(e.key==='wf_theme'&&e.newValue){
+        const val=JSON.parse(e.newValue);
+        setAgTheme(val==='light'?'light':'dark');
+      }
+    }
+    window.addEventListener('storage',onStorage);
+    return()=>window.removeEventListener('storage',onStorage);
+  },[]);
+
+  // Apply the palette synchronously so all CA.* reads below reflect the
+  // current theme — same pattern App uses.
+  applyTheme(agTheme==='light'?'light':'dark');
+
+  function toggleAuthTheme(){
+    const next=agTheme==='light'?'dark':'light';
+    setAgTheme(next);
+    saveStored('wf_theme',next);
+  }
 
   useEffect(()=>{
     fetch('/api/auth/get-session',{credentials:'include'})
@@ -2108,6 +2133,11 @@ function AuthGate({children}){
   const INP={width:'100%',boxSizing:'border-box',background:CA.p2,color:CA.foam,
     border:`1px solid ${CA.line}`,borderRadius:10,padding:'11px 12px',fontSize:16};
 
+  // Box-shadow intensity differs by theme: strong on dark, subtle on light.
+  const cardShadow=agTheme==='light'
+    ?'0 8px 32px -8px rgba(0,0,0,.18)'
+    :'0 30px 70px -30px rgba(0,0,0,.75)';
+
   if(sess===null)return(
     <div style={{minHeight:'100vh',display:'grid',placeItems:'center',background:CA.deep}}>
       <p style={{color:CA.haze,fontFamily:'monospace'}}>{t('sess_checking')}</p>
@@ -2119,9 +2149,19 @@ function AuthGate({children}){
         background:`radial-gradient(120% 90% at 50% -10%,${C.surface},${C.bg})`,padding:'max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom))'}}>
       <div style={{width:'100%',maxWidth:380,background:CA.deep,
           border:`1px solid ${CA.line}`,borderRadius:18,padding:26,
-          boxShadow:'0 30px 70px -30px rgba(0,0,0,.75)'}}>
-        <div style={{fontSize:11,letterSpacing:'.2em',textTransform:'uppercase',
-          color:CA.lift,fontWeight:700,marginBottom:6}}>WindFoil</div>
+          boxShadow:cardShadow}}>
+        {/* Header row: branding + theme toggle */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+          <div style={{fontSize:11,letterSpacing:'.2em',textTransform:'uppercase',
+            color:CA.lift,fontWeight:700}}>WindFoil</div>
+          <button onClick={toggleAuthTheme}
+            title={agTheme==='light'?'Dark Mode':'Light Mode'}
+            style={{background:'transparent',border:`1px solid ${C.border2}`,color:C.muted,
+              borderRadius:4,padding:'2px 8px',fontFamily:'monospace',fontSize:13,
+              cursor:'pointer',lineHeight:1.2}}>
+            {agTheme==='light'?'☾':'☀'}
+          </button>
+        </div>
         <h1 style={{fontSize:21,fontWeight:700,color:CA.foam,margin:'0 0 4px'}}>
           {mode==='signup'?t('auth_title_signup'):t('auth_title_signin')}</h1>
         <p style={{fontSize:13,color:CA.haze,margin:'0 0 20px'}}>
@@ -4164,7 +4204,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.16</span>
+        <span>WindFoil Weather Intelligence v3.28.17</span>
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
         <a href="/sardinia.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sardinien</a>
