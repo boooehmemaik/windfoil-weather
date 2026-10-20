@@ -103,8 +103,10 @@
     .dir-arrow{display:inline-block;transition:transform .3s}
 
     /* ── Hour sparkline bars ── */
-    .spark{display:flex;align-items:flex-end;gap:1px;height:30px;margin-top:8px}
-    .spark-bar{flex:1;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s}
+    .spark{display:flex;align-items:flex-end;gap:1px;height:40px;margin-top:8px}
+    .spark-col{flex:1;position:relative;display:flex;align-items:flex-end;height:100%}
+    .spark-bar{width:100%;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s}
+    .spark-icon{position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:11px;line-height:1;opacity:.75;pointer-events:none}
 
     /* ── Loading / error state ── */
     .loading{padding:20px;text-align:center;font-family:monospace;font-size:11px;color:#5a7a96}
@@ -345,7 +347,7 @@ function scoreEmoji(s) {
 async function fetchForecast(lat, lon) {
   const params = new URLSearchParams({
     latitude: lat, longitude: lon,
-    hourly: 'windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m',
+    hourly: 'windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m,weathercode',
     wind_speed_unit: 'ms', forecast_days: 4, timezone: 'auto',
     models: 'meteofrance_arome_france_hd',
   });
@@ -354,6 +356,18 @@ async function fetchForecast(lat, lon) {
   });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
+}
+
+// ── WMO weather-code → icon ───────────────────────────────
+function wmoIcon(code) {
+  if (code == null) return '';
+  if (code === 95 || code === 96 || code === 99) return '⛈';
+  if (code >= 61 && code <= 67) return '🌧';
+  if (code >= 80 && code <= 82) return '🌧';
+  if (code >= 51 && code <= 57) return '🌦';
+  if (code >= 71 && code <= 77) return '🌨';
+  if (code === 85 || code === 86) return '🌨';
+  return '';
 }
 
 // ── Compute day stats ─────────────────────────────────────
@@ -371,10 +385,14 @@ function dayStats(fc, dayIdx) {
   slice_d.forEach(d => { sx += Math.cos(d * Math.PI/180); sy += Math.sin(d * Math.PI/180); });
   const avgDir = slice_d.length ? ((Math.atan2(sy/slice_d.length, sx/slice_d.length) * 180/Math.PI) + 360) % 360 : 0;
   const score = scoreDay(winds, start);
-  // Hourly scores for sparkline (9-18)
-  const spark = [];
-  for (let h2 = 9; h2 <= 18; h2++) spark.push(scoreHour(winds[start + h2] ?? 0, DEFAULT_WIN));
-  return { avgWind, maxGust, avgDir, score, spark, avgWindKn: msToKn(avgWind) };
+  // Hourly scores + weathercodes for sparkline (9-18)
+  const spark = [], sparkCodes = [];
+  const codes = h.weathercode;
+  for (let h2 = 9; h2 <= 18; h2++) {
+    spark.push(scoreHour(winds[start + h2] ?? 0, DEFAULT_WIN));
+    sparkCodes.push(codes ? (codes[start + h2] ?? null) : null);
+  }
+  return { avgWind, maxGust, avgDir, score, spark, sparkCodes, avgWindKn: msToKn(avgWind) };
 }
 
 // ── Day label ─────────────────────────────────────────────
@@ -407,9 +425,10 @@ function buildCard(spot, forecasts, bestId) {
     </div>`).join('');
 
   const detailHtml = days.map((ds, i) => {
-    const sparkHtml = ds.spark.map(s => {
+    const sparkHtml = ds.spark.map((s, si) => {
       const pct = Math.max(4, s);
-      return `<div class="spark-bar" style="background:${scoreColor(s)};height:${pct}%;opacity:.8"></div>`;
+      const icon = wmoIcon(ds.sparkCodes ? ds.sparkCodes[si] : null);
+      return `<div class="spark-col"><div class="spark-bar" style="background:${scoreColor(s)};height:${pct}%;opacity:.8"></div>${icon ? `<span class="spark-icon">${icon}</span>` : ''}</div>`;
     }).join('');
 
     return `<div class="day-detail" id="detail-${spot.id}-${i}" style="${i === 0 ? '' : 'display:none'}">
