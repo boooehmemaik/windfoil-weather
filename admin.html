@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WindFoil — Admin</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a1520;color:#c8dce8;min-height:100vh;padding:20px}
+  h1{font-size:18px;color:#3a9ad9;letter-spacing:.05em;margin-bottom:20px}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#5a7a96;margin-bottom:10px}
+
+  /* Login */
+  #login-screen{max-width:380px;margin:80px auto;background:#0f1e2d;border:1px solid #1e3045;border-radius:8px;padding:32px}
+  #login-screen h1{text-align:center;font-size:20px;margin-bottom:24px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:11px;color:#5a7a96;margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em}
+  .field input{width:100%;background:#0a1520;border:1px solid #1e3045;color:#c8dce8;padding:9px 12px;border-radius:5px;font-size:14px;outline:none}
+  .field input:focus{border-color:#3a9ad9}
+  #login-err{color:#e05555;font-size:12px;margin-bottom:10px;display:none}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:5px;font-size:13px;cursor:pointer;transition:opacity .15s}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-primary{background:#3a9ad9;color:#fff}
+  .btn-primary:hover:not(:disabled){opacity:.85}
+  .btn-danger{background:#8b2828;color:#fff}
+  .btn-danger:hover:not(:disabled){opacity:.85}
+  .btn-neutral{background:#1e3045;color:#c8dce8}
+  .btn-neutral:hover:not(:disabled){background:#2a4060}
+  .btn-green{background:#1a5c2a;color:#4cde80}
+  .btn-green:hover:not(:disabled){background:#236b35}
+
+  /* Main layout */
+  #app{display:none;max-width:900px;margin:0 auto}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #1e3045}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  @media(max-width:600px){.grid{grid-template-columns:1fr}}
+  .card{background:#0f1e2d;border:1px solid #1e3045;border-radius:8px;padding:18px}
+  .card.full{grid-column:1/-1}
+  .status-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .dot-green{background:#4cde80}
+  .dot-red{background:#e05555}
+  .dot-grey{background:#3a4a5a}
+  .dot-spin{background:#3a9ad9;animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .status-label{font-size:14px;font-weight:600}
+  .status-sub{font-size:11px;color:#5a7a96;margin-top:2px}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+  pre#claude-log{background:#060f18;border:1px solid #1e3045;border-radius:5px;padding:12px;font-family:monospace;font-size:10px;color:#7aafc8;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;margin-top:12px}
+  .flash{font-size:11px;margin-top:8px;padding:6px 10px;border-radius:4px;display:none}
+  .flash.ok{background:#0d2e18;color:#4cde80;border:1px solid #1a5c2a}
+  .flash.err{background:#2e0d0d;color:#e05555;border:1px solid #5c1a1a}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;color:#5a7a96;font-weight:600;padding:6px 8px;border-bottom:1px solid #1e3045;text-transform:uppercase;font-size:10px;letter-spacing:.06em}
+  td{padding:6px 8px;border-bottom:1px solid #0f1e2d;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700}
+  .badge-ok{background:#0d2e18;color:#4cde80}
+  .badge-disabled{background:#2e1a0a;color:#e08844}
+  .refresh-note{font-size:10px;color:#3a4a5a;margin-top:6px}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <h1>🛠 WindFoil Admin</h1>
+  <div class="field">
+    <label>Passwort</label>
+    <input type="password" id="pw" placeholder="Admin-Passwort" autocomplete="current-password">
+  </div>
+  <div id="login-err">Falsches Passwort oder Server nicht erreichbar.</div>
+  <button class="btn btn-primary" onclick="doLogin()" style="width:100%">Einloggen</button>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div class="header">
+    <h1>🛠 WindFoil Admin</h1>
+    <button class="btn btn-neutral" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Claude Code -->
+  <div class="card full" style="border-color:#1a3a5a;margin-bottom:16px">
+    <h2>🤖 Claude Code Agent</h2>
+    <div class="status-row">
+      <div class="dot dot-grey" id="claude-dot"></div>
+      <div>
+        <div class="status-label" id="claude-status-label">Lade…</div>
+        <div class="status-sub" id="claude-status-sub">agent-loop · /var/www/windfoil</div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-green" id="btn-claude-start" onclick="claudeAction('start')" disabled>▶ Start</button>
+      <button class="btn btn-danger" id="btn-claude-stop" onclick="claudeAction('stop')" disabled>■ Stop</button>
+      <button class="btn btn-neutral" id="btn-claude-restart" onclick="claudeAction('restart')" disabled>↺ Restart</button>
+      <button class="btn btn-neutral" onclick="loadClaudeStatus()">⟳ Refresh</button>
+    </div>
+    <div class="flash" id="claude-flash"></div>
+    <pre id="claude-log">Log wird geladen…</pre>
+    <div class="refresh-note">Log: letzte 50 Zeilen aus journalctl -u claude-code</div>
+  </div>
+
+  <div class="grid">
+    <!-- Services -->
+    <div class="card">
+      <h2>⚙️ Services</h2>
+      <div id="services-output" style="font-family:monospace;font-size:11px;color:#7aafc8;white-space:pre-wrap">Lade…</div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-neutral" onclick="loadServices()">⟳ Refresh</button>
+        <button class="btn btn-neutral" onclick="restartProxy()">↺ Proxy restart</button>
+      </div>
+      <div class="flash" id="proxy-flash"></div>
+    </div>
+
+    <!-- Deploy -->
+    <div class="card">
+      <h2>🚀 Deploy</h2>
+      <p style="font-size:12px;color:#5a7a96;margin-bottom:12px">git pull + npm ci + reload nginx + restart proxy</p>
+      <button class="btn btn-primary" id="btn-deploy" onclick="doDeploy()">🚀 Deploy maik.surf</button>
+      <div class="flash" id="deploy-flash"></div>
+      <pre id="deploy-output" style="display:none;background:#060f18;border:1px solid #1e3045;border-radius:5px;padding:10px;font-family:monospace;font-size:10px;color:#7aafc8;max-height:200px;overflow-y:auto;white-space:pre-wrap;margin-top:10px"></pre>
+    </div>
+  </div>
+
+  <!-- Users -->
+  <div class="card full">
+    <h2>👥 Benutzer</h2>
+    <table id="users-table">
+      <thead><tr><th>Name</th><th>E-Mail</th><th>Registriert</th><th>Status</th><th>Aktionen</th></tr></thead>
+      <tbody id="users-body"><tr><td colspan="5" style="color:#3a4a5a;text-align:center;padding:16px">Lade…</td></tr></tbody>
+    </table>
+    <div class="flash" id="users-flash"></div>
+  </div>
+</div>
+
+<script>
+const API = '/api/admin';
+let TOKEN = '';
+
+function saveToken(t) { TOKEN = t; try { sessionStorage.setItem('wf_admin_token', t); } catch(_){} }
+function loadToken() { try { return sessionStorage.getItem('wf_admin_token') || ''; } catch(_){ return ''; } }
+
+async function api(path, method = 'GET', body = null) {
+  const opts = { method, headers: { 'x-admin-token': TOKEN, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (r.status === 401 || r.status === 403) { logout(); throw new Error('Unauthorized'); }
+  return r.json();
+}
+
+function flash(id, msg, isErr) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'flash ' + (isErr ? 'err' : 'ok');
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
+
+async function doLogin() {
+  const pw = document.getElementById('pw').value.trim();
+  document.getElementById('login-err').style.display = 'none';
+  try {
+    const r = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw }),
+    });
+    const d = await r.json();
+    if (!d.ok || !d.token) throw new Error('bad');
+    saveToken(d.token);
+    showApp();
+  } catch(e) {
+    document.getElementById('login-err').style.display = 'block';
+  }
+}
+document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+function logout() {
+  TOKEN = '';
+  try { sessionStorage.removeItem('wf_admin_token'); } catch(_){}
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = '';
+  document.getElementById('pw').value = '';
+}
+
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadClaudeStatus();
+  loadServices();
+  loadUsers();
+}
+
+// ── Claude Code ──────────────────────────────────────────────────────────────
+async function loadClaudeStatus() {
+  const dot = document.getElementById('claude-dot');
+  const label = document.getElementById('claude-status-label');
+  const log = document.getElementById('claude-log');
+  dot.className = 'dot dot-spin';
+  label.textContent = 'Lade…';
+  try {
+    const d = await api('/claude/status');
+    dot.className = d.active ? 'dot dot-green' : 'dot dot-red';
+    label.textContent = d.active ? 'aktiv (running)' : 'gestoppt';
+    log.textContent = d.log || '(kein Log)';
+    log.scrollTop = log.scrollHeight;
+    document.getElementById('btn-claude-start').disabled = d.active;
+    document.getElementById('btn-claude-stop').disabled = !d.active;
+    document.getElementById('btn-claude-restart').disabled = false;
+  } catch(e) {
+    dot.className = 'dot dot-grey';
+    label.textContent = 'Fehler beim Laden';
+    log.textContent = e.message;
+  }
+}
+
+async function claudeAction(action) {
+  ['btn-claude-start','btn-claude-stop','btn-claude-restart'].forEach(id => {
+    document.getElementById(id).disabled = true;
+  });
+  document.getElementById('claude-dot').className = 'dot dot-spin';
+  try {
+    const d = await api('/claude/' + action, 'POST');
+    flash('claude-flash', d.output || (action + ' OK'), !d.ok);
+  } catch(e) {
+    flash('claude-flash', e.message, true);
+  }
+  setTimeout(loadClaudeStatus, 1500);
+}
+
+// ── Services ─────────────────────────────────────────────────────────────────
+async function loadServices() {
+  document.getElementById('services-output').textContent = 'Lade…';
+  try {
+    const d = await api('/status');
+    document.getElementById('services-output').textContent = d.output || '(keine Ausgabe)';
+  } catch(e) {
+    document.getElementById('services-output').textContent = 'Fehler: ' + e.message;
+  }
+}
+
+async function restartProxy() {
+  try {
+    const d = await api('/restart-proxy');
+    flash('proxy-flash', d.output || 'Proxy neu gestartet', !d.ok);
+  } catch(e) {
+    flash('proxy-flash', e.message, true);
+  }
+}
+
+// ── Deploy ───────────────────────────────────────────────────────────────────
+async function doDeploy() {
+  const btn = document.getElementById('btn-deploy');
+  const out = document.getElementById('deploy-output');
+  btn.disabled = true;
+  btn.textContent = '⏳ Deploying…';
+  out.style.display = 'none';
+  try {
+    const d = await api('/deploy');
+    out.textContent = d.output || '(keine Ausgabe)';
+    out.style.display = 'block';
+    out.scrollTop = out.scrollHeight;
+    flash('deploy-flash', d.ok ? 'Deploy erfolgreich' : 'Deploy fehlgeschlagen', !d.ok);
+  } catch(e) {
+    flash('deploy-flash', e.message, true);
+  }
+  btn.disabled = false;
+  btn.textContent = '🚀 Deploy maik.surf';
+}
+
+// ── Users ────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  try {
+    const d = await api('/users');
+    const tbody = document.getElementById('users-body');
+    if (!d.users || !d.users.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:#3a4a5a;text-align:center;padding:16px">Keine Benutzer</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.users.map(u => `
+      <tr>
+        <td>${u.name || '—'}</td>
+        <td style="font-family:monospace;font-size:11px">${u.email}</td>
+        <td style="color:#5a7a96;font-size:11px">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('de-DE') : '—'}</td>
+        <td><span class="badge ${u.disabled ? 'badge-disabled' : 'badge-ok'}">${u.disabled ? 'Gesperrt' : 'Aktiv'}</span></td>
+        <td>
+          <button class="btn btn-neutral" style="padding:4px 10px;font-size:11px" onclick="toggleUser('${u.id}',${u.disabled ? 0 : 1})">${u.disabled ? 'Freischalten' : 'Sperren'}</button>
+          <button class="btn btn-neutral" style="padding:4px 10px;font-size:11px;margin-left:4px" onclick="resetPw('${u.id}','${u.email}')">PW reset</button>
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('users-body').innerHTML = `<tr><td colspan="5" style="color:#e05555">Fehler: ${e.message}</td></tr>`;
+  }
+}
+
+async function toggleUser(id, disabled) {
+  try {
+    const d = await api('/users/set-disabled', 'POST', { userId: id, disabled });
+    flash('users-flash', d.message || 'Gespeichert', !d.ok);
+    loadUsers();
+  } catch(e) { flash('users-flash', e.message, true); }
+}
+
+async function resetPw(id, email) {
+  if (!confirm(`Passwort für ${email} zurücksetzen?`)) return;
+  try {
+    const d = await api('/users/reset-password', 'POST', { userId: id });
+    if (d.ok && d.newPassword) alert(`Neues Passwort für ${email}:\n\n${d.newPassword}`);
+    else flash('users-flash', d.message || 'Fehler', !d.ok);
+  } catch(e) { flash('users-flash', e.message, true); }
+}
+
+// ── Auto-login if token in session ───────────────────────────────────────────
+(async () => {
+  const t = loadToken();
+  if (!t) return;
+  TOKEN = t;
+  try {
+    const d = await api('/check');
+    if (d.ok) { showApp(); return; }
+  } catch(_) {}
+  TOKEN = '';
+})();
+</script>
+</body>
+</html>

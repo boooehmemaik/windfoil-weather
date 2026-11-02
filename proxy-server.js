@@ -1442,5 +1442,43 @@ app.get("/api/admin/mos/recompute", async (req, res) => {
   }
 });
 
+// ── Claude Code service control ────────────────────────────────────────────────
+app.get("/api/admin/claude/status", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  execFile("/bin/bash", ["-c",
+    "sudo /usr/bin/systemctl is-active claude-code 2>/dev/null; " +
+    "sudo /usr/bin/journalctl -u claude-code -n 50 --no-pager 2>/dev/null || true"
+  ], { timeout: 10000 }, (err, stdout, stderr) => {
+    const lines = (stdout || "").split("\n");
+    const active = lines[0]?.trim();
+    const log = lines.slice(1).join("\n").trim();
+    res.json({ ok: true, active: active === "active", status: active || "unknown", log });
+  });
+});
+
+app.post("/api/admin/claude/start", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  execFile("/usr/bin/sudo", ["/usr/bin/systemctl", "start", "claude-code"], { timeout: 15000 },
+    (err, stdout, stderr) => {
+      res.json({ ok: !err, action: "start", output: err ? (stderr || err.message) : "Claude Code gestartet." });
+    });
+});
+
+app.post("/api/admin/claude/stop", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  execFile("/usr/bin/sudo", ["/usr/bin/systemctl", "stop", "claude-code"], { timeout: 15000 },
+    (err, stdout, stderr) => {
+      res.json({ ok: !err, action: "stop", output: err ? (stderr || err.message) : "Claude Code gestoppt." });
+    });
+});
+
+app.post("/api/admin/claude/restart", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  execFile("/usr/bin/sudo", ["/usr/bin/systemctl", "restart", "claude-code"], { timeout: 15000 },
+    (err, stdout, stderr) => {
+      res.json({ ok: !err, action: "restart", output: err ? (stderr || err.message) : "Claude Code neu gestartet." });
+    });
+});
+
 app.listen(PORT, () => console.log(`WindFoil station proxy on :${PORT} (key ${KEY ? "set" : "MISSING"}, admin ${ADMIN_TOKEN && ADMIN_PASSWORD ? "ENABLED" : "disabled"})`));
 })().catch(err => { console.error("[windfoil] startup error:", err); process.exit(1); });
