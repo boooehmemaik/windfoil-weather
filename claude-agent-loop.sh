@@ -3,7 +3,7 @@
 # Permissions are granted via /var/www/windfoil/.claude/settings.json (not --dangerously-skip-permissions).
 # Logs to /var/log/windfoil/claude-agent.log.
 
-LOG_DIR=/var/log/windfoil
+LOG_DIR=/var/www/windfoil/logs
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/claude-agent.log"
 
