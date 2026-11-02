@@ -348,14 +348,14 @@ async function fetchForecast(lat, lon) {
   const windParams = new URLSearchParams({
     latitude: lat, longitude: lon,
     hourly: 'windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m',
-    wind_speed_unit: 'ms', forecast_days: 4, timezone: 'auto',
+    wind_speed_unit: 'ms', forecast_days: 3, timezone: 'auto',
     models: 'meteofrance_arome_france_hd',
   });
   // weathercode fetched separately — AROME covers France only, returns null for Sardinia
   const wxParams = new URLSearchParams({
     latitude: lat, longitude: lon,
     hourly: 'weathercode',
-    forecast_days: 4, timezone: 'auto',
+    forecast_days: 3, timezone: 'auto',
   });
   const [windR, wxR] = await Promise.all([
     fetch(`https://api.open-meteo.com/v1/forecast?${windParams}`, { signal: AbortSignal.timeout(10000) }),
@@ -363,9 +363,12 @@ async function fetchForecast(lat, lon) {
   ]);
   if (!windR.ok) throw new Error(`HTTP ${windR.status}`);
   const fc = await windR.json();
+  if (!fc?.hourly?.windspeed_10m) throw new Error('Unexpected API response structure');
   if (wxR.ok) {
-    const wx = await wxR.json();
-    if (fc.hourly && wx.hourly?.weathercode) fc.hourly.weathercode = wx.hourly.weathercode;
+    try {
+      const wx = await wxR.json();
+      if (wx.hourly?.weathercode) fc.hourly.weathercode = wx.hourly.weathercode;
+    } catch (_) { /* weathercode optional */ }
   }
   return fc;
 }
@@ -384,6 +387,7 @@ function wmoIcon(code) {
 
 // ── Compute day stats ─────────────────────────────────────
 function dayStats(fc, dayIdx) {
+  if (!fc?.hourly?.windspeed_10m) return { avgWind: 0, maxGust: 0, avgDir: 0, score: 0, spark: Array(10).fill(0), sparkCodes: Array(10).fill(null), avgWindKn: 0 };
   const h = fc.hourly;
   const start = dayIdx * 24;
   const winds = h.windspeed_10m, gusts = h.windgusts_10m, dirs = h.winddirection_10m;
@@ -546,6 +550,7 @@ async function loadAll() {
     try {
       results[spot.id] = await fetchForecast(spot.lat, spot.lon);
     } catch (e) {
+      console.error(`[sardinia] fetch failed for ${spot.id}:`, e);
       results[spot.id] = null;
     }
   }));
@@ -578,7 +583,8 @@ async function loadAll() {
   // Update map markers
   SPOTS.forEach(spot => {
     if (!results[spot.id]) return;
-    const s = dayStats(results[spot.id], 0).score;
+    const ds = dayStats(results[spot.id], 0);
+    const s = ds.score;
     const col = scoreColor(s);
     const icon = L.divIcon({
       className: '',
@@ -591,7 +597,6 @@ async function loadAll() {
       iconAnchor: [10, 54],
     });
     mapMarkers[spot.id].setIcon(icon);
-    const ds = dayStats(results[spot.id], 0);
     mapMarkers[spot.id].bindPopup(`
       <b>${spot.emoji} ${spot.name}</b>${spot.id === bestId ? ' ⭐' : ''}<br>
       <span style="color:${col};font-size:13px;font-weight:700">Score ${s}</span>
