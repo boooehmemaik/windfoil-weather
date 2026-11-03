@@ -3770,8 +3770,8 @@ function App() {
                 </div>
                 <div style={{fontSize:10,color:C.muted,marginBottom:10,lineHeight:1.5}}>
                   {lang==="en"
-                    ? <>Manufacturer specs (reference weight {WING_BRANDS[DEFAULT_WING_BRAND].refWeightKg} kg). Second column shows your adjusted window for <b style={{color:C.text}}>{rider.weight} kg · {t(`skill_${rider.skill}`)}</b>.</>
-                    : <>Herstellerangaben (Referenzgewicht {WING_BRANDS[DEFAULT_WING_BRAND].refWeightKg} kg). Die zweite Spalte zeigt dein angepasstes Fenster für <b style={{color:C.text}}>{rider.weight} kg · {t(`skill_${rider.skill}`)}</b>.</>}
+                    ? <>Manufacturer specs (reference weight {WING_BRANDS[DEFAULT_WING_BRAND].refWeightKg} kg). Second column shows your adjusted window for <b style={{color:C.text}}>{ri.weight} kg · {t(`skill_${ri.skill}`)}</b>.</>
+                    : <>Herstellerangaben (Referenzgewicht {WING_BRANDS[DEFAULT_WING_BRAND].refWeightKg} kg). Die zweite Spalte zeigt dein angepasstes Fenster für <b style={{color:C.text}}>{ri.weight} kg · {t(`skill_${ri.skill}`)}</b>.</>}
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:8}}>
                   {Object.entries(WING_BRANDS).map(([brandName,brand])=>(
@@ -3781,17 +3781,19 @@ function App() {
                         <span style={{fontSize:9,color:C.muted}}>{t('ref_freeride')}</span>
                       </div>
                       <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"3px 8px",fontSize:10,color:C.dim,marginBottom:4,paddingLeft:6}}>
-                        <span></span><span>{t('ref_manufacturer')}</span><span>{rider.weight} kg</span>
+                        <span></span><span>{t('ref_manufacturer')}</span><span>{ri.weight} kg</span>
                       </div>
                       {Object.entries(brand.sizes).map(([sz,data])=>{
                         const size=Number(sz);
-                        const isActive=size===parseFloat(rider.wingSize);
-                        const adj=wingTableWindow(rider.weight,size,brandName);
+                        const isActive=size===parseFloat(ri.wingSize);
+                        const adj=wingTableWindow(ri.weight,size,brandName);
                         const adjOk=adj&&!adj.outOfRange;
                         return(
-                          <div key={sz} style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"3px 8px",
-                            fontSize:11,color:isActive?C.go:C.muted,marginBottom:3,
-                            borderLeft:`2px solid ${isActive?C.go:"transparent"}`,paddingLeft:6}}>
+                          <div key={sz} title={`${size} m² auswählen`}
+                            onClick={()=>{ setRi(r=>({...r,wingSize:size})); setRider(r=>({...r,wingSize:size})); setActiveDay(0); }}
+                            style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"3px 8px",
+                            fontSize:11,color:isActive?C.go:C.muted,marginBottom:3,cursor:"pointer",
+                            borderLeft:`2px solid ${isActive?C.go:C.border}`,paddingLeft:6}}>
                             <span>{size} m²</span>
                             <span style={{fontFamily:"monospace",color:C.dim}}>{data.rangeKn[0]}–{data.rangeKn[1]} kn</span>
                             <span style={{fontFamily:"monospace",color:isActive?C.go:C.muted}}>
