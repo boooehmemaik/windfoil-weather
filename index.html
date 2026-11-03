@@ -2157,7 +2157,7 @@ function AuthGate({children}){
           <button onClick={toggleAuthTheme}
             title={agTheme==='light'?'Dark Mode':'Light Mode'}
             style={{background:'transparent',border:`1px solid ${C.border2}`,color:C.muted,
-              borderRadius:4,padding:'2px 8px',fontFamily:'monospace',fontSize:13,
+              borderRadius:8,padding:'5px 12px',fontSize:13,
               cursor:'pointer',lineHeight:1.2}}>
             {agTheme==='light'?'☾':'☀'}
           </button>
@@ -2368,7 +2368,7 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
       <div style={{display:"flex",gap:6}}>
         {[1,2,3,4,5].map(n=>(
           <button key={n} type="button" onClick={()=>onChange(n)}
-            style={{flex:1,height:34,borderRadius:6,cursor:"pointer",
+            style={{flex:1,height:34,borderRadius:10,cursor:"pointer",
               border:`1px solid ${value>=n&&value?C.signal:C.border2}`,
               background:value>=n&&value?C.signal:C.bg}} />
         ))}
@@ -2381,11 +2381,11 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
 
   const dateLabel = new Intl.DateTimeFormat("de-DE",{weekday:"short",day:"2-digit",month:"short"}).format(new Date());
   const lbl = {display:"block",fontSize:13,fontWeight:600,color:C.text,marginBottom:8};
-  const inputStyle = {background:C.bg,color:C.text,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px",fontSize:15,fontFamily:"'Barlow',sans-serif"};
+  const inputStyle = {background:C.bg,color:C.text,border:`1px solid ${C.border2}`,borderRadius:10,padding:"8px 10px",fontSize:15,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"};
 
   return (
-    <div style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box",fontFamily:"'Barlow',sans-serif"}}>
-      <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,width:"100%",maxWidth:480,maxHeight:"100%",overflow:"auto",color:C.text}}>
+    <div style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>
+      <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:20,width:"100%",maxWidth:480,maxHeight:"100%",overflow:"auto",color:C.text}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
           <div>
             <div style={{fontFamily:"monospace",fontSize:10,color:C.signal,textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700}}>{t('fb_modal_label')}</div>
@@ -2431,7 +2431,7 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
                   </div>
                 );
               })()}
-              <button onClick={onClose} style={{marginTop:16,width:"100%",padding:12,border:"none",borderRadius:6,cursor:"pointer",background:C.signal,color:"#fff",fontWeight:700,fontSize:14}}>{t('fb_close')}</button>
+              <button onClick={onClose} style={{marginTop:16,width:"100%",padding:12,border:"none",borderRadius:10,cursor:"pointer",background:C.signal,color:"#fff",fontWeight:700,fontSize:14}}>{t('fb_close')}</button>
             </div>
           ) : (
           <>
@@ -2503,7 +2503,7 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
               <span style={lbl}>{t('fb_notes_label')}</span>
               <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3}
                 placeholder={t('fb_notes_placeholder')}
-                style={{width:"100%",boxSizing:"border-box",background:C.bg,color:C.text,border:`1px solid ${C.border2}`,borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Barlow',sans-serif",resize:"vertical"}} />
+                style={{width:"100%",boxSizing:"border-box",background:C.bg,color:C.text,border:`1px solid ${C.border2}`,borderRadius:14,padding:"10px 12px",fontSize:14,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",resize:"vertical"}} />
             </div>
 
             <button type="button" disabled={busy} onClick={submit}
@@ -3283,22 +3283,22 @@ function App() {
   }
 
   const S={
-    wrap:{fontFamily:"'Barlow',sans-serif",background:C.bg,color:C.text,minHeight:"100vh",fontSize:14},
-    hdr:{background:C.headerBg,borderBottom:`1px solid ${C.border}`,padding:"8px 14px",display:"flex",flexDirection:"column",gap:4,position:"sticky",top:0,zIndex:100},
+    wrap:{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",background:C.bg,color:C.text,minHeight:"100vh",fontSize:14},
+    hdr:{background:C.headerBg,borderBottom:`1px solid ${C.border}`,padding:"10px 16px",backdropFilter:"blur(20px)",display:"flex",flexDirection:"column",gap:4,position:"sticky",top:0,zIndex:100},
     hdrRow1:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8},
     hdrRow2:{display:"flex",alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap",gap:6},
-    locBar:{background:C.panel,borderBottom:`2px solid ${C.sky}`,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8},
+    locBar:{background:C.panel,borderBottom:`2px solid ${C.sky}`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8},
     riderBar:{background:C.panel,borderBottom:`1px solid ${C.border}`,borderTop:`2px solid ${C.signal}`,padding:"14px 20px"},
     main:{padding:"14px clamp(10px,3vw,18px) calc(40px + env(safe-area-inset-bottom))",maxWidth:1200,margin:"0 auto"},
-    card:{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,padding:"12px 16px",marginBottom:12},
-    sec:{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted,marginBottom:8},
-    btn:{background:C.signal,color:"#fff",border:"none",borderRadius:4,fontWeight:700,fontSize:13,padding:"7px 18px",cursor:"pointer",fontFamily:"monospace"},
-    btnG:{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:4,fontSize:12,padding:"4px 10px",cursor:"pointer"},
-    inp:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:4,padding:"5px 8px",fontFamily:"monospace",fontSize:12,outline:"none"},
-    fl:{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4},
-    fi:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:4,padding:"0 10px",fontFamily:"monospace",fontSize:14,outline:"none",height:40,width:"100%",boxSizing:"border-box"},
-    grid2:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:12,marginBottom:12},
-    grid6:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:12},
+    card:{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:14,padding:"16px 20px",marginBottom:12,boxShadow:"0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2)"},
+    sec:{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted,marginBottom:8},
+    btn:{background:C.signal,color:"#fff",border:"none",borderRadius:10,fontWeight:700,fontSize:14,padding:"10px 20px",cursor:"pointer"},
+    btnG:{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:8,fontSize:13,padding:"8px 14px",cursor:"pointer"},
+    inp:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:8,padding:"8px 12px",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:12,outline:"none"},
+    fl:{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4},
+    fi:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:8,padding:"0 10px",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:14,outline:"none",height:44,width:"100%",boxSizing:"border-box"},
+    grid2:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:14,marginBottom:12},
+    grid6:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:12},
     cw:{height:190}, cwL:{height:210},
   };
 
@@ -3315,14 +3315,14 @@ function App() {
               <path d="M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3" stroke={C.muted} strokeWidth="2.4" strokeLinecap="round"/>
             </svg>
             <div>
-              <div style={{fontFamily:"monospace",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-              <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,letterSpacing:"0.1em"}}>{t('version_label')}</div>
+              <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
+              <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:10,color:C.muted,letterSpacing:"0.1em"}}>{t('version_label')}</div>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <a href="https://paypal.me/boehmemaik" target="_blank" rel="noopener noreferrer"
               title={t('footer_support_title')}
-              style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:3,padding:"2px 8px",fontFamily:"monospace",fontSize:11,cursor:"pointer",textDecoration:"none",lineHeight:"1.6"}}>
+              style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer",textDecoration:"none",lineHeight:"1.6"}}>
               {t('footer_donate')}
             </a>
             <span style={{fontFamily:"monospace",fontSize:13,color:C.signal,minWidth:44,textAlign:"right"}}>{clock}</span>
@@ -3337,25 +3337,25 @@ function App() {
           {/* Sport-Umschalter */}
           <div style={{display:"flex",gap:3}}>
             {[{k:"foil",lk:"sport_foil"},{k:"kite",lk:"sport_kite"}].map(({k,lk})=>(
-              <button key={k} onClick={()=>setSport(k)} style={{background:sport===k?C.signal:"transparent",border:`1px solid ${sport===k?C.signal:C.border2}`,color:sport===k?"#fff":C.muted,borderRadius:3,padding:"3px 10px",fontFamily:"monospace",fontSize:10,cursor:"pointer"}}>
+              <button key={k} onClick={()=>setSport(k)} style={{background:sport===k?C.signal:"transparent",border:`1px solid ${sport===k?C.signal:C.border2}`,color:sport===k?"#fff":C.muted,borderRadius:8,padding:"5px 12px",fontSize:10,cursor:"pointer"}}>
                 {t(lk)}
               </button>
             ))}
           </div>
           <div style={{display:"flex",gap:3}}>
             {["ms","kn","bf"].map(u=>(
-              <button key={u} onClick={()=>setWindUnit(u)} style={{background:windUnit===u?C.signal:"transparent",border:`1px solid ${windUnit===u?C.signal:C.border2}`,color:windUnit===u?"#fff":C.muted,borderRadius:3,padding:"2px 7px",fontFamily:"monospace",fontSize:10,cursor:"pointer",textTransform:"uppercase"}}>
+              <button key={u} onClick={()=>setWindUnit(u)} style={{background:windUnit===u?C.signal:"transparent",border:`1px solid ${windUnit===u?C.signal:C.border2}`,color:windUnit===u?"#fff":C.muted,borderRadius:8,padding:"5px 12px",fontSize:10,cursor:"pointer",textTransform:"uppercase"}}>
                 {u==="ms"?"m/s":u==="kn"?"kn":"BF"}
               </button>
             ))}
           </div>
           <button onClick={()=>setTheme(theme==="light"?"dark":"light")}
             title={theme==="light"?"Dark Mode":"Light Mode"}
-            style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:3,padding:"2px 8px",fontFamily:"monospace",fontSize:13,cursor:"pointer",lineHeight:1.2}}>
+            style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:8,padding:"5px 12px",fontSize:13,cursor:"pointer",lineHeight:1.2}}>
             {theme==="light"?"☾":"☀"}
           </button>
           <button onClick={()=>{ const nl=langState==="de"?"en":"de"; setLangState(nl); savePref("wf_lang",nl); }}
-            style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:3,padding:"2px 8px",fontFamily:"monospace",fontSize:10,cursor:"pointer"}}>
+            style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:8,padding:"5px 12px",fontSize:10,cursor:"pointer"}}>
             {langState==="de"?"EN":"DE"}
           </button>
           {activeUsers!=null && <span title={t('active_users_title')} style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"flex",alignItems:"center",gap:3}}>
@@ -3365,7 +3365,7 @@ function App() {
           <a href="/sardinia.html"
             title="Sardinien Wingfoil-Map"
             className="wf-hdr-sardinia"
-            style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:3,padding:"2px 8px",fontFamily:"monospace",fontSize:11,cursor:"pointer",textDecoration:"none",lineHeight:"1.6"}}>
+            style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer",textDecoration:"none",lineHeight:"1.6"}}>
             🏝 Sardinien
           </a>
         </div>
@@ -3589,7 +3589,7 @@ function App() {
                 return(
                   <button key={d} onClick={()=>setActiveDay(d)} style={{
                     background:active?C.signal:C.surface, border:`1px solid ${active?C.signal:C.border2}`,
-                    color:active?"#fff":C.muted, borderRadius:4, padding:"8px 14px", cursor:"pointer",
+                    color:active?"#fff":C.muted, borderRadius:8, padding:"8px 14px", cursor:"pointer",
                     display:"flex", flexDirection:"column", alignItems:"center", gap:2, minWidth:90,
                     opacity:uncertain?0.72:1 }}>
                     <span style={{fontSize:14}}>{icon}</span>
@@ -3954,7 +3954,7 @@ function App() {
                       <span style={{fontFamily:"monospace",fontWeight:900,fontSize:32,color:cc.color,lineHeight:1}}>{stationCmp.confidence ?? "–"}%</span>
                       <div style={{flex:1}}>
                         <div style={{fontSize:12,color:cc.color,marginBottom:4}}>{cc.icon} {confidenceLabel(cc)}</div>
-                        <div style={{height:6,background:C.bg,borderRadius:3,overflow:"hidden"}}>
+                        <div style={{height:6,background:C.bg,borderRadius:8,overflow:"hidden"}}>
                           <div style={{height:"100%",width:`${stationCmp.confidence ?? 0}%`,background:cc.color,transition:"width .4s"}} />
                         </div>
                       </div>
@@ -4100,7 +4100,7 @@ function App() {
       {/* LOC MODAL */}
       {showLoc&&(
         <div style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box"}}>
-          <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,width:"100%",maxWidth:460,maxHeight:"100%",overflow:"auto"}}>
+          <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:20,width:"100%",maxWidth:460,maxHeight:"100%",overflow:"auto"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
               <strong style={{fontFamily:"monospace",fontSize:14}}>{t('loc_modal_title')}</strong>
               <button onClick={()=>setShowLoc(false)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
@@ -4217,7 +4217,7 @@ function App() {
       {/* ADMIN MODAL */}
       {adminOpen && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:8,width:"100%",maxWidth:560}}>
+          <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:20,width:"100%",maxWidth:560}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
               <strong style={{fontFamily:"monospace",fontSize:14}}>⚙ Admin</strong>
               <button onClick={()=>{setAdminOpen(false);setAdminAuthed(false);setAdminToken("");setAdminPw("");setAdminOut("");setAdminErr("");setAdminTab("actions");setUsers([]);setUsersMsg("");setPwInputs({});}}
