@@ -2924,7 +2924,9 @@ function App() {
       const size=kite?.sizes.find(s=>s.m===kiteRider.kiteSize);
       if(kite&&size) return calcKiteWindow(size.minKn,size.maxKn,kiteRider.skill,kiteRider.weight);
     }
-    return wingWindow(rider.weight,rider.wingSize,rider.skill, effPlaneMs, DEFAULT_WING_BRAND, spotWingMap?.[String(rider.wingSize)]);
+    const effPlaneMsRi = (spotCal && spotCal.rolling!=null) ? knToMs(spotCal.rolling)
+                       : (ri.planeKn ? knToMs(parseFloat(ri.planeKn)) : null);
+    return wingWindow(ri.weight,ri.wingSize,ri.skill, effPlaneMsRi, DEFAULT_WING_BRAND, spotWingMap?.[String(ri.wingSize)]);
   }
 
   // ── Derived day data ────────────────────────────────────────────────────────
@@ -3785,7 +3787,8 @@ function App() {
                       </div>
                       {Object.entries(brand.sizes).map(([sz,data])=>{
                         const size=Number(sz);
-                        const isActive=size===parseFloat(ri.wingSize);
+                        const activeSize = (useGear && dayData?.pickedGear) ? parseFloat(dayData.pickedGear.wing) : parseFloat(ri.wingSize);
+                        const isActive = size === activeSize;
                         const adj=wingTableWindow(ri.weight,size,brandName);
                         const adjOk=adj&&!adj.outOfRange;
                         return(
