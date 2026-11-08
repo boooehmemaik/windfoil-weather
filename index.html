@@ -11,7 +11,7 @@
 #boot .ring{width:42px;height:42px;border:3px solid #243040;border-top-color:#f07820;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select,button,textarea{font-size:inherit}}
-@media(max-width:600px){.wf-hdr-sardinia{display:none!important}.wf-hdr-sizilien{display:none!important}.wf-hdr-spanien{display:none!important}.wf-hdr-vergleich{display:none!important}}</style>
+@media(max-width:600px){.wf-hdr-nav{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.wf-hdr-nav::-webkit-scrollbar{display:none}}</style>
 <script type="importmap">{"imports":{"react":"vendor/react-esm-shim.js","react-dom":"vendor/react-esm-shim.js"}}</script></head>
 <body><div id="boot"><div class="ring"></div><div id="bootMsg">WindFoil wird geladen…</div></div><div id="root"></div>
   <script>
@@ -2256,70 +2256,41 @@ function AuthGate({children}){
   return(
     <AuthCtx.Provider value={sess.user?.email||null}>
     <div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-          padding:'8px 16px',background:CA.deep,borderBottom:`1px solid ${CA.line}`}}>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          <a href="/sardinia.html"
-            title="Sardinien Wingfoil-Map"
-            className="wf-hdr-sardinia"
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
-              display:'inline-flex',alignItems:'center',gap:4}}>
-            Sardinien
-          </a>
-          <a href="/sizilien.html"
-            title="Sizilien Wingfoil-Map"
-            className="wf-hdr-sizilien"
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
-              display:'inline-flex',alignItems:'center',gap:4}}>
-            Sizilien
-          </a>
-          <a href="/spanien.html"
-            title="Spanien Wingfoil-Map"
-            className="wf-hdr-spanien"
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
-              display:'inline-flex',alignItems:'center',gap:4}}>
-            Spanien
-          </a>
-          <a href="/vergleich.html"
-            title="Spots Vergleich — alle Regionen"
-            className="wf-hdr-vergleich"
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
-              display:'inline-flex',alignItems:'center',gap:4}}>
-            Vergleich
-          </a>
-          <a href="/watcher.html"
-            title="Forecast-Genauigkeit · Kalibrierung"
-            className="wf-hdr-vergleich"
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
-              display:'inline-flex',alignItems:'center',gap:4}}>
-            Watcher
-          </a>
+      <div style={{display:'flex',alignItems:'center',gap:8,
+          padding:'8px 16px',background:CA.deep,borderBottom:`1px solid ${CA.line}`,minWidth:0}}>
+        <div className="wf-hdr-nav" style={{display:'flex',gap:6,alignItems:'center',flexWrap:'nowrap',flex:1,minWidth:0}}>
+          {[
+            {href:'/sardinia.html',    label:'Sardinien'},
+            {href:'/sizilien.html',    label:'Sizilien'},
+            {href:'/spanien.html',     label:'Spanien'},
+            {href:'/skandinavien.html',label:'Skandinavien'},
+            {href:'/vergleich.html',   label:'Vergleich'},
+            {href:'/watcher.html',     label:'Watcher'},
+          ].map(({href,label})=>(
+            <a key={href} href={href}
+              style={{padding:'6px 10px',borderRadius:8,cursor:'pointer',flexShrink:0,
+                border:`1px solid ${CA.line}`,background:'transparent',
+                color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
+                display:'inline-flex',alignItems:'center',whiteSpace:'nowrap'}}>
+              {label}
+            </a>
+          ))}
           {isHistUser && (
             <button onClick={()=>setHistOpen(o=>!o)}
-              style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
+              style={{padding:'6px 10px',borderRadius:8,cursor:'pointer',flexShrink:0,
                 border:`1px solid ${histOpen?CA.lift:CA.line}`,
                 background:histOpen?CA.lift:'transparent',
-                color:histOpen?'#fff':CA.foam,fontSize:13,fontWeight:600}}>
+                color:histOpen?'#fff':CA.foam,fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>
               History
             </button>
           )}
-          <button onClick={doSignOut}
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600}}>
-            {t('auth_signout')}
-          </button>
         </div>
+        <button onClick={doSignOut}
+          style={{padding:'6px 10px',borderRadius:8,cursor:'pointer',flexShrink:0,
+            border:`1px solid ${CA.line}`,background:'transparent',
+            color:CA.foam,fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>
+          {t('auth_signout')}
+        </button>
       </div>
       {histOpen && isHistUser
         ? <HistoryView onClose={()=>setHistOpen(false)}/>
