@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Watcher · Forecast-Genauigkeit · WindFoil</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:#0a0e14;color:#d8e4f0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","Barlow",sans-serif;min-height:100vh}
+    a{color:#3a9ad9;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    .hdr{background:rgba(10,14,20,.92);border-bottom:1px solid #1e2d3d;padding:12px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+      position:sticky;top:0;z-index:200;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+    .hdr-logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+    .hdr-title{font-weight:900;font-size:15px;letter-spacing:.12em;color:#d8e4f0}
+    .hdr-sub{font-size:10px;color:#5a7a96;letter-spacing:.05em;margin-top:1px}
+    .hdr-links{display:flex;gap:6px;align-items:center;flex-shrink:0}
+    .hdr-btn{background:transparent;border:1px solid #243040;color:#5a7a96;border-radius:8px;
+      padding:6px 12px;font-size:12px;cursor:pointer;text-decoration:none;min-height:32px;
+      display:inline-flex;align-items:center;transition:border-color .15s,color .15s;white-space:nowrap}
+    .hdr-btn:hover{border-color:#3a9ad9;color:#3a9ad9;text-decoration:none}
+    #hdr-clock{font-size:13px;font-feature-settings:"tnum";color:#f07820}
+    @media(max-width:600px){.hdr-sub{display:none}#hdr-clock{display:none}}
+
+    /* ── Summary banner ── */
+    #summary-bar{background:linear-gradient(90deg,rgba(58,154,217,.1),rgba(58,154,217,.04));
+      border-bottom:1px solid rgba(58,154,217,.2);padding:10px 20px;
+      display:flex;align-items:center;gap:20px;flex-wrap:wrap;min-height:44px;font-size:12px}
+    #summary-bar .label{font-family:monospace;font-size:10px;color:#5a7a96;text-transform:uppercase;letter-spacing:.08em}
+    #summary-bar .val{font-weight:700;color:#3a9ad9}
+    #summary-bar .caution{color:#f5b942}
+    #summary-bar .good{color:#3ddc84}
+
+    /* ── Main ── */
+    .main{padding:20px;max-width:1200px;margin:0 auto}
+    .sec-title{font-size:11px;font-weight:600;color:#5a7a96;text-transform:uppercase;
+      letter-spacing:.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #1e2d3d}
+
+    /* ── Tables ── */
+    .tbl-wrap{overflow-x:auto;border-radius:14px;border:1px solid #1e2d3d;margin-bottom:28px}
+    table{width:100%;border-collapse:collapse;font-size:12px;min-width:600px}
+    thead th{background:#0d1420;padding:8px 10px;text-align:left;font-size:10px;font-weight:600;
+      color:#5a7a96;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #1e2d3d;white-space:nowrap}
+    tbody tr{border-bottom:1px solid rgba(30,45,61,.5)}
+    tbody tr:last-child{border-bottom:none}
+    tbody tr:hover{background:rgba(58,154,217,.04)}
+    td{padding:8px 10px;vertical-align:middle}
+    .region-badge{display:inline-flex;align-items:center;font-size:9px;font-weight:600;
+      border-radius:4px;padding:1px 5px;text-transform:uppercase;letter-spacing:.04em}
+
+    /* ── Bias bar ── */
+    .bias-bar-wrap{width:80px;height:6px;background:#1e2d3d;border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:4px}
+    .bias-bar{height:6px;border-radius:3px}
+
+    /* ── Info box ── */
+    .info-box{background:#151d28;border:1px solid #1e2d3d;border-radius:16px;padding:16px 20px;
+      font-size:11px;color:#5a7a96;line-height:1.9;margin-bottom:28px}
+    .info-box b{color:#d8e4f0}
+
+    /* ── Calibration action bar ── */
+    .action-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+    .btn{background:transparent;border:1px solid #3a9ad9;color:#3a9ad9;border-radius:8px;
+      padding:7px 14px;font-size:12px;cursor:pointer;transition:all .15s}
+    .btn:hover{background:rgba(58,154,217,.12)}
+    .btn.danger{border-color:#e84040;color:#e84040}
+    .btn.danger:hover{background:rgba(232,64,64,.1)}
+    .calib-active{font-size:11px;color:#3ddc84;font-family:monospace;padding:7px 12px;
+      background:rgba(61,220,132,.08);border:1px solid rgba(61,220,132,.25);border-radius:8px}
+
+    /* ── Loading ── */
+    .loading{padding:20px;text-align:center;font-size:12px;color:#5a7a96}
+    .spin{display:inline-block;animation:spin 1s linear infinite;margin-right:4px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Progress bar ── */
+    .progress-wrap{background:#1e2d3d;border-radius:4px;height:4px;width:200px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:8px}
+    .progress-fill{height:4px;background:#3a9ad9;border-radius:4px;transition:width .3s}
+
+    /* ── Footer ── */
+    .ftr{background:#111820;border-top:1px solid #1e2d3d;padding:14px 20px;
+      text-align:center;font-size:11px;color:#5a7a96;
+      display:flex;justify-content:center;gap:20px;flex-wrap:wrap;align-items:center}
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-logo">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="WindFoil">
+      <path d="M5 11.5h11.5a2.7 2.7 0 1 0-2.7-2.7" stroke="#f07820" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M5 20.5h15a2.7 2.7 0 1 1-2.7 2.7" stroke="#f07820" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3" stroke="#5a7a96" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="hdr-title">WINDFOIL</div>
+      <div class="hdr-sub">Watcher · Forecast-Genauigkeit &amp; Kalibrierung</div>
+    </div>
+  </div>
+  <div class="hdr-links">
+    <a href="/vergleich.html" class="hdr-btn">📊 Vergleich</a>
+    <a href="/" class="hdr-btn">← Hauptseite</a>
+    <span id="hdr-clock"></span>
+  </div>
+</header>
+
+<div id="summary-bar">
+  <div>
+    <div class="label">Status</div>
+    <div class="val" id="sum-status"><span class="spin">⟳</span> Analysiere <span id="load-progress">0</span>/26 Spots…
+      <span class="progress-wrap"><span class="progress-fill" id="progress-fill" style="width:0%"></span></span>
+    </div>
+  </div>
+  <div id="sum-bias-wrap" style="display:none">
+    <div class="label">Ø Modell-Bias</div>
+    <div class="val" id="sum-bias">–</div>
+  </div>
+  <div id="sum-worst-wrap" style="display:none">
+    <div class="label">Stärkste Abweichung</div>
+    <div class="val" id="sum-worst">–</div>
+  </div>
+  <div id="sum-calib-wrap" style="display:none">
+    <div class="label">Kalibrierung</div>
+    <div id="sum-calib">–</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="sec-title">🔬 Modell-Genauigkeit · ERA5-Reanalyse vs. Open-Meteo (letzte 7 Tage, 9–18 Uhr)</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Spot</th>
+          <th>Region</th>
+          <th>Modell Ø</th>
+          <th>ERA5 Ø (real)</th>
+          <th>Bias-Faktor</th>
+          <th>RMSE</th>
+          <th>Bewertung</th>
+          <th>Tage</th>
+        </tr>
+      </thead>
+      <tbody id="accuracy-body">
+        <tr><td colspan="8"><div class="loading"><span class="spin">⟳</span> Lade Daten…</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec-title">🧠 Gelernter Kalibrierungsstand (gespeichert in diesem Browser)</div>
+  <div class="action-bar">
+    <button class="btn" onclick="applyCalibration()">✓ Kalibrierung auf Vergleich-Seite anwenden</button>
+    <button class="btn danger" onclick="resetCalibration()">✕ Kalibrierung zurücksetzen</button>
+    <span class="calib-active" id="calib-active-badge" style="display:none">🧠 Kalibrierung aktiv</span>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Spot</th>
+          <th>Region</th>
+          <th>Bias-Faktor</th>
+          <th>Empfehlung</th>
+          <th>Datenstand</th>
+        </tr>
+      </thead>
+      <tbody id="calib-body">
+        <tr><td colspan="5"><div class="loading"><span class="spin">⟳</span></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec-title">ℹ️ Methodik</div>
+  <div class="info-box">
+    <b>Was dieser Watcher misst</b><br>
+    Für jeden der 26 Spots werden zwei Datenquellen verglichen:<br>
+    • <b>Open-Meteo Forecast</b> (past_days=7): Was zeigt das aktuelle Modell für die letzten 7 Tage?<br>
+    • <b>ERA5 Reanalyse</b>: Was hat tatsächlich stattgefunden? ERA5 ist der Goldstandard — es assimiliert echte Messungen weltweit.<br><br>
+    <b>Bias-Faktor</b> = ERA5 ÷ Modell. Werte &gt;1.0 bedeuten, das Modell unterschätzt den Wind (wie bei Lefkada NW × ~2.0 durch Meltemi-Kanalisierung). Werte &lt;1.0 bedeuten Überschätzung.<br><br>
+    <b>Kalibrierung</b>: Mit einem exponentiellen gleitenden Durchschnitt (α=0.3) wird der Bias pro Spot über alle Messungen gemittelt. Die Kalibrierungsfaktoren werden im Browser-localStorage gespeichert und können auf der Vergleich-Seite aktiv geschaltet werden, um Scores realistischer zu gewichten.<br><br>
+    <b>Einschränkung</b>: ERA5 ist typischerweise 1–5 Tage zeitverzögert. Der Vergleich nutzt die letzte verfügbare Überlappung (meist 3–6 gemeinsame Tage). Open-Meteo forecast mit past_days zeigt die aktuelle Modellanalyse rückwärts — das entspricht ungefähr dem, was als kurzfristige Prognose ausgegeben worden wäre.
+  </div>
+
+</div>
+
+<footer class="ftr">
+  <span>WindFoil Weather Intelligence</span>
+  <span>ERA5 ECMWF · Open-Meteo GFS</span>
+  <a href="/vergleich.html">📊 Vergleich</a>
+  <a href="/">← Hauptseite</a>
+  <a href="https://paypal.me/boehmemaik" target="_blank" rel="noopener">♥ Spenden</a>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// WindFoil Watcher — Forecast accuracy vs ERA5 reanalysis
+// Bias-Faktoren → localStorage → Kalibrierung für Vergleich
+// ═══════════════════════════════════════════════════════════
+
+function tickClock(){
+  const el=document.getElementById('hdr-clock');
+  if(el) el.textContent=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tickClock,1000); tickClock();
+
+const msToKn = ms => ms * 1.94384;
+
+// Same 26 spots as vergleich.html
+const ALL_SPOTS = [
+  { region:'Sardinien',    regionColor:'#3a9ad9', id:'s_porto_pollo',   name:'Porto Pollo',          emoji:'🌊', lat:41.130, lon:9.320  },
+  { region:'Sardinien',    regionColor:'#3a9ad9', id:'s_stintino',      name:'Stintino',             emoji:'⛵', lat:40.934, lon:8.226  },
+  { region:'Sardinien',    regionColor:'#3a9ad9', id:'s_putzu_idu',     name:'Putzu Idu',            emoji:'💨', lat:40.013, lon:8.377  },
+  { region:'Sardinien',    regionColor:'#3a9ad9', id:'s_porto_botte',   name:'Porto Botte',          emoji:'🌅', lat:39.054, lon:8.566  },
+  { region:'Sardinien',    regionColor:'#3a9ad9', id:'s_cala_gonone',   name:'Cala Gonone',          emoji:'🏔', lat:40.283, lon:9.629  },
+  { region:'Sardinien',    regionColor:'#3a9ad9', id:'s_villasimius',   name:'Villasimius',          emoji:'🐠', lat:39.118, lon:9.533  },
+  { region:'Sizilien',     regionColor:'#f07820', id:'z_puzziteddu',    name:'Puzziteddu/Granitola', emoji:'🌊', lat:37.634, lon:12.665 },
+  { region:'Sizilien',     regionColor:'#f07820', id:'z_ragusa',        name:'Marina di Ragusa',     emoji:'🌅', lat:36.868, lon:14.555 },
+  { region:'Sizilien',     regionColor:'#f07820', id:'z_maganuco',      name:'Spiaggia Maganuco',    emoji:'⛵', lat:36.726, lon:14.858 },
+  { region:'Sizilien',     regionColor:'#f07820', id:'z_avola',         name:'Avola',                emoji:'💎', lat:36.906, lon:15.099 },
+  { region:'Sizilien',     regionColor:'#f07820', id:'z_correnti',      name:'Isola delle Correnti', emoji:'🌊', lat:36.679, lon:15.137 },
+  { region:'Sizilien',     regionColor:'#f07820', id:'z_capo_dorlando', name:'Capo d\'Orlando',      emoji:'💨', lat:38.157, lon:14.758 },
+  { region:'Sizilien',     regionColor:'#f07820', id:'z_messina',       name:'Messina/Capo Peloro',  emoji:'🌊', lat:38.267, lon:15.636 },
+  { region:'Spanien',      regionColor:'#3ddc84', id:'p_roses',         name:'Roses',                emoji:'🌊', lat:42.267, lon:3.185  },
+  { region:'Spanien',      regionColor:'#3ddc84', id:'p_delta_ebre',    name:"Delta de l'Ebre",      emoji:'🏞', lat:40.730, lon:0.868  },
+  { region:'Spanien',      regionColor:'#3ddc84', id:'p_peniscola',     name:'Peñíscola',            emoji:'🏰', lat:40.360, lon:0.421  },
+  { region:'Spanien',      regionColor:'#3ddc84', id:'p_denia',         name:'Denia',                emoji:'☀️', lat:38.846, lon:0.118  },
+  { region:'Spanien',      regionColor:'#3ddc84', id:'p_tarifa',        name:'Tarifa',               emoji:'💨', lat:36.012, lon:-5.598 },
+  { region:'Nordspanien',  regionColor:'#10b981', id:'n_valdovino',     name:'Valdoviño',            emoji:'🌊', lat:43.569, lon:-8.172 },
+  { region:'Nordspanien',  regionColor:'#10b981', id:'n_zarautz',       name:'Zarautz',              emoji:'🏄', lat:43.284, lon:-2.167 },
+  { region:'Nordspanien',  regionColor:'#10b981', id:'n_liencres',      name:'Liencres (Cantabria)', emoji:'🌬', lat:43.449, lon:-3.964 },
+  { region:'Apulien',      regionColor:'#fb923c', id:'a_vieste',        name:'Vieste',               emoji:'🏖', lat:41.886, lon:16.183 },
+  { region:'Kroatien',     regionColor:'#f43f5e', id:'k_viganj',        name:'Viganj',               emoji:'💨', lat:43.027, lon:17.277 },
+  { region:'Kroatien',     regionColor:'#f43f5e', id:'k_bol',           name:'Bol / Zlatni Rat',     emoji:'⛵', lat:43.258, lon:16.634 },
+  { region:'Kroatien',     regionColor:'#f43f5e', id:'k_nin',           name:'Nin Lagune',           emoji:'🌊', lat:44.238, lon:15.185 },
+  { region:'Kroatien',     regionColor:'#f43f5e', id:'k_baska',         name:'Baška (Krk)',          emoji:'🏔', lat:44.967, lon:14.741 },
+  { region:'Griechenland', regionColor:'#60a5fa', id:'g_vasiliki',      name:'Vasiliki',             emoji:'💨', lat:38.630, lon:20.610 },
+  { region:'Griechenland', regionColor:'#60a5fa', id:'g_lefkada_nw',    name:'Lefkada NW',           emoji:'🌊', lat:38.752, lon:20.579 },
+  { region:'Griechenland', regionColor:'#60a5fa', id:'g_gialova',       name:'Gialova / Navarino',   emoji:'🏖', lat:36.983, lon:21.667 },
+];
+
+// ── Calibration localStorage ────────────────────────────────
+const CALIB_KEY = 'wf_calibration';
+const CALIB_ACTIVE_KEY = 'wf_calibration_active';
+
+function loadCalibration(){
+  try{ return JSON.parse(localStorage.getItem(CALIB_KEY)||'{}'); }catch{ return {}; }
+}
+function saveCalibration(c){
+  localStorage.setItem(CALIB_KEY,JSON.stringify(c));
+}
+function isCalibActive(){
+  return localStorage.getItem(CALIB_ACTIVE_KEY)==='1';
+}
+function applyCalibration(){
+  localStorage.setItem(CALIB_ACTIVE_KEY,'1');
+  document.getElementById('calib-active-badge').style.display='';
+  alert('✓ Kalibrierung aktiviert. Auf der Vergleich-Seite werden kalibrierte Scores angezeigt.');
+}
+function resetCalibration(){
+  if(!confirm('Kalibrierungsdaten und gespeicherte Faktoren löschen?')) return;
+  localStorage.removeItem(CALIB_KEY);
+  localStorage.removeItem(CALIB_ACTIVE_KEY);
+  document.getElementById('calib-active-badge').style.display='none';
+  renderCalibTable();
+}
+
+// ── Fetch open-meteo forecast with past 7 days ──────────────
+async function fetchModelPast(lat, lon){
+  const p=new URLSearchParams({
+    latitude:lat,longitude:lon,
+    hourly:'windspeed_10m,winddirection_10m',
+    wind_speed_unit:'ms',
+    past_days:7,forecast_days:0,
+    timezone:'auto'
+  });
+  const r=await fetch('https://api.open-meteo.com/v1/forecast?'+p,{signal:AbortSignal.timeout(12000)});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+// ── Fetch ERA5 last 7 days ──────────────────────────────────
+async function fetchERA5Past(lat, lon){
+  const end=new Date(); end.setDate(end.getDate()-1);
+  const start=new Date(end); start.setDate(end.getDate()-6);
+  const fmt=d=>d.toISOString().slice(0,10);
+  const p=new URLSearchParams({
+    latitude:lat,longitude:lon,
+    start_date:fmt(start),end_date:fmt(end),
+    hourly:'windspeed_10m',
+    wind_speed_unit:'ms',
+    timezone:'auto'
+  });
+  const r=await fetch('https://archive-api.open-meteo.com/v1/archive?'+p,{signal:AbortSignal.timeout(14000)});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+// ── Align and compare (9–18h window) ───────────────────────
+function compareWinds(modelFc, era5Fc){
+  if(!modelFc?.hourly?.time || !era5Fc?.hourly?.time) return [];
+
+  const modelMap={};
+  modelFc.hourly.time.forEach((t,i)=>{
+    if(modelFc.hourly.windspeed_10m[i]!=null)
+      modelMap[t]=modelFc.hourly.windspeed_10m[i];
+  });
+
+  const dayMap={};
+  era5Fc.hourly.time.forEach((t,i)=>{
+    const date=t.slice(0,10), h=parseInt(t.slice(11,13));
+    if(h<9||h>18) return;
+    const eraW=era5Fc.hourly.windspeed_10m[i];
+    const modW=modelMap[t];
+    if(eraW==null||modW==null) return;
+    if(!dayMap[date]) dayMap[date]={model:[],era5:[]};
+    dayMap[date].model.push(modW);
+    dayMap[date].era5.push(eraW);
+  });
+
+  return Object.entries(dayMap)
+    .filter(([,d])=>d.model.length>=3)
+    .map(([date,d])=>{
+      const avgM=d.model.reduce((a,b)=>a+b,0)/d.model.length;
+      const avgE=d.era5.reduce((a,b)=>a+b,0)/d.era5.length;
+      return{
+        date,
+        modelKn:msToKn(avgM),
+        era5Kn:msToKn(avgE),
+        bias:avgM>0?avgE/avgM:1,
+        rmse:Math.sqrt(d.era5.map((e,i)=>Math.pow(e-d.model[i],2)).reduce((a,b)=>a+b,0)/d.era5.length)*1.94384
+      };
+    })
+    .sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function spotStats(days){
+  if(!days.length) return null;
+  const avgBias=days.reduce((a,d)=>a+d.bias,0)/days.length;
+  const avgModelKn=days.reduce((a,d)=>a+d.modelKn,0)/days.length;
+  const avgEra5Kn=days.reduce((a,d)=>a+d.era5Kn,0)/days.length;
+  const rmse=Math.sqrt(days.reduce((a,d)=>a+d.rmse*d.rmse,0)/days.length);
+  return{dayCount:days.length,avgBias,avgModelKn,avgEra5Kn,rmse};
+}
+
+// ── Render accuracy table ───────────────────────────────────
+function gradeFromBias(b){
+  const d=Math.abs(b-1);
+  if(d<0.1) return{txt:'🟢 Exzellent',color:'#3ddc84'};
+  if(d<0.2) return{txt:'🟡 Gut',color:'#f5b942'};
+  if(d<0.4) return{txt:'🟠 Abweichend',color:'#f07820'};
+  return{txt:'🔴 Stark abweichend',color:'#e84040'};
+}
+
+function biasBarHtml(bias){
+  const pct=Math.min(100,Math.abs(bias-1)*100*2);
+  const col=bias>1?'#f5b942':'#3a9ad9';
+  const dir=bias>1?'(+)':'(-)';
+  return '<span class="bias-bar-wrap"><span class="bias-bar" style="width:'+pct+'%;background:'+col+'"></span></span>'+dir;
+}
+
+function renderAccuracyTable(summaries){
+  const sorted=[...summaries].sort((a,b)=>{
+    if(!a.stats) return 1; if(!b.stats) return -1;
+    return Math.abs(b.stats.avgBias-1)-Math.abs(a.stats.avgBias-1);
+  });
+  document.getElementById('accuracy-body').innerHTML=sorted.map(({spot,stats})=>{
+    if(!stats) return '<tr><td colspan="8" style="color:#5a7a96;font-size:11px;padding:8px 10px">⚠ '+spot.emoji+' '+spot.name+': keine Daten</td></tr>';
+    const g=gradeFromBias(stats.avgBias);
+    return '<tr>'+
+      '<td><b style="color:'+spot.regionColor+'">'+spot.emoji+' '+spot.name+'</b></td>'+
+      '<td><span class="region-badge" style="background:'+spot.regionColor+'18;color:'+spot.regionColor+'">'+spot.region+'</span></td>'+
+      '<td style="font-family:monospace">'+stats.avgModelKn.toFixed(1)+' kn</td>'+
+      '<td style="font-family:monospace;color:#3ddc84">'+stats.avgEra5Kn.toFixed(1)+' kn</td>'+
+      '<td style="font-weight:700;font-family:monospace;color:'+g.color+'">'+stats.avgBias.toFixed(2)+'× '+biasBarHtml(stats.avgBias)+'</td>'+
+      '<td style="font-family:monospace;color:#5a7a96">'+stats.rmse.toFixed(1)+' kn</td>'+
+      '<td style="font-size:11px;color:'+g.color+'">'+g.txt+'</td>'+
+      '<td style="font-family:monospace;color:#5a7a96">'+stats.dayCount+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ── Render calibration table ────────────────────────────────
+function renderCalibTable(){
+  const calib=loadCalibration();
+  if(isCalibActive()) document.getElementById('calib-active-badge').style.display='';
+
+  const entries=ALL_SPOTS.map(spot=>{
+    const c=calib[spot.id];
+    return c?{spot,bias:c.bias,days:c.days,updated:c.updated}:null;
+  }).filter(Boolean).sort((a,b)=>Math.abs(b.bias-1)-Math.abs(a.bias-1));
+
+  if(!entries.length){
+    document.getElementById('calib-body').innerHTML=
+      '<tr><td colspan="5" style="color:#5a7a96;padding:20px;text-align:center">'+
+      'Noch keine Kalibrierungsdaten gespeichert. Analyse läuft automatisch beim Laden dieser Seite.'+
+      '</td></tr>';
+    return;
+  }
+
+  const biasColor=b=>Math.abs(b-1)<0.1?'#3ddc84':Math.abs(b-1)<0.3?'#f5b942':'#f07820';
+  document.getElementById('calib-body').innerHTML=entries.map(({spot,bias,days,updated})=>{
+    const pct=((bias-1)*100);
+    const rec=pct>10?'⬆ +'+pct.toFixed(0)+'% aufwerten':pct<-10?'⬇ '+pct.toFixed(0)+'% abwerten':'✓ Im Rahmen';
+    const dateStr=new Date(updated).toLocaleDateString('de-DE');
+    return '<tr>'+
+      '<td><b style="color:'+spot.regionColor+'">'+spot.emoji+' '+spot.name+'</b></td>'+
+      '<td><span class="region-badge" style="background:'+spot.regionColor+'18;color:'+spot.regionColor+'">'+spot.region+'</span></td>'+
+      '<td style="font-weight:700;font-family:monospace;color:'+biasColor(bias)+'">'+bias.toFixed(3)+'×</td>'+
+      '<td style="font-size:11px;color:'+biasColor(bias)+'">'+rec+'</td>'+
+      '<td style="font-family:monospace;font-size:10px;color:#5a7a96">'+days+' Tage · '+dateStr+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ── Save calibration from summaries ────────────────────────
+function persistCalibration(summaries){
+  const calib=loadCalibration();
+  const ALPHA=0.3;
+  summaries.forEach(({spot,stats})=>{
+    if(!stats||stats.dayCount<2) return;
+    const prev=calib[spot.id];
+    const newBias=prev?
+      (1-ALPHA)*prev.bias+ALPHA*stats.avgBias :
+      stats.avgBias;
+    calib[spot.id]={bias:newBias,days:stats.dayCount,updated:new Date().toISOString()};
+  });
+  saveCalibration(calib);
+}
+
+// ── Summary banner ──────────────────────────────────────────
+function renderSummary(summaries){
+  const valid=summaries.filter(s=>s.stats);
+  if(!valid.length) return;
+
+  const avgBias=valid.reduce((a,s)=>a+s.stats.avgBias,0)/valid.length;
+  const worst=valid.sort((a,b)=>Math.abs(b.stats.avgBias-1)-Math.abs(a.stats.avgBias-1))[0];
+  const calib=loadCalibration();
+  const calibCount=Object.keys(calib).length;
+
+  document.getElementById('sum-status').innerHTML='✓ '+valid.length+'/'+ALL_SPOTS.length+' Spots analysiert';
+  document.getElementById('sum-bias').innerHTML=avgBias.toFixed(2)+'× '+(avgBias>1.1?'<span style="color:#f5b942">(Modell unterschätzt)</span>':avgBias<0.9?'<span style="color:#e84040">(Modell überschätzt)</span>':'<span style="color:#3ddc84">(gut kalibriert)</span>');
+  document.getElementById('sum-worst').innerHTML='<b style="color:'+worst.spot.regionColor+'">'+worst.spot.name+'</b> <span style="color:#f5b942">'+worst.stats.avgBias.toFixed(2)+'×</span>';
+  document.getElementById('sum-calib').innerHTML='<span class="'+(calibCount>0?'good':'')+'">'+calibCount+' Spots gespeichert'+(isCalibActive()?' · <b style="color:#3ddc84">aktiv</b>':'')+'</span>';
+
+  ['sum-bias-wrap','sum-worst-wrap','sum-calib-wrap'].forEach(id=>document.getElementById(id).style.display='');
+}
+
+// ── Main ────────────────────────────────────────────────────
+async function loadAll(){
+  let loaded=0;
+  const total=ALL_SPOTS.length;
+
+  const results=await Promise.allSettled(ALL_SPOTS.map(async spot=>{
+    const [model,era5]=await Promise.all([
+      fetchModelPast(spot.lat,spot.lon),
+      fetchERA5Past(spot.lat,spot.lon)
+    ]);
+    loaded++;
+    document.getElementById('load-progress').textContent=loaded+'/'+total;
+    document.getElementById('progress-fill').style.width=Math.round(loaded/total*100)+'%';
+    return{spot,days:compareWinds(model,era5)};
+  }));
+
+  const summaries=results.map((r,i)=>({
+    spot:ALL_SPOTS[i],
+    stats:r.status==='fulfilled'?spotStats(r.value.days):null
+  }));
+
+  persistCalibration(summaries);
+  renderAccuracyTable(summaries);
+  renderCalibTable();
+  renderSummary(summaries);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{ loadAll(); renderCalibTable(); });
+</script>
+</body>
+</html>

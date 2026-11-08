@@ -273,6 +273,7 @@ const SPOTS = [
     lat: 37.634, lon: 12.665,
     shoreNote: 'Sandeinstieg, Wave bei NW/SO',
     color: '#3a9ad9',
+    offshoreDir: 45,
     camper: true, camperNote: 'Strandparkplatz Granitola, Campervans regelmäßig vor Ort',
   },
   {
@@ -283,6 +284,7 @@ const SPOTS = [
     lat: 36.868, lon: 14.555,
     shoreNote: 'Scirocco-Fetch, Hafenmole Westseite',
     color: '#a78bfa',
+    offshoreDir: 0,
     camper: true, camperNote: 'Ausgestatteter Strand, Camper-Stellplätze nahe der Promenade',
   },
   {
@@ -293,6 +295,7 @@ const SPOTS = [
     lat: 36.726, lon: 14.858,
     shoreNote: 'Ostwind sideshore, Mole schützt',
     color: '#f07820',
+    offshoreDir: 315,
     camper: true, camperNote: 'Breiter Sandstrand mit freiem Zugang, gute Zufahrt für Camper',
   },
   {
@@ -303,6 +306,7 @@ const SPOTS = [
     lat: 36.906, lon: 15.099,
     shoreNote: 'Türkisblaues Wasser, NE onshore',
     color: '#f5b942',
+    offshoreDir: 315,
   },
   {
     id: 'isola_correnti',
@@ -312,6 +316,7 @@ const SPOTS = [
     lat: 36.679, lon: 15.137,
     shoreNote: 'Stärkster Scirocco-Fetch, Strömung!',
     color: '#3ddc84',
+    offshoreDir: 0,
   },
   {
     id: 'capo_dorlando',
@@ -321,6 +326,7 @@ const SPOTS = [
     lat: 38.157, lon: 14.758,
     shoreNote: 'Sofort tiefes Wasser',
     color: '#f472b6',
+    offshoreDir: 180,
   },
   {
     id: 'messina',
@@ -330,6 +336,7 @@ const SPOTS = [
     lat: 38.267, lon: 15.636,
     shoreNote: 'Stetigster Wind, Gezeitenströmung',
     color: '#6de8c0',
+    offshoreDir: 270,
   },
 ];
 
@@ -358,9 +365,18 @@ function scoreHour(w, win) {
   if (w <= win.maxWind) return Math.round(100 - ((w - win.optMax) / (win.maxWind - win.optMax)) * 50);
   return Math.max(0, Math.round(50 - (w - win.maxWind) * 10));
 }
-function scoreDay(winds, start = 0) {
+function offshoreMultiplier(windDir,offshoreDir){
+  if(windDir==null||offshoreDir==null) return 1;
+  const diff=((windDir-offshoreDir+540)%360)-180;
+  return Math.cos(diff*Math.PI/180)>0.7?0:1;
+}
+function scoreDay(winds, dirs, start, offshoreDir) {
   const hrs = [];
-  for (let h = 9; h <= 18; h++) if (winds[start + h] !== undefined) hrs.push(scoreHour(winds[start + h], DEFAULT_WIN));
+  for (let h = 9; h <= 18; h++) {
+    if (winds[start + h] === undefined) continue;
+    const s = scoreHour(winds[start + h], DEFAULT_WIN);
+    hrs.push(s * offshoreMultiplier(dirs?.[start+h]??null, offshoreDir??null));
+  }
   return hrs.length ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : 0;
 }
 function scoreColor(s) {
@@ -420,7 +436,7 @@ function wmoIcon(code) {
 }
 
 // ── Compute day stats ──────────────────────────────────────
-function dayStats(fc, dayIdx) {
+function dayStats(fc, dayIdx, spot) {
   if (!fc?.hourly?.windspeed_10m) return { avgWind: 0, maxGust: 0, avgDir: 0, score: 0, spark: Array(10).fill(0), sparkCodes: Array(10).fill(null), avgWindKn: 0 };
   const h = fc.hourly;
   const start = dayIdx * 24;
@@ -433,11 +449,11 @@ function dayStats(fc, dayIdx) {
   let sx = 0, sy = 0;
   slice_d.forEach(d => { sx += Math.cos(d * Math.PI/180); sy += Math.sin(d * Math.PI/180); });
   const avgDir = slice_d.length ? ((Math.atan2(sy/slice_d.length, sx/slice_d.length) * 180/Math.PI) + 360) % 360 : 0;
-  const score = scoreDay(winds, start);
+  const score = scoreDay(winds, dirs, start, spot?.offshoreDir);
   const spark = [], sparkCodes = [];
   const codes = h.weathercode;
   for (let h2 = 9; h2 <= 18; h2++) {
-    spark.push(scoreHour(winds[start + h2] ?? 0, DEFAULT_WIN));
+    spark.push(scoreHour(winds[start + h2] ?? 0, DEFAULT_WIN) * offshoreMultiplier(dirs?.[start+h2]??null, spot?.offshoreDir??null));
     sparkCodes.push(codes ? (codes[start + h2] ?? null) : null);
   }
   return { avgWind, maxGust, avgDir, score, spark, sparkCodes, avgWindKn: msToKn(avgWind) };
@@ -475,7 +491,7 @@ function buildCard(spot, forecasts, bestId) {
         ⚠ Forecast nicht verfügbar
       </div>
     </div>`;
-  const days = [0, 1, 2].map(d => dayStats(forecasts[spot.id], d));
+  const days = [0, 1, 2].map(d => dayStats(forecasts[spot.id], d, spot));
   const labels = [0, 1, 2].map(d => dayLabel(forecasts[spot.id], d));
 
   const tabsHtml = days.map((ds, i) => `
@@ -594,7 +610,7 @@ async function loadAll() {
 
   const ranking = SPOTS.map(spot => {
     if (!results[spot.id]) return { spot, avg: 0, days: [0,0,0], winds: [0,0,0], dirs: [0,0,0] };
-    const days = [0,1,2].map(d => dayStats(results[spot.id], d));
+    const days = [0,1,2].map(d => dayStats(results[spot.id], d, spot));
     const avg = Math.round(days.reduce((a, ds) => a + ds.score, 0) / 3);
     return {
       spot,
@@ -617,7 +633,7 @@ async function loadAll() {
 
   SPOTS.forEach(spot => {
     if (!results[spot.id]) return;
-    const ds = dayStats(results[spot.id], 0);
+    const ds = dayStats(results[spot.id], 0, spot);
     const s = ds.score;
     const col = scoreColor(s);
     const icon = L.divIcon({

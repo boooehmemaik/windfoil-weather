@@ -214,11 +214,11 @@ function tickClock(){
 setInterval(tickClock,1000); tickClock();
 
 const SPOTS = [
-  { id:'roses',       name:'Roses',           emoji:'🌊', desc:'Tramuntana · Costa Brava Nord',   lat:42.267, lon:3.185,  shoreNote:'Pyrenäen-Fallwind, Golf de Roses', color:'#3a9ad9', camper:true, camperNote:'Camping La Siesta & weitere Campingplätze direkt am Strand' },
-  { id:'delta_ebre',  name:"Delta de l'Ebre", emoji:'🏞', desc:'Tramuntana · Flachwasser-Delta',  lat:40.730, lon:0.868,  shoreNote:'Sandwatt, Tramuntana/Mistral',    color:'#f07820', camper:true, camperNote:'Naturpark Ebro-Delta, freies Campieren und Stellplätze verfügbar' },
-  { id:'peniscola',   name:'Peñíscola',        emoji:'🏰', desc:'Levante · Costa del Azahar',     lat:40.360, lon:0.421,  shoreNote:'Levante-Thermik, O-Exposition',   color:'#f5b942' },
-  { id:'denia',       name:'Denia',            emoji:'☀️', desc:'Levante · Costa Blanca',          lat:38.846, lon:0.118,  shoreNote:'Levante + Montgo-Katabatik',      color:'#a78bfa' },
-  { id:'tarifa',      name:'Tarifa',           emoji:'💨', desc:'Levante + Poniente · Gibraltar',  lat:36.012, lon:-5.598, shoreNote:'Stärkster Windspot Europas',       color:'#3ddc84', camper:true, camperNote:'Campingparadies Europas — Dos Mares, 100 Patos, Los Lances, viele Spots' },
+  { id:'roses',       name:'Roses',           emoji:'🌊', desc:'Tramuntana · Costa Brava Nord',   lat:42.267, lon:3.185,  shoreNote:'Pyrenäen-Fallwind, Golf de Roses', color:'#3a9ad9', offshoreDir:315, camper:true, camperNote:'Camping La Siesta & weitere Campingplätze direkt am Strand' },
+  { id:'delta_ebre',  name:"Delta de l'Ebre", emoji:'🏞', desc:'Tramuntana · Flachwasser-Delta',  lat:40.730, lon:0.868,  shoreNote:'Sandwatt, Tramuntana/Mistral',    color:'#f07820', offshoreDir:315, camper:true, camperNote:'Naturpark Ebro-Delta, freies Campieren und Stellplätze verfügbar' },
+  { id:'peniscola',   name:'Peñíscola',        emoji:'🏰', desc:'Levante · Costa del Azahar',     lat:40.360, lon:0.421,  shoreNote:'Levante-Thermik, O-Exposition',   color:'#f5b942', offshoreDir:270 },
+  { id:'denia',       name:'Denia',            emoji:'☀️', desc:'Levante · Costa Blanca',          lat:38.846, lon:0.118,  shoreNote:'Levante + Montgo-Katabatik',      color:'#a78bfa', offshoreDir:315 },
+  { id:'tarifa',      name:'Tarifa',           emoji:'💨', desc:'Levante + Poniente · Gibraltar',  lat:36.012, lon:-5.598, shoreNote:'Stärkster Windspot Europas',       color:'#3ddc84', offshoreDir:0,   camper:true, camperNote:'Campingparadies Europas — Dos Mares, 100 Patos, Los Lances, viele Spots' },
 ];
 
 const msToKn = ms => ms * 1.94384;
@@ -241,9 +241,17 @@ function scoreHour(w,win){
   if(w<=win.maxWind)return Math.round(100-((w-win.optMax)/(win.maxWind-win.optMax))*50);
   return Math.max(0,Math.round(50-(w-win.maxWind)*10));
 }
-function scoreDay(winds,start=0){
+function offshoreMultiplier(windDir,offshoreDir){
+  if(windDir==null||offshoreDir==null) return 1;
+  const diff=((windDir-offshoreDir+540)%360)-180;
+  return Math.cos(diff*Math.PI/180)>0.7?0:1;
+}
+function scoreDay(winds,dirs,start=0,offshoreDir){
   const hrs=[];
-  for(let h=9;h<=18;h++) if(winds[start+h]!==undefined) hrs.push(scoreHour(winds[start+h],DEFAULT_WIN));
+  for(let h=9;h<=18;h++){
+    if(winds[start+h]===undefined) continue;
+    hrs.push(scoreHour(winds[start+h],DEFAULT_WIN)*offshoreMultiplier(dirs?.[start+h]??null,offshoreDir??null));
+  }
   return hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
 }
 function scoreColor(s){return s>=70?'#3ddc84':s>=40?'#f5b942':'#e84040';}
@@ -282,7 +290,7 @@ function wmoIcon(c){
   if(c>=51&&c<=57)return'🌦';if(c>=71&&c<=77)return'🌨';return'';
 }
 
-function dayStats(fc,dayIdx){
+function dayStats(fc,dayIdx,spot){
   if(!fc?.hourly?.windspeed_10m) return{avgWind:0,maxGust:0,avgDir:0,score:0,spark:Array(10).fill(0),sparkCodes:Array(10).fill(null),avgWindKn:0};
   const h=fc.hourly,start=dayIdx*24;
   const sw=h.windspeed_10m.slice(start+9,start+19).filter(v=>v!=null);
@@ -292,9 +300,9 @@ function dayStats(fc,dayIdx){
   const maxGust=sg.length?Math.max(...sg):0;
   let sx=0,sy=0;sd.forEach(d=>{sx+=Math.cos(d*Math.PI/180);sy+=Math.sin(d*Math.PI/180);});
   const avgDir=sd.length?((Math.atan2(sy/sd.length,sx/sd.length)*180/Math.PI)+360)%360:0;
-  const score=scoreDay(h.windspeed_10m,start);
-  const spark=[],sparkCodes=[],codes=h.weathercode;
-  for(let h2=9;h2<=18;h2++){spark.push(scoreHour(h.windspeed_10m[start+h2]??0,DEFAULT_WIN));sparkCodes.push(codes?(codes[start+h2]??null):null);}
+  const score=scoreDay(h.windspeed_10m,h.winddirection_10m,start,spot?.offshoreDir);
+  const spark=[],sparkCodes=[],codes=h.weathercode,dirs=h.winddirection_10m;
+  for(let h2=9;h2<=18;h2++){spark.push(scoreHour(h.windspeed_10m[start+h2]??0,DEFAULT_WIN)*offshoreMultiplier(dirs?.[start+h2]??null,spot?.offshoreDir??null));sparkCodes.push(codes?(codes[start+h2]??null):null);}
   return{avgWind,maxGust,avgDir,score,spark,sparkCodes,avgWindKn:msToKn(avgWind)};
 }
 
@@ -312,7 +320,7 @@ function windArrowSvg(deg,color='#3a9ad9',size=20){
 function buildCard(spot,forecasts,bestId){
   const isBest=spot.id===bestId;
   if(!forecasts[spot.id]) return`<div class="spot-card" id="card-${spot.id}"><div class="spot-head"><div><div class="spot-name">${spot.emoji} ${spot.name}</div><div class="spot-desc">${spot.desc}</div></div></div><div style="padding:20px;text-align:center;color:#5a7a96;font-size:11px">⚠ Forecast nicht verfügbar</div></div>`;
-  const days=[0,1,2].map(d=>dayStats(forecasts[spot.id],d));
+  const days=[0,1,2].map(d=>dayStats(forecasts[spot.id],d,spot));
   const labels=[0,1,2].map(d=>dayLabel(forecasts[spot.id],d));
   const tabsHtml=days.map((ds,i)=>`<div class="day-tab ${i===0?'active':''}" onclick="switchDay('${spot.id}',${i})" id="tab-${spot.id}-${i}"><span class="score-mini" style="color:${scoreColor(ds.score)}">${ds.score}</span>${labels[i]}</div>`).join('');
   const detailHtml=days.map((ds,i)=>{
@@ -369,7 +377,7 @@ async function loadAll(){
   await Promise.all(SPOTS.map(async spot=>{try{results[spot.id]=await fetchForecast(spot.lat,spot.lon);}catch(e){console.error(`[spanien] ${spot.id}:`,e);results[spot.id]=null;}}));
   const ranking=SPOTS.map(spot=>{
     if(!results[spot.id])return{spot,avg:0,days:[0,0,0],winds:[0,0,0],dirs:[0,0,0]};
-    const days=[0,1,2].map(d=>dayStats(results[spot.id],d));
+    const days=[0,1,2].map(d=>dayStats(results[spot.id],d,spot));
     return{spot,avg:Math.round(days.reduce((a,ds)=>a+ds.score,0)/3),days:days.map(d=>d.score),winds:days.map(d=>d.avgWindKn),dirs:days.map(d=>d.avgDir)};
   }).sort((a,b)=>b.avg-a.avg);
   const bestId=ranking[0].spot.id;
@@ -377,7 +385,7 @@ async function loadAll(){
   document.getElementById('winner-why').innerHTML=`${scoreEmoji(ranking[0].avg)} Bester 3-Tage-Ø Score · Ø ${ranking[0].winds[0].toFixed(1)} kn heute · ${compass(ranking[0].dirs[0])} Hauptrichtung · ${ranking[0].spot.shoreNote}`;
   SPOTS.forEach(spot=>{
     if(!results[spot.id])return;
-    const ds=dayStats(results[spot.id],0),s=ds.score,col=scoreColor(s);
+    const ds=dayStats(results[spot.id],0,spot),s=ds.score,col=scoreColor(s);
     const icon=L.divIcon({className:'',html:`<div style="position:relative;width:90px;height:64px;pointer-events:none"><svg style="position:absolute;top:0;left:0;width:90px;height:64px;overflow:visible;pointer-events:none"><line x1="10" y1="54" x2="70" y2="16" stroke="${col}" stroke-width="1.5" stroke-opacity="0.75"/></svg><div class="lm-dot" style="background:${col}"></div><div class="lm-badge" style="color:${col};border-color:${col}">${s}</div></div>`,iconSize:[90,64],iconAnchor:[10,54]});
     mapMarkers[spot.id].setIcon(icon);
     mapMarkers[spot.id].bindPopup(`<b>${spot.emoji} ${spot.name}</b>${spot.id===bestId?' ⭐':''}<br><span style="color:${col};font-size:13px;font-weight:700">Score ${s}</span><span style="color:#5a7a96;font-size:10px"> (Heute 9–18 Uhr)</span><br><span style="font-size:11px">Ø <b>${ds.avgWindKn.toFixed(1)} kn</b> · ${windArrowSvg(ds.avgDir,'#3a9ad9',14)} <b>${compass(ds.avgDir)}</b></span><br><span style="font-family:monospace;font-size:9px;color:#5a7a96">${spot.lat.toFixed(4)}°N ${Math.abs(spot.lon).toFixed(4)}°${spot.lon>=0?'E':'W'} · ${spot.desc}</span>`);

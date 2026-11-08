@@ -2295,6 +2295,15 @@ function AuthGate({children}){
               display:'inline-flex',alignItems:'center',gap:4}}>
             Vergleich
           </a>
+          <a href="/watcher.html"
+            title="Forecast-Genauigkeit · Kalibrierung"
+            className="wf-hdr-vergleich"
+            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
+              border:`1px solid ${CA.line}`,background:'transparent',
+              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
+              display:'inline-flex',alignItems:'center',gap:4}}>
+            Watcher
+          </a>
           {isHistUser && (
             <button onClick={()=>setHistOpen(o=>!o)}
               style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
@@ -4249,6 +4258,7 @@ function App() {
         <a href="/sizilien.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sizilien</a>
         <a href="/spanien.html" style={{color:C.sky,textDecoration:"none"}}>🇪🇸 Spanien</a>
         <a href="/vergleich.html" style={{color:C.sky,textDecoration:"none"}}>📊 Vergleich</a>
+        <a href="/watcher.html" style={{color:C.sky,textDecoration:"none"}}>🔭 Watcher</a>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>{t('footer_help')}</a>
         <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
           title="Admin"

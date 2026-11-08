@@ -118,13 +118,14 @@
     </svg>
     <div>
       <div class="hdr-title">WINDFOIL</div>
-      <div class="hdr-sub">Spot-Vergleich · 26 Spots · 5-Tage-Forecast</div>
+      <div class="hdr-sub">Spot-Vergleich · 29 Spots · 5-Tage-Forecast</div>
     </div>
   </div>
   <div class="hdr-links">
     <a href="/sardinia.html" class="hdr-btn">Sardinien</a>
     <a href="/sizilien.html" class="hdr-btn">Sizilien</a>
     <a href="/spanien.html" class="hdr-btn">Spanien</a>
+    <a href="/watcher.html" class="hdr-btn">🔬 Watcher</a>
     <a href="/" class="hdr-btn">← Hauptseite</a>
     <span id="hdr-clock"></span>
   </div>
@@ -149,12 +150,13 @@
   </div>
 
   <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <span>📊 Vollständiges Ranking · alle 26 Spots</span>
+    <span>📊 Vollständiges Ranking · alle 29 Spots</span>
     <div class="filter-row" style="margin:0">
       <button class="filter-btn active" onclick="setFilter('all',this)">Alle</button>
       <button class="filter-btn" onclick="setFilter('Sardinien',this)">Sardinien</button>
       <button class="filter-btn" onclick="setFilter('Sizilien',this)">Sizilien</button>
       <button class="filter-btn" onclick="setFilter('Spanien',this)">Spanien</button>
+      <button class="filter-btn" onclick="setFilter('Nordspanien',this)">Nordspanien</button>
       <button class="filter-btn" onclick="setFilter('Apulien',this)">Apulien</button>
       <button class="filter-btn" onclick="setFilter('Kroatien',this)">Kroatien</button>
       <button class="filter-btn" onclick="setFilter('Griechenland',this)">Griechenland</button>
@@ -179,7 +181,7 @@
         </tr>
       </thead>
       <tbody id="compare-body">
-        <tr><td colspan="11"><div class="loading-overlay"><span class="spin">⟳</span> Lade alle 26 Spots…</div></td></tr>
+        <tr><td colspan="11"><div class="loading-overlay"><span class="spin">⟳</span> Lade alle 29 Spots…</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -192,14 +194,15 @@
   <a href="/sardinia.html">Sardinien</a>
   <a href="/sizilien.html">Sizilien</a>
   <a href="/spanien.html">Spanien</a>
+  <a href="/watcher.html">🔬 Watcher</a>
   <a href="/">← Hauptseite</a>
   <a href="https://paypal.me/boehmemaik" target="_blank" rel="noopener">♥ Spenden</a>
 </footer>
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// WindFoil Spot-Vergleich — 26 Spots, 5-Tage-Forecast
-// Sardinien(6)+Sizilien(7)+Spanien(5)+Apulien(1)+Kroatien(4)+Griechenland(3)
+// WindFoil Spot-Vergleich — 29 Spots, 5-Tage-Forecast
+// Sardinien(6)+Sizilien(7)+Spanien(5)+Nordspanien(3)+Apulien(1)+Kroatien(4)+Griechenland(3)
 // ═══════════════════════════════════════════════════════════
 
 function tickClock(){
@@ -209,39 +212,46 @@ function tickClock(){
 setInterval(tickClock,1000); tickClock();
 
 // ── All spots ──────────────────────────────────────────────
+// offshoreDir: compass bearing pointing AWAY from water (inland direction).
+// Wind from offshoreDir = fully offshore = score forced to 0.
+// Wind within 45° of offshoreDir (cosine > 0.7) = >70% offshore → score = 0.
 const ALL_SPOTS = [
   // Sardinien
-  { region:'Sardinien', regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_porto_pollo',   name:'Porto Pollo',       emoji:'🌊', lat:41.130, lon:9.320  },
-  { region:'Sardinien', regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_stintino',      name:'Stintino',          emoji:'⛵', lat:40.934, lon:8.226  },
-  { region:'Sardinien', regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_putzu_idu',     name:'Putzu Idu',         emoji:'💨', lat:40.013, lon:8.377  },
-  { region:'Sardinien', regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_porto_botte',   name:'Porto Botte',       emoji:'🌅', lat:39.054, lon:8.566  },
-  { region:'Sardinien', regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_cala_gonone',   name:'Cala Gonone',       emoji:'🏔', lat:40.283, lon:9.629  },
-  { region:'Sardinien', regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_villasimius',   name:'Villasimius',       emoji:'🐠', lat:39.118, lon:9.533  },
+  { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_porto_pollo',   name:'Porto Pollo',          emoji:'🌊', lat:41.130, lon:9.320,  offshoreDir:225 },
+  { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_stintino',      name:'Stintino',             emoji:'⛵', lat:40.934, lon:8.226,  offshoreDir:90  },
+  { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_putzu_idu',     name:'Putzu Idu',            emoji:'💨', lat:40.013, lon:8.377,  offshoreDir:90  },
+  { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_porto_botte',   name:'Porto Botte',          emoji:'🌅', lat:39.054, lon:8.566,  offshoreDir:45  },
+  { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_cala_gonone',   name:'Cala Gonone',          emoji:'🏔', lat:40.283, lon:9.629,  offshoreDir:270 },
+  { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_villasimius',   name:'Villasimius',          emoji:'🐠', lat:39.118, lon:9.533,  offshoreDir:315 },
   // Sizilien
-  { region:'Sizilien',  regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_puzziteddu',    name:'Puzziteddu/Granitola', emoji:'🌊', lat:37.634, lon:12.665 },
-  { region:'Sizilien',  regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_ragusa',        name:'Marina di Ragusa',  emoji:'🌅', lat:36.868, lon:14.555 },
-  { region:'Sizilien',  regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_maganuco',      name:'Spiaggia Maganuco', emoji:'⛵', lat:36.726, lon:14.858 },
-  { region:'Sizilien',  regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_avola',         name:'Avola',             emoji:'💎', lat:36.906, lon:15.099 },
-  { region:'Sizilien',  regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_correnti',      name:'Isola delle Correnti', emoji:'🌊', lat:36.679, lon:15.137 },
-  { region:'Sizilien',  regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_capo_dorlando', name:'Capo d\'Orlando',   emoji:'💨', lat:38.157, lon:14.758 },
-  { region:'Sizilien',  regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_messina',       name:'Messina/Capo Peloro', emoji:'🌊', lat:38.267, lon:15.636 },
-  // Spanien
-  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_roses',         name:'Roses',             emoji:'🌊', lat:42.267, lon:3.185  },
-  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_delta_ebre',    name:'Delta de l\'Ebre',  emoji:'🏞', lat:40.730, lon:0.868  },
-  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_peniscola',     name:'Peñíscola',          emoji:'🏰', lat:40.360, lon:0.421  },
-  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_denia',         name:'Denia',             emoji:'☀️', lat:38.846, lon:0.118  },
-  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_tarifa',        name:'Tarifa',            emoji:'💨', lat:36.012, lon:-5.598 },
+  { region:'Sizilien',     regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_puzziteddu',    name:'Puzziteddu/Granitola', emoji:'🌊', lat:37.634, lon:12.665, offshoreDir:45  },
+  { region:'Sizilien',     regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_ragusa',        name:'Marina di Ragusa',     emoji:'🌅', lat:36.868, lon:14.555, offshoreDir:0   },
+  { region:'Sizilien',     regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_maganuco',      name:'Spiaggia Maganuco',    emoji:'⛵', lat:36.726, lon:14.858, offshoreDir:315 },
+  { region:'Sizilien',     regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_avola',         name:'Avola',                emoji:'💎', lat:36.906, lon:15.099, offshoreDir:315 },
+  { region:'Sizilien',     regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_correnti',      name:'Isola delle Correnti', emoji:'🌊', lat:36.679, lon:15.137, offshoreDir:0   },
+  { region:'Sizilien',     regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_capo_dorlando', name:'Capo d\'Orlando',      emoji:'💨', lat:38.157, lon:14.758, offshoreDir:180 },
+  { region:'Sizilien',     regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_messina',       name:'Messina/Capo Peloro',  emoji:'🌊', lat:38.267, lon:15.636, offshoreDir:270 },
+  // Spanien (Mittelmeer)
+  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_roses',         name:'Roses',                emoji:'🌊', lat:42.267, lon:3.185,  offshoreDir:315 },
+  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_delta_ebre',    name:'Delta de l\'Ebre',     emoji:'🏞', lat:40.730, lon:0.868,  offshoreDir:315 },
+  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_peniscola',     name:'Peñíscola',            emoji:'🏰', lat:40.360, lon:0.421,  offshoreDir:270 },
+  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_denia',         name:'Denia',                emoji:'☀️', lat:38.846, lon:0.118,  offshoreDir:315 },
+  { region:'Spanien',      regionColor:'#3ddc84', regionUrl:'/spanien.html',  id:'p_tarifa',        name:'Tarifa',               emoji:'💨', lat:36.012, lon:-5.598, offshoreDir:0   },
+  // Nordspanien (Atlantik)
+  { region:'Nordspanien',  regionColor:'#10b981', regionUrl:'/',              id:'n_valdovino',     name:'Valdoviño',            emoji:'🌊', lat:43.569, lon:-8.172, offshoreDir:90  },
+  { region:'Nordspanien',  regionColor:'#10b981', regionUrl:'/',              id:'n_zarautz',       name:'Zarautz',              emoji:'🏄', lat:43.284, lon:-2.167, offshoreDir:180 },
+  { region:'Nordspanien',  regionColor:'#10b981', regionUrl:'/',              id:'n_liencres',      name:'Liencres (Cantabria)', emoji:'💨', lat:43.449, lon:-3.964, offshoreDir:180 },
   // Apulien
-  { region:'Apulien',      regionColor:'#fb923c', regionUrl:'/',              id:'a_vieste',        name:'Vieste',            emoji:'🏖', lat:41.886, lon:16.183 },
+  { region:'Apulien',      regionColor:'#fb923c', regionUrl:'/',              id:'a_vieste',        name:'Vieste',               emoji:'🏖', lat:41.886, lon:16.183, offshoreDir:270 },
   // Kroatien
-  { region:'Kroatien',     regionColor:'#f43f5e', regionUrl:'/',              id:'k_viganj',        name:'Viganj',            emoji:'💨', lat:43.027, lon:17.277 },
-  { region:'Kroatien',     regionColor:'#f43f5e', regionUrl:'/',              id:'k_bol',           name:'Bol / Zlatni Rat',  emoji:'⛵', lat:43.258, lon:16.634 },
-  { region:'Kroatien',     regionColor:'#f43f5e', regionUrl:'/',              id:'k_nin',           name:'Nin Lagune',        emoji:'🌊', lat:44.238, lon:15.185 },
-  { region:'Kroatien',     regionColor:'#f43f5e', regionUrl:'/',              id:'k_baska',         name:'Baška (Krk)',       emoji:'🏔', lat:44.967, lon:14.741 },
+  { region:'Kroatien',     regionColor:'#f43f5e', regionUrl:'/',              id:'k_viganj',        name:'Viganj',               emoji:'💨', lat:43.027, lon:17.277, offshoreDir:45  },
+  { region:'Kroatien',     regionColor:'#f43f5e', regionUrl:'/',              id:'k_bol',           name:'Bol / Zlatni Rat',     emoji:'⛵', lat:43.258, lon:16.634, offshoreDir:0   },
+  { region:'Kroatien',     regionColor:'#f43f5e', regionUrl:'/',              id:'k_nin',           name:'Nin Lagune',           emoji:'🌊', lat:44.238, lon:15.185, offshoreDir:90  },
+  { region:'Kroatien',     regionColor:'#f43f5e', regionUrl:'/',              id:'k_baska',         name:'Baška (Krk)',          emoji:'🏔', lat:44.967, lon:14.741, offshoreDir:180 },
   // Griechenland
-  { region:'Griechenland', regionColor:'#60a5fa', regionUrl:'/',              id:'g_vasiliki',      name:'Vasiliki',          emoji:'💨', lat:38.630, lon:20.610 },
-  { region:'Griechenland', regionColor:'#60a5fa', regionUrl:'/',              id:'g_lefkada_nw',    name:'Lefkada NW',        emoji:'🌊', lat:38.752, lon:20.579 },
-  { region:'Griechenland', regionColor:'#60a5fa', regionUrl:'/',              id:'g_gialova',       name:'Gialova / Navarino',emoji:'🏖', lat:36.983, lon:21.667 },
+  { region:'Griechenland', regionColor:'#60a5fa', regionUrl:'/',              id:'g_vasiliki',      name:'Vasiliki',             emoji:'💨', lat:38.630, lon:20.610, offshoreDir:45  },
+  { region:'Griechenland', regionColor:'#60a5fa', regionUrl:'/',              id:'g_lefkada_nw',    name:'Lefkada NW',           emoji:'🌊', lat:38.752, lon:20.579, offshoreDir:135 },
+  { region:'Griechenland', regionColor:'#60a5fa', regionUrl:'/',              id:'g_gialova',       name:'Gialova / Navarino',   emoji:'🏖', lat:36.983, lon:21.667, offshoreDir:45  },
 ];
 
 // ── Scoring ────────────────────────────────────────────────
@@ -272,13 +282,27 @@ function tempColor(t){
   return'#e84040';
 }
 
-function dayStats5(fc, dayIdx) {
+// Wind within 45° of pure-offshore (cosine > 0.7) → score 0
+function offshoreMultiplier(windDir, offshoreDir){
+  if(windDir==null||offshoreDir==null) return 1;
+  const diff=((windDir-offshoreDir+540)%360)-180;
+  return Math.cos(diff*Math.PI/180)>0.7?0:1;
+}
+
+function dayStats5(fc, dayIdx, spot) {
   if(!fc?.hourly?.windspeed_10m) return{score:0,avgWindKn:0,avgTemp:null};
   const h=fc.hourly, start=dayIdx*24;
-  const sw=h.windspeed_10m.slice(start+9,start+19).filter(v=>v!=null);
+  const sw=h.windspeed_10m.slice(start+9,start+19);
+  const sd=h.winddirection_10m?h.winddirection_10m.slice(start+9,start+19):[];
   const st=h.temperature_2m?h.temperature_2m.slice(start+9,start+19).filter(v=>v!=null):[];
-  const score=sw.length?Math.round(sw.map(w=>scoreHour(w,DEFAULT_WIN)).reduce((a,b)=>a+b,0)/sw.length):0;
-  const avgWindKn=sw.length?msToKn(sw.reduce((a,b)=>a+b,0)/sw.length):0;
+  const validW=sw.filter(v=>v!=null);
+  const scores=sw.map((w,i)=>{
+    if(w==null) return null;
+    const s=scoreHour(w,DEFAULT_WIN);
+    return s*offshoreMultiplier(sd[i]??null,spot?.offshoreDir??null);
+  }).filter(v=>v!=null);
+  const score=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
+  const avgWindKn=validW.length?msToKn(validW.reduce((a,b)=>a+b,0)/validW.length):0;
   const avgTemp=st.length?st.reduce((a,b)=>a+b,0)/st.length:null;
   return{score,avgWindKn,avgTemp};
 }
@@ -305,7 +329,7 @@ async function fetchForecast5(lat,lon){
 }
 
 // ── Leaflet map ────────────────────────────────────────────
-const vergleichMap = L.map('spots-map',{center:[40.5,13.0],zoom:5,zoomControl:true,attributionControl:true});
+const vergleichMap = L.map('spots-map',{center:[40.5,10.0],zoom:4,zoomControl:true,attributionControl:true});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
   attribution:'© OpenStreetMap contributors',maxZoom:18
 }).addTo(vergleichMap);
@@ -500,7 +524,7 @@ async function loadAll() {
     const spot=ALL_SPOTS[i];
     if(r.status!=='fulfilled') return{spot,avg:null,d0:null,d1:null,d2:null,d3:null,d4:null,wind:null,temp:null};
     const fc=r.value.fc;
-    const days=[0,1,2,3,4].map(d=>dayStats5(fc,d));
+    const days=[0,1,2,3,4].map(d=>dayStats5(fc,d,spot));
     const scores=days.map(d=>d.score);
     const avg=Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
     const wind=days.reduce((a,d)=>a+d.avgWindKn,0)/days.length;
