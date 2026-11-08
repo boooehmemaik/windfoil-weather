@@ -134,6 +134,8 @@
     .hist-axis{display:flex;justify-content:space-between;font-size:9px;color:#5a7a96;margin-top:4px}
     .hist-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:#5a7a96}
     .hist-stats b{font-weight:700}
+    .hist-temp-strip{display:flex;height:8px;margin:3px 0 0;border-radius:2px;overflow:hidden;gap:1px}
+    .hist-temp-strip div{flex:1;border-radius:1px}
 
     /* ── Footer ── */
     .ftr{background:#111820;border-top:1px solid #1e2d3d;padding:14px 20px;
@@ -357,6 +359,11 @@ function scoreEmoji(s) {
   if (s >= 70) return '🟢';
   if (s >= 40) return '🟡';
   return '🔴';
+}
+function tempColor(t){
+  if(t<10)return'#4a9ed8';if(t<15)return'#74bcd5';if(t<19)return'#98d4c5';
+  if(t<23)return'#c8d882';if(t<27)return'#f5c842';if(t<31)return'#f07820';
+  return'#e84040';
 }
 
 // ── Fetch forecast (Open-Meteo) ──────────────────────────
@@ -673,7 +680,7 @@ async function fetchSpotHistoryERA5(lat, lon, days=14) {
   const p=new URLSearchParams({
     latitude:lat,longitude:lon,
     start_date:fmt(start),end_date:fmt(end),
-    hourly:'windspeed_10m,windgusts_10m,winddirection_10m',
+    hourly:'windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m',
     wind_speed_unit:'ms',timezone:'Europe/Rome'
   });
   const r=await fetch(`https://archive-api.open-meteo.com/v1/archive?${p}`,{signal:AbortSignal.timeout(12000)});
@@ -684,7 +691,7 @@ async function fetchSpotHistoryERA5(lat, lon, days=14) {
   j.hourly.time.forEach((t,i)=>{
     const date=t.slice(0,10), hour=parseInt(t.slice(11,13));
     if(hour<9||hour>18) return;
-    if(!dayMap[date]) dayMap[date]={winds:[],gusts:[],dirs:[]};
+    if(!dayMap[date]) dayMap[date]={winds:[],gusts:[],dirs:[],temps:[]};
     const w=j.hourly.windspeed_10m[i];
     if(w!=null){
       dayMap[date].winds.push(w);
@@ -692,13 +699,16 @@ async function fetchSpotHistoryERA5(lat, lon, days=14) {
       const dir=j.hourly.winddirection_10m?.[i];
       if(dir!=null) dayMap[date].dirs.push(dir);
     }
+      const temp=j.hourly.temperature_2m?.[i];
+      if(temp!=null) dayMap[date].temps.push(temp);
   });
   return Object.entries(dayMap).map(([date,d])=>{
     const avgWind=d.winds.length?d.winds.reduce((a,b)=>a+b,0)/d.winds.length:0;
     const maxGust=d.gusts.length?Math.max(...d.gusts):0;
     const scores=d.winds.map(w=>scoreHour(w,DEFAULT_WIN));
     const score=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
-    return{date,avgWind,maxGust,score,avgWindKn:msToKn(avgWind)};
+    const avgTemp=d.temps.length?d.temps.reduce((a,b)=>a+b,0)/d.temps.length:null;
+    return{date,avgWind,maxGust,score,avgWindKn:msToKn(avgWind),avgTemp};
   }).sort((a,b)=>a.date.localeCompare(b.date));
 }
 
@@ -724,11 +734,18 @@ function buildHistCard(spot, histData) {
   return `<div class="hist-card">
     <div class="hist-card-title" style="color:${spot.color}">${spot.emoji} ${spot.name}</div>
     <svg class="hist-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>
+    <div class="hist-temp-strip" title="Tagestemperatur 9–18 Uhr">${histData.map(d=>{
+    const t=d.avgTemp;
+    const col=t!=null?tempColor(t):'#1e2d3d';
+    const lbl=t!=null?`${new Date(d.date+'T12:00').toLocaleDateString('de-DE',{day:'numeric',month:'numeric'})}: Ø ${t.toFixed(1)}°C`:'keine Temp-Daten';
+    return`<div style="flex:1;background:${col};border-radius:1px;opacity:.85" title="${lbl}"></div>`;
+  }).join('')}</div>
     <div class="hist-axis"><span>${first}</span><span>${last}</span></div>
     <div class="hist-stats">
       <span>Ø Score: <b style="color:${scoreColor(avgScore)}">${avgScore}</b></span>
       <span>Best: <b style="color:#3ddc84">${bestLabel} · ${best.score}</b></span>
       <span>Ø Wind: <b style="color:#d8e4f0">${avgKn} kn</b></span>
+      ${(()=>{const tempsValid=histData.filter(d=>d.avgTemp!=null);const avgTempVal=tempsValid.length?(tempsValid.reduce((a,b)=>a+b.avgTemp,0)/tempsValid.length).toFixed(1):null;return avgTempVal?`<span>Ø Temp: <b style="color:${tempColor(parseFloat(avgTempVal))}">${avgTempVal}°C</b></span>`:''})()}
     </div>
   </div>`;
 }
