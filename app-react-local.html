@@ -11,7 +11,7 @@
 #boot .ring{width:42px;height:42px;border:3px solid #243040;border-top-color:#f07820;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select,button,textarea{font-size:inherit}}
-@media(max-width:600px){.wf-hdr-sardinia{display:none!important}}</style>
+@media(max-width:600px){.wf-hdr-sardinia{display:none!important}.wf-hdr-sizilien{display:none!important}}</style>
 <script type="importmap">{"imports":{"react":"vendor/react-esm-shim.js","react-dom":"vendor/react-esm-shim.js"}}</script></head>
 <body><div id="boot"><div class="ring"></div><div id="bootMsg">WindFoil wird geladen…</div></div><div id="root"></div>
   <script>
@@ -2056,6 +2056,8 @@ function HistoryView({ onClose }) {
   );
 }
 
+const AuthCtx = React.createContext(null);
+
 function AuthGate({children}){
   const [sess,setSess]=useState(null); // null=loading, false=anon, obj=authed
   const [histOpen,setHistOpen]=useState(false);
@@ -2252,13 +2254,29 @@ function AuthGate({children}){
   const isHistUser = HISTORY_EMAILS.includes(sess.user?.email);
 
   return(
+    <AuthCtx.Provider value={sess.user?.email||null}>
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
           padding:'8px 16px',background:CA.deep,borderBottom:`1px solid ${CA.line}`}}>
-        <span style={{fontSize:13,color:CA.haze}}>
-          {t('auth_logged_as')} <b style={{color:CA.foam}}>{sess.user?.email}</b>
-        </span>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <a href="/sardinia.html"
+            title="Sardinien Wingfoil-Map"
+            className="wf-hdr-sardinia"
+            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
+              border:`1px solid ${CA.line}`,background:'transparent',
+              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
+              display:'inline-flex',alignItems:'center',gap:4}}>
+            Sardinien
+          </a>
+          <a href="/sizilien.html"
+            title="Sizilien Wingfoil-Map"
+            className="wf-hdr-sizilien"
+            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
+              border:`1px solid ${CA.line}`,background:'transparent',
+              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
+              display:'inline-flex',alignItems:'center',gap:4}}>
+            Sizilien
+          </a>
           {isHistUser && (
             <button onClick={()=>setHistOpen(o=>!o)}
               style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
@@ -2280,6 +2298,7 @@ function AuthGate({children}){
         ? <HistoryView onClose={()=>setHistOpen(false)}/>
         : children}
     </div>
+    </AuthCtx.Provider>
   );
 }
 
@@ -2520,6 +2539,7 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
+  const userEmail = React.useContext(AuthCtx);
   const [loc,setLoc]           = useState(()=>loadStored("wf_loc",{lat:48.0703,lon:11.1167,name:"Wörthsee / Pilsensee"}));
   const [rider,setRider]       = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,skill:"intermediate",planeKn:""}));
   const [ri,setRi]             = useState(()=>loadStored("wf_rider",{weight:80,wingSize:5.0,skill:"intermediate",planeKn:""}));
@@ -3364,12 +3384,6 @@ function App() {
             <span style={{width:6,height:6,borderRadius:"50%",background:C.go,display:"inline-block"}}/>
             {activeUsers}
           </span>}
-          <a href="/sardinia.html"
-            title="Sardinien Wingfoil-Map"
-            className="wf-hdr-sardinia"
-            style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer",textDecoration:"none",lineHeight:"1.6"}}>
-            🏝 Sardinien
-          </a>
         </div>
       </header>
 
@@ -4210,9 +4224,11 @@ function App() {
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
         <span>WindFoil Weather Intelligence v3.28.17</span>
+        {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
         <a href="/sardinia.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sardinien</a>
+        <a href="/sizilien.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sizilien</a>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>{t('footer_help')}</a>
         <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
           title="Admin"
