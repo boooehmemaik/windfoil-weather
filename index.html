@@ -2259,6 +2259,14 @@ function AuthGate({children}){
           {t('auth_logged_as')} <b style={{color:CA.foam}}>{sess.user?.email}</b>
         </span>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <a href="/sardinia.html"
+            title="Sardinien Wingfoil-Map"
+            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
+              border:`1px solid ${CA.line}`,background:'transparent',
+              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
+              display:'inline-flex',alignItems:'center',gap:4}}>
+            🏝 Sardinien
+          </a>
           {isHistUser && (
             <button onClick={()=>setHistOpen(o=>!o)}
               style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
@@ -3364,12 +3372,6 @@ function App() {
             <span style={{width:6,height:6,borderRadius:"50%",background:C.go,display:"inline-block"}}/>
             {activeUsers}
           </span>}
-          <a href="/sardinia.html"
-            title="Sardinien Wingfoil-Map"
-            className="wf-hdr-sardinia"
-            style={{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:8,padding:"5px 12px",fontSize:11,cursor:"pointer",textDecoration:"none",lineHeight:"1.6"}}>
-            🏝 Sardinien
-          </a>
         </div>
       </header>
 

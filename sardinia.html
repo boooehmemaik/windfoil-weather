@@ -126,6 +126,15 @@
     .rank-3{color:#5a7a96}
     .rank-4{color:#5a7a96}
 
+    /* ── History Section ── */
+    .hist-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:28px}
+    .hist-card{background:#151d28;border:1px solid #1e2d3d;border-radius:16px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+    .hist-card-title{font-weight:700;font-size:13px;margin-bottom:10px}
+    .hist-chart{width:100%;height:64px;display:block}
+    .hist-axis{display:flex;justify-content:space-between;font-size:9px;color:#5a7a96;margin-top:4px}
+    .hist-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:#5a7a96}
+    .hist-stats b{font-weight:700}
+
     /* ── Footer ── */
     .ftr{background:#111820;border-top:1px solid #1e2d3d;padding:14px 20px;
       text-align:center;font-size:11px;color:#5a7a96;
@@ -213,6 +222,12 @@
     <b>Porto Botte</b> — Südwestküste, Laguna di Porto Botte bei Giba. Flaches Lagunen-Wasser ideal für Wingfoiling und Anfänger. Sehr konstanter Maestrale, windgeschützte Einfahrt. Einer der verlässlichsten Spots der Insel.<br>
     <b>Cala Gonone</b> — Nordostküste, Golf von Orosei. Levante (Ostwind) und lokale Thermiksysteme. Felsige Steilküste, tiefes Wasser direkt am Spot. Weniger überlaufen.<br>
     <b>Villasimius</b> — Südostspitze Sardiniens. Scirocco (SO) mit langer Fetch aus dem Mittelmeer und Maestrale-Querung. Kristallklares Wasser, Naturschutzgebiet.
+  </div>
+
+  <!-- History Charts -->
+  <div class="sec-title">📊 14-Tage Rückblick · ERA5-Reanalyse (9–18 Uhr)</div>
+  <div class="hist-grid" id="hist-grid">
+    <div class="loading"><span class="spin">⟳</span> Lade ERA5-Verlaufsdaten…</div>
   </div>
 </div>
 
@@ -617,6 +632,7 @@ async function loadAll() {
 
   // Build ranking table
   buildRankingTable(ranking, results);
+  loadHistoryCharts();
 }
 
 // ── Ranking table ─────────────────────────────────────────
@@ -647,6 +663,88 @@ function buildRankingTable(ranking, results) {
       <td style="font-size:10px;color:#8ab5d0">${rankLabel[i]}</td>
     </tr>`;
   }).join('');
+}
+
+// ── ERA5 history ───────────────────────────────────────────
+async function fetchSpotHistoryERA5(lat, lon, days=14) {
+  const end=new Date(); end.setDate(end.getDate()-1);
+  const start=new Date(end); start.setDate(end.getDate()-days+1);
+  const fmt=d=>d.toISOString().slice(0,10);
+  const p=new URLSearchParams({
+    latitude:lat,longitude:lon,
+    start_date:fmt(start),end_date:fmt(end),
+    hourly:'windspeed_10m,windgusts_10m,winddirection_10m',
+    wind_speed_unit:'ms',timezone:'Europe/Rome'
+  });
+  const r=await fetch(`https://archive-api.open-meteo.com/v1/archive?${p}`,{signal:AbortSignal.timeout(12000)});
+  if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j=await r.json();
+  if(!j?.hourly?.time) throw new Error('no data');
+  const dayMap={};
+  j.hourly.time.forEach((t,i)=>{
+    const date=t.slice(0,10), hour=parseInt(t.slice(11,13));
+    if(hour<9||hour>18) return;
+    if(!dayMap[date]) dayMap[date]={winds:[],gusts:[],dirs:[]};
+    const w=j.hourly.windspeed_10m[i];
+    if(w!=null){
+      dayMap[date].winds.push(w);
+      dayMap[date].gusts.push(j.hourly.windgusts_10m?.[i]??w);
+      const dir=j.hourly.winddirection_10m?.[i];
+      if(dir!=null) dayMap[date].dirs.push(dir);
+    }
+  });
+  return Object.entries(dayMap).map(([date,d])=>{
+    const avgWind=d.winds.length?d.winds.reduce((a,b)=>a+b,0)/d.winds.length:0;
+    const maxGust=d.gusts.length?Math.max(...d.gusts):0;
+    const scores=d.winds.map(w=>scoreHour(w,DEFAULT_WIN));
+    const score=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
+    return{date,avgWind,maxGust,score,avgWindKn:msToKn(avgWind)};
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function buildHistCard(spot, histData) {
+  if(!histData||!histData.length){
+    return `<div class="hist-card"><div class="hist-card-title" style="color:${spot.color}">${spot.emoji} ${spot.name}</div><div style="font-size:11px;color:#5a7a96;padding:8px 0">ERA5-Daten nicht verfügbar</div></div>`;
+  }
+  const maxWK=Math.max(...histData.map(d=>d.avgWindKn),4);
+  const W=280,H=60,bw=W/histData.length-1.5;
+  const bars=histData.map((d,i)=>{
+    const h=Math.max(2,(d.avgWindKn/maxWK)*H);
+    const x=(i*(W/histData.length)).toFixed(1);
+    const y=(H-h).toFixed(1);
+    const label=new Date(d.date+'T12:00').toLocaleDateString('de-DE',{day:'numeric',month:'numeric'});
+    return `<rect x="${x}" y="${y}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${scoreColor(d.score)}" opacity="0.85" rx="2"><title>${label}: Ø ${d.avgWindKn.toFixed(1)} kn · Score ${d.score}</title></rect>`;
+  }).join('');
+  const best=histData.reduce((a,b)=>b.score>a.score?b:a,histData[0]);
+  const bestLabel=new Date(best.date+'T12:00').toLocaleDateString('de-DE',{day:'numeric',month:'numeric'});
+  const avgScore=Math.round(histData.reduce((a,b)=>a+b.score,0)/histData.length);
+  const avgKn=(histData.reduce((a,b)=>a+b.avgWindKn,0)/histData.length).toFixed(1);
+  const first=new Date(histData[0].date+'T12:00').toLocaleDateString('de-DE',{day:'numeric',month:'numeric'});
+  const last=new Date(histData[histData.length-1].date+'T12:00').toLocaleDateString('de-DE',{day:'numeric',month:'numeric'});
+  return `<div class="hist-card">
+    <div class="hist-card-title" style="color:${spot.color}">${spot.emoji} ${spot.name}</div>
+    <svg class="hist-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>
+    <div class="hist-axis"><span>${first}</span><span>${last}</span></div>
+    <div class="hist-stats">
+      <span>Ø Score: <b style="color:${scoreColor(avgScore)}">${avgScore}</b></span>
+      <span>Best: <b style="color:#3ddc84">${bestLabel} · ${best.score}</b></span>
+      <span>Ø Wind: <b style="color:#d8e4f0">${avgKn} kn</b></span>
+    </div>
+  </div>`;
+}
+
+async function loadHistoryCharts() {
+  const grid=document.getElementById('hist-grid');
+  if(!grid) return;
+  try {
+    const results=await Promise.allSettled(SPOTS.map(s=>fetchSpotHistoryERA5(s.lat,s.lon)));
+    grid.innerHTML=SPOTS.map((s,i)=>{
+      const r=results[i];
+      return buildHistCard(s,r.status==='fulfilled'?r.value:null);
+    }).join('');
+  } catch(e) {
+    grid.innerHTML=`<div style="color:#e84040;font-size:12px;padding:12px">Fehler: ${e.message}</div>`;
+  }
 }
 
 // ── Start ─────────────────────────────────────────────────
