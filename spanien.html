@@ -56,6 +56,8 @@
     .spot-desc{font-size:11px;color:#5a7a96;margin-top:2px}
     .spot-best-badge{background:#3ddc84;color:#0a0e14;font-size:10px;font-weight:700;
       border-radius:8px;padding:3px 8px;white-space:nowrap}
+    .camper-badge{background:rgba(45,90,61,.85);border:1px solid #4a9d6a;color:#6de8c0;
+      font-size:10px;font-weight:700;border-radius:8px;padding:3px 8px;white-space:nowrap;cursor:default}
 
     .day-tabs{display:flex;border-bottom:1px solid #1e2d3d}
     .day-tab{flex:1;padding:8px 4px;text-align:center;font-size:10px;
@@ -212,11 +214,11 @@ function tickClock(){
 setInterval(tickClock,1000); tickClock();
 
 const SPOTS = [
-  { id:'roses',       name:'Roses',           emoji:'🌊', desc:'Tramuntana · Costa Brava Nord',   lat:42.267, lon:3.185,  shoreNote:'Pyrenäen-Fallwind, Golf de Roses', color:'#3a9ad9' },
-  { id:'delta_ebre',  name:"Delta de l'Ebre", emoji:'🏞', desc:'Tramuntana · Flachwasser-Delta',  lat:40.730, lon:0.868,  shoreNote:'Sandwatt, Tramuntana/Mistral',    color:'#f07820' },
+  { id:'roses',       name:'Roses',           emoji:'🌊', desc:'Tramuntana · Costa Brava Nord',   lat:42.267, lon:3.185,  shoreNote:'Pyrenäen-Fallwind, Golf de Roses', color:'#3a9ad9', camper:true, camperNote:'Camping La Siesta & weitere Campingplätze direkt am Strand' },
+  { id:'delta_ebre',  name:"Delta de l'Ebre", emoji:'🏞', desc:'Tramuntana · Flachwasser-Delta',  lat:40.730, lon:0.868,  shoreNote:'Sandwatt, Tramuntana/Mistral',    color:'#f07820', camper:true, camperNote:'Naturpark Ebro-Delta, freies Campieren und Stellplätze verfügbar' },
   { id:'peniscola',   name:'Peñíscola',        emoji:'🏰', desc:'Levante · Costa del Azahar',     lat:40.360, lon:0.421,  shoreNote:'Levante-Thermik, O-Exposition',   color:'#f5b942' },
   { id:'denia',       name:'Denia',            emoji:'☀️', desc:'Levante · Costa Blanca',          lat:38.846, lon:0.118,  shoreNote:'Levante + Montgo-Katabatik',      color:'#a78bfa' },
-  { id:'tarifa',      name:'Tarifa',           emoji:'💨', desc:'Levante + Poniente · Gibraltar',  lat:36.012, lon:-5.598, shoreNote:'Stärkster Windspot Europas',       color:'#3ddc84' },
+  { id:'tarifa',      name:'Tarifa',           emoji:'💨', desc:'Levante + Poniente · Gibraltar',  lat:36.012, lon:-5.598, shoreNote:'Stärkster Windspot Europas',       color:'#3ddc84', camper:true, camperNote:'Campingparadies Europas — Dos Mares, 100 Patos, Los Lances, viele Spots' },
 ];
 
 const msToKn = ms => ms * 1.94384;
@@ -334,7 +336,7 @@ function buildCard(spot,forecasts,bestId){
       <div class="spot-name">${spot.emoji} ${spot.name}</div>
       <div class="spot-desc">${spot.desc}</div>
       <div class="spot-coords">${spot.lat.toFixed(3)}°N ${spot.lon.toFixed(3)}°${spot.lon>=0?'E':'W'}</div>
-    </div>${isBest?'<div class="spot-best-badge">⭐ BEST</div>':''}</div>
+    </div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${isBest?'<div class="spot-best-badge">⭐ BEST</div>':''}${spot.camper?'<div class="camper-badge" title="'+spot.camperNote+'">🚐 Camper</div>':''}</div></div>
     <div class="day-tabs">${tabsHtml}</div>
     ${detailHtml}
   </div>`;
@@ -356,7 +358,7 @@ const mapMarkers={};
 SPOTS.forEach(spot=>{
   const icon=L.divIcon({className:'',html:`<div style="position:relative;width:20px;height:20px"><div style="width:16px;height:16px;border-radius:50%;background:${spot.color};border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 6px rgba(0,0,0,.6);margin:2px"></div></div>`,iconSize:[20,20],iconAnchor:[10,10]});
   const m=L.marker([spot.lat,spot.lon],{icon}).addTo(map);
-  m.bindPopup(`<b>${spot.emoji} ${spot.name}</b><br><span style="color:#5a7a96;font-size:10px">${spot.desc}</span><br><span style="font-family:monospace;font-size:9px;color:#5a7a96">${spot.lat.toFixed(4)}°N ${Math.abs(spot.lon).toFixed(4)}°${spot.lon>=0?'E':'W'}</span><br><i style="color:#5a7a96;font-size:10px">Lade Forecast…</i>`);
+  m.bindPopup(`<b>${spot.emoji} ${spot.name}</b>${spot.camper ? ' <span style="color:#6de8c0;font-size:10px">🚐</span>' : ''}<br><span style="color:#5a7a96;font-size:10px">${spot.desc}</span><br><span style="font-family:monospace;font-size:9px;color:#5a7a96">${spot.lat.toFixed(4)}°N ${Math.abs(spot.lon).toFixed(4)}°${spot.lon>=0?'E':'W'}</span><br><i style="color:#5a7a96;font-size:10px">Lade Forecast…</i>`);
   mapMarkers[spot.id]=m;
 });
 
