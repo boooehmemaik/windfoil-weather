@@ -118,13 +118,14 @@
     </svg>
     <div>
       <div class="hdr-title">WINDFOIL</div>
-      <div class="hdr-sub">Spot-Vergleich · 29 Spots · 5-Tage-Forecast</div>
+      <div class="hdr-sub">Spot-Vergleich · 40 Spots · 5-Tage-Forecast</div>
     </div>
   </div>
   <div class="hdr-links">
     <a href="/sardinia.html" class="hdr-btn">Sardinien</a>
     <a href="/sizilien.html" class="hdr-btn">Sizilien</a>
     <a href="/spanien.html" class="hdr-btn">Spanien</a>
+    <a href="/skandinavien.html" class="hdr-btn">Skandinavien</a>
     <a href="/watcher.html" class="hdr-btn">🔬 Watcher</a>
     <a href="/" class="hdr-btn">← Hauptseite</a>
     <span id="hdr-clock"></span>
@@ -150,7 +151,7 @@
   </div>
 
   <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <span>📊 Vollständiges Ranking · alle 29 Spots</span>
+    <span>📊 Vollständiges Ranking · alle 40 Spots</span>
     <div class="filter-row" style="margin:0">
       <button class="filter-btn active" onclick="setFilter('all',this)">Alle</button>
       <button class="filter-btn" onclick="setFilter('Sardinien',this)">Sardinien</button>
@@ -160,6 +161,8 @@
       <button class="filter-btn" onclick="setFilter('Apulien',this)">Apulien</button>
       <button class="filter-btn" onclick="setFilter('Kroatien',this)">Kroatien</button>
       <button class="filter-btn" onclick="setFilter('Griechenland',this)">Griechenland</button>
+      <button class="filter-btn" onclick="setFilter('Schweden',this)">Schweden</button>
+      <button class="filter-btn" onclick="setFilter('Finnland',this)">Finnland</button>
     </div>
   </div>
 
@@ -177,11 +180,12 @@
           <th onclick="sortBy('avg')">Ø Score<span class="sort-arrow">↕</span></th>
           <th onclick="sortBy('wind')">Ø Wind<span class="sort-arrow">↕</span></th>
           <th onclick="sortBy('temp')">Ø Temp<span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('sst')">🌊 SST<span class="sort-arrow">↕</span></th>
           <th></th>
         </tr>
       </thead>
       <tbody id="compare-body">
-        <tr><td colspan="11"><div class="loading-overlay"><span class="spin">⟳</span> Lade alle 29 Spots…</div></td></tr>
+        <tr><td colspan="12"><div class="loading-overlay"><span class="spin">⟳</span> Lade alle 40 Spots…</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -194,6 +198,7 @@
   <a href="/sardinia.html">Sardinien</a>
   <a href="/sizilien.html">Sizilien</a>
   <a href="/spanien.html">Spanien</a>
+  <a href="/skandinavien.html">🏔 Skandinavien</a>
   <a href="/watcher.html">🔬 Watcher</a>
   <a href="/">← Hauptseite</a>
   <a href="https://paypal.me/boehmemaik" target="_blank" rel="noopener">♥ Spenden</a>
@@ -201,8 +206,8 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// WindFoil Spot-Vergleich — 29 Spots, 5-Tage-Forecast
-// Sardinien(6)+Sizilien(7)+Spanien(5)+Nordspanien(3)+Apulien(1)+Kroatien(4)+Griechenland(3)
+// WindFoil Spot-Vergleich — 40 Spots, 5-Tage-Forecast
+// Sardinien(6)+Sizilien(7)+Spanien(5)+Nordspanien(3)+Apulien(1)+Kroatien(4)+Griechenland(3)+Schweden(7)+Finnland(4)
 // ═══════════════════════════════════════════════════════════
 
 function tickClock(){
@@ -252,6 +257,19 @@ const ALL_SPOTS = [
   { region:'Griechenland', regionColor:'#60a5fa', regionUrl:'/',              id:'g_vasiliki',      name:'Vasiliki',             emoji:'💨', lat:38.630, lon:20.610, offshoreDir:45  },
   { region:'Griechenland', regionColor:'#60a5fa', regionUrl:'/',              id:'g_lefkada_nw',    name:'Lefkada NW',           emoji:'🌊', lat:38.752, lon:20.579, offshoreDir:135 },
   { region:'Griechenland', regionColor:'#60a5fa', regionUrl:'/',              id:'g_gialova',       name:'Gialova / Navarino',   emoji:'🏖', lat:36.983, lon:21.667, offshoreDir:45  },
+  // Schweden (7)
+  { region:'Schweden',     regionColor:'#1a73e8', regionUrl:'/skandinavien.html', id:'sk_haga_park',        name:'Haga Park (Öland)',        emoji:'🌊', lat:56.650, lon:16.420, offshoreDir:90  },
+  { region:'Schweden',     regionColor:'#1a73e8', regionUrl:'/skandinavien.html', id:'sk_gronhogen',        name:'Grönhögen (Öland)',        emoji:'💨', lat:56.264, lon:16.470, offshoreDir:315 },
+  { region:'Schweden',     regionColor:'#1a73e8', regionUrl:'/skandinavien.html', id:'sk_lomma',            name:'Lomma',                    emoji:'⛵', lat:55.682, lon:12.955, offshoreDir:90  },
+  { region:'Schweden',     regionColor:'#1a73e8', regionUrl:'/skandinavien.html', id:'sk_skalderviken',     name:'Skälderviken',             emoji:'🏖', lat:56.232, lon:12.862, offshoreDir:45  },
+  { region:'Schweden',     regionColor:'#1a73e8', regionUrl:'/skandinavien.html', id:'sk_naset_falsterbo',  name:'Näset / Falsterbo',        emoji:'🏄', lat:55.390, lon:12.840, offshoreDir:45  },
+  { region:'Schweden',     regionColor:'#1a73e8', regionUrl:'/skandinavien.html', id:'sk_varberg',          name:'Varberg / Apelviken',      emoji:'🌊', lat:57.112, lon:12.220, offshoreDir:90  },
+  { region:'Schweden',     regionColor:'#1a73e8', regionUrl:'/skandinavien.html', id:'sk_ringenas',         name:'Ringenäs (Halmstad)',      emoji:'⛵', lat:56.698, lon:12.665, offshoreDir:90  },
+  // Finnland (3 coastal + 1 lake)
+  { region:'Finnland',     regionColor:'#06b6d4', regionUrl:'/skandinavien.html', id:'sk_hanko',            name:'Hanko / Tulliniemi',       emoji:'🌊', lat:59.820, lon:22.910, offshoreDir:0   },
+  { region:'Finnland',     regionColor:'#06b6d4', regionUrl:'/skandinavien.html', id:'sk_pori_yyteri',      name:'Pori / Yyteri',            emoji:'🌊', lat:61.600, lon:21.440, offshoreDir:90  },
+  { region:'Finnland',     regionColor:'#06b6d4', regionUrl:'/skandinavien.html', id:'sk_lauttasaari',      name:'Lauttasaari / Helsinki',   emoji:'💨', lat:60.148, lon:24.886, offshoreDir:0   },
+  { region:'Finnland',     regionColor:'#06b6d4', regionUrl:'/skandinavien.html', id:'sk_lahti',            name:'Lahti / Vesijärvi',        emoji:'🏞', lat:60.980, lon:25.660, offshoreDir:180, noMarine:true },
 ];
 
 // ── Scoring ────────────────────────────────────────────────
@@ -364,10 +382,11 @@ function updateMapMarkers(){
     m.setIcon(icon);
     const wind=r.wind!=null?r.wind.toFixed(1)+' kn':'–';
     const temp=r.temp!=null?r.temp.toFixed(1)+'°C':'–';
+    const sst=r.sst!=null?r.sst.toFixed(1)+'°C':'–';
     m.bindPopup('<b>'+r.spot.emoji+' '+r.spot.name+'</b><br>'+
       '<span style="color:'+col+';font-size:13px;font-weight:700">Score '+scoreText+'</span>'+
       ' <span style="color:#5a7a96;font-size:10px">(Heute)</span><br>'+
-      '<span style="font-size:11px">Ø '+wind+' · 🌡 '+temp+'</span><br>'+
+      '<span style="font-size:11px">Ø '+wind+' · 🌡 '+temp+' · 🌊 '+sst+'</span><br>'+
       '<span style="color:'+r.spot.regionColor+';font-size:10px">'+r.spot.region+'</span>');
   });
 }
@@ -403,6 +422,7 @@ function renderTable() {
     const avgDisp = r.avg!=null?'<b style="color:'+scoreColor(r.avg)+'">'+r.avg+'</b>':'–';
     const windDisp = r.wind!=null?(r.wind.toFixed(1)+' kn'):'–';
     const tempDisp = r.temp!=null?('<b style="color:'+tempColor(r.temp)+'">'+r.temp.toFixed(1)+'°C</b>'):'–';
+    const sstDisp = r.sst!=null?('<b style="color:'+sstColor(r.sst)+'">'+r.sst.toFixed(1)+'°C</b>'):'–';
     const lon=r.spot.lon;
     const lonStr=Math.abs(lon).toFixed(3)+'°'+(lon>=0?'E':'W');
     return '<tr data-region="'+r.spot.region+'">'+
@@ -415,6 +435,7 @@ function renderTable() {
       '<td class="wind-cell">'+avgDisp+'</td>'+
       '<td class="wind-cell">'+windDisp+'</td>'+
       '<td class="temp-cell">'+tempDisp+'</td>'+
+      '<td class="temp-cell">'+sstDisp+'</td>'+
       '<td class="link-cell"><a href="'+r.spot.regionUrl+'" title="'+r.spot.region+' öffnen">→ Detail</a></td>'+
     '</tr>';
   }).join('');
@@ -498,20 +519,45 @@ function triggerRefresh(){
   loadAll();
 }
 
+// ── Fetch SST (Open-Meteo Marine API) ─────────────────────
+async function fetchMarine(lat, lon) {
+  const p = new URLSearchParams({latitude:lat,longitude:lon,hourly:'sea_surface_temperature',forecast_days:1,timezone:'auto'});
+  try {
+    const r = await fetch('https://marine-api.open-meteo.com/v1/marine?'+p, {signal:AbortSignal.timeout(8000)});
+    if (!r.ok) return null;
+    const j = await r.json();
+    const vals = j?.hourly?.sea_surface_temperature;
+    if (!vals) return null;
+    const valid = vals.slice(9,18).filter(v => v != null);
+    return valid.length ? valid.reduce((a,b) => a+b, 0) / valid.length : null;
+  } catch { return null; }
+}
+
+function sstColor(t) {
+  if(t==null)return'#5a7a96';
+  if(t<8)return'#4a9ed8';if(t<14)return'#74bcd5';if(t<18)return'#98d4c5';
+  if(t<22)return'#c8d882';if(t<26)return'#f5c842';return'#f07820';
+}
+
 // ── Main load ──────────────────────────────────────────────
 async function loadAll() {
   const statusEl=document.getElementById('load-status');
   if(statusEl) statusEl.textContent='⟳ Lade…';
 
   let loaded=0;
-  const results = await Promise.allSettled(
-    ALL_SPOTS.map(async spot=>{
-      const fc=await fetchForecast5(spot.lat,spot.lon);
-      loaded++;
-      if(statusEl) statusEl.textContent='⟳ '+loaded+'/'+ALL_SPOTS.length+' geladen…';
-      return{spot,fc};
-    })
-  );
+  const [results, marineResults] = await Promise.all([
+    Promise.allSettled(
+      ALL_SPOTS.map(async spot=>{
+        const fc=await fetchForecast5(spot.lat,spot.lon);
+        loaded++;
+        if(statusEl) statusEl.textContent='⟳ '+loaded+'/'+ALL_SPOTS.length+' geladen…';
+        return{spot,fc};
+      })
+    ),
+    Promise.allSettled(
+      ALL_SPOTS.map(s => s.noMarine ? Promise.resolve(null) : fetchMarine(s.lat, s.lon))
+    ),
+  ]);
 
   // Build day labels from first successful result
   const firstOk=results.find(r=>r.status==='fulfilled');
@@ -522,7 +568,8 @@ async function loadAll() {
   // Build table data
   tableData = results.map((r,i)=>{
     const spot=ALL_SPOTS[i];
-    if(r.status!=='fulfilled') return{spot,avg:null,d0:null,d1:null,d2:null,d3:null,d4:null,wind:null,temp:null};
+    const sst=marineResults[i]?.status==='fulfilled'?marineResults[i].value:null;
+    if(r.status!=='fulfilled') return{spot,avg:null,d0:null,d1:null,d2:null,d3:null,d4:null,wind:null,temp:null,sst};
     const fc=r.value.fc;
     const days=[0,1,2,3,4].map(d=>dayStats5(fc,d,spot));
     const scores=days.map(d=>d.score);
@@ -530,7 +577,7 @@ async function loadAll() {
     const wind=days.reduce((a,d)=>a+d.avgWindKn,0)/days.length;
     const tempsValid=days.map(d=>d.avgTemp).filter(t=>t!=null);
     const temp=tempsValid.length?tempsValid.reduce((a,b)=>a+b,0)/tempsValid.length:null;
-    return{spot,avg,d0:scores[0],d1:scores[1],d2:scores[2],d3:scores[3],d4:scores[4],wind,temp};
+    return{spot,avg,d0:scores[0],d1:scores[1],d2:scores[2],d3:scores[3],d4:scores[4],wind,temp,sst};
   });
 
   // Sort by avg score (default)
