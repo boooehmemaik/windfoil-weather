@@ -11,7 +11,7 @@
 #boot .ring{width:42px;height:42px;border:3px solid #243040;border-top-color:#f07820;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select,button,textarea{font-size:inherit}}
-@media(max-width:600px){.wf-hdr-sardinia{display:none!important}.wf-hdr-sizilien{display:none!important}.wf-hdr-spanien{display:none!important}}</style>
+@media(max-width:600px){.wf-hdr-sardinia{display:none!important}.wf-hdr-sizilien{display:none!important}.wf-hdr-spanien{display:none!important}.wf-hdr-vergleich{display:none!important}}</style>
 <script type="importmap">{"imports":{"react":"vendor/react-esm-shim.js","react-dom":"vendor/react-esm-shim.js"}}</script></head>
 <body><div id="boot"><div class="ring"></div><div id="bootMsg">WindFoil wird geladen…</div></div><div id="root"></div>
   <script>
@@ -2286,6 +2286,15 @@ function AuthGate({children}){
               display:'inline-flex',alignItems:'center',gap:4}}>
             Spanien
           </a>
+          <a href="/vergleich.html"
+            title="Spots Vergleich — alle Regionen"
+            className="wf-hdr-vergleich"
+            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
+              border:`1px solid ${CA.line}`,background:'transparent',
+              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
+              display:'inline-flex',alignItems:'center',gap:4}}>
+            Vergleich
+          </a>
           {isHistUser && (
             <button onClick={()=>setHistOpen(o=>!o)}
               style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
@@ -4239,6 +4248,7 @@ function App() {
         <a href="/sardinia.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sardinien</a>
         <a href="/sizilien.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sizilien</a>
         <a href="/spanien.html" style={{color:C.sky,textDecoration:"none"}}>🇪🇸 Spanien</a>
+        <a href="/vergleich.html" style={{color:C.sky,textDecoration:"none"}}>📊 Vergleich</a>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>{t('footer_help')}</a>
         <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
           title="Admin"

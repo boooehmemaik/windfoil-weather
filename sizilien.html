@@ -192,13 +192,13 @@
 <div class="main">
 
   <!-- Forecast cards -->
-  <div class="sec-title">🗺 3-Tage-Forecast · 6 Offshore-Messpunkte (~200 m vor der Küste)</div>
+  <div class="sec-title">🗺 3-Tage-Forecast · 7 Offshore-Messpunkte (~200 m vor der Küste)</div>
   <div class="spots-grid" id="spots-grid">
     <!-- filled by JS -->
   </div>
 
   <!-- Ranking table -->
-  <div class="sec-title">🏆 Gesamt-Ranking (3-Tage-Score, Wingfoiling Ø)</div>
+  <div class="sec-title">🏆 Gesamt-Ranking (3-Tage-Score, Wingfoiling Ø · 7 Spots)</div>
   <div class="rec-box">
     <div id="rec-loading" class="loading"><span class="spin">⟳</span> Berechne Ranking…</div>
     <table class="rec-table" id="rec-table" style="display:none">
@@ -222,12 +222,13 @@
     Winddaten: Open-Meteo GFS + ECMWF. Böenindex zeigt das Max-/Mittel-Verhältnis.
     <br><br>
     <b style="color:#d8e4f0">📍 Spots</b><br>
-    <b>Marsala – Stagnone</b> — Bekanntester Wingfoil-Spot Siziliens. Flache Lagune zwischen Marsala und dem Naturschutzgebiet Stagnone. Libeccio (SW) und Maestrale (NW) konstant von Frühjahr bis Herbst. Tiefe 0,5–1,5 m, ideal für Anfänger und Fortgeschrittene. Wärmste Wassertemperaturen der Insel.<br>
-    <b>Mondello</b> — Nordwestküste bei Palermo. Naturbucht mit sandigen Untiefen. Tramontane (N) und Maestrale (NW) dominieren. Gut erreichbar, touristisch, moderates Niveau für alle Rider.<br>
-    <b>Capo d'Orlando</b> — Nordostküste, Golf von Patti. Levante (O/NO) und thermische Nachmittagswinde aus dem Valle d'Agrò. Meist ruhige Morgen, stärker ab 12 Uhr. Flachwasserzone vor der Hafenmauer.<br>
-    <b>Marina di Ragusa</b> — Südostküste, Provinz Ragusa. Scirocco (SO) mit ausgedehntem Mittelmeer-Fetch. Langer Sandstrand, kaum Hindernisse. Zuverlässig Mai–Oktober, stärkste Winde nachmittags.<br>
-    <b>Portopalo di Capo Passero</b> — Südlichste Spitze Siziliens. Stärkster Scirocco-Fetch der gesamten Insel. Tiefes blaues Wasser, Naturschutzgebiet. Für erfahrene Rider — Wellen und starke Strömung möglich.<br>
-    <b>Giardini Naxos</b> — Ostküste bei Taormina. Levante (O) in Kombination mit katabatischen Winden vom Ätna-Massiv. Spektakuläres Panorama. Thermik stark, oft nachmittags 15–22 kn.
+    <b>🌊 Puzziteddu / Granitola</b> (Campobello di Mazara) — Einer der bekanntesten und besten Wingfoil-Spots der Insel. Schöner Sandeinstieg, das Wasser wird rasch tief genug. Bei moderatem Maestrale (NW) kleines Kabbelwasser; bei starkem NW oder Scirocco (SO) baut sich eine ordentliche Welle auf — ideal für Wave-Foiler.<br>
+    <b>🌅 Marina di Ragusa</b> — Sehr flexibler Küstenabschnitt mit guter Infrastruktur. Bei zu großen Wellen oder schwierigem Einstieg bietet die Schutzzone der Hafenmole auf der Westseite ruhigeres Wasser. Funktioniert besonders gut bei Scirocco (SO).<br>
+    <b>⛵ Spiaggia Maganuco</b> (nahe Pozzallo) — Breit angelegter Sandstrand, gut erreichbar. Der Ostwind bläst sideshore über den Strand. Durch eine lange Hafenmole am östlichen Ende bleibt das Wasser relativ moderat — kein extremer Wave-Break.<br>
+    <b>💎 Avola</b> (südlich von Syrakus) — Kristallklares, türkisblaues Wasser mit Sandstränden. Funktioniert hervorragend bei Nordostwind (Grecale). Leicht onshore mit Kabbelwelle, aber tief genug und gut zum Freeriden.<br>
+    <b>🌊 Isola delle Correnti</b> (Portopalo di Capo Passero) — Der südlichste Punkt Siziliens, wo Ionisches und Mittelmeer aufeinandertreffen. Anspruchsvoller Welle- und Windspot mit starker Strömung, vor allem bei West- oder Scirocco-Wind. Für erfahrene Foiler.<br>
+    <b>💨 Capo d'Orlando</b> — Malerischer Spot an der Nordostküste, Golf von Patti. Funktioniert bei Winden aus West bis Nordost. Da die Küste schnell abfällt, hast du sofort tiefes Wasser unter dem Foil.<br>
+    <b>🌊 Messina / Capo Peloro</b> — Die Meerenge von Messina. Sehr stetiger Wind durch Düseneffekte in der Straße. Aufgrund der starken Gezeitenströmungen eher etwas für erfahrene Foiler.
   </div>
 
   <!-- History Charts -->
@@ -263,31 +264,13 @@ setInterval(tickClock,1000); tickClock();
 // ── Spots (~200 m offshore) ────────────────────────────────
 const SPOTS = [
   {
-    id: 'marsala_stagnone',
-    name: 'Marsala – Stagnone',
+    id: 'puzziteddu',
+    name: 'Puzziteddu / Granitola',
     emoji: '🌊',
-    desc: 'Libeccio · Nordwestküste · Lagune',
-    lat: 37.843, lon: 12.467,
-    shoreNote: 'Flache Lagune, Libeccio/Maestrale',
+    desc: 'Maestrale/Scirocco · SW-Küste · Wave',
+    lat: 37.634, lon: 12.665,
+    shoreNote: 'Sandeinstieg, Wave bei NW/SO',
     color: '#3a9ad9',
-  },
-  {
-    id: 'mondello',
-    name: 'Mondello',
-    emoji: '⛵',
-    desc: 'Tramontane · Nordwestbucht',
-    lat: 38.222, lon: 13.323,
-    shoreNote: 'Naturbucht, Tramontane/Maestrale',
-    color: '#f07820',
-  },
-  {
-    id: 'capo_dorlando',
-    name: 'Capo d\'Orlando',
-    emoji: '💨',
-    desc: 'Levante · Nordostküste',
-    lat: 38.157, lon: 14.758,
-    shoreNote: 'Thermisch, Levante/Greco',
-    color: '#f5b942',
   },
   {
     id: 'marina_di_ragusa',
@@ -295,26 +278,53 @@ const SPOTS = [
     emoji: '🌅',
     desc: 'Scirocco · Südostküste',
     lat: 36.868, lon: 14.555,
-    shoreNote: 'Scirocco-Fetch, Sandstrand',
+    shoreNote: 'Scirocco-Fetch, Hafenmole Westseite',
     color: '#a78bfa',
   },
   {
-    id: 'portopalo',
-    name: 'Portopalo',
+    id: 'maganuco',
+    name: 'Spiaggia Maganuco',
+    emoji: '⛵',
+    desc: 'Levante · Pozzallo · Sandstrand',
+    lat: 36.726, lon: 14.858,
+    shoreNote: 'Ostwind sideshore, Mole schützt',
+    color: '#f07820',
+  },
+  {
+    id: 'avola',
+    name: 'Avola',
+    emoji: '💎',
+    desc: 'Grecale (NO) · Südlich Syrakus',
+    lat: 36.906, lon: 15.099,
+    shoreNote: 'Türkisblaues Wasser, NE onshore',
+    color: '#f5b942',
+  },
+  {
+    id: 'isola_correnti',
+    name: 'Isola delle Correnti',
     emoji: '🌊',
-    desc: 'Scirocco · Südspitze',
+    desc: 'Scirocco/W · Südspitze · Wave',
     lat: 36.679, lon: 15.137,
-    shoreNote: 'Stärkster Scirocco-Fetch der Insel',
+    shoreNote: 'Stärkster Scirocco-Fetch, Strömung!',
     color: '#3ddc84',
   },
   {
-    id: 'giardini_naxos',
-    name: 'Giardini Naxos',
-    emoji: '🌋',
-    desc: 'Levante · Ostküste · Ätna',
-    lat: 37.831, lon: 15.271,
-    shoreNote: 'Levante + Ätna-Katabatik',
+    id: 'capo_dorlando',
+    name: 'Capo d\'Orlando',
+    emoji: '💨',
+    desc: 'Levante/W-NO · Nordostküste',
+    lat: 38.157, lon: 14.758,
+    shoreNote: 'Sofort tiefes Wasser',
     color: '#f472b6',
+  },
+  {
+    id: 'messina',
+    name: 'Messina / Capo Peloro',
+    emoji: '🌊',
+    desc: 'Düseneffekt · Straße von Messina',
+    lat: 38.267, lon: 15.636,
+    shoreNote: 'Stetigster Wind, Gezeitenströmung',
+    color: '#6de8c0',
   },
 ];
 
@@ -634,11 +644,12 @@ function buildRankingTable(ranking, results) {
   document.getElementById('rec-loading').style.display = 'none';
   const tbl = document.getElementById('rec-table');
   tbl.style.display = '';
-  const rankClass = ['rank-1','rank-2','rank-3','rank-4','rank-4','rank-4'];
+  const rankClass = ['rank-1','rank-2','rank-3','rank-4','rank-4','rank-4','rank-4'];
   const rankLabel = [
     '🥇 Bester Spot — ideal für heutige Session',
     '🥈 Gut — lohnend bei gutem Timing',
     '🥉 Mittel — nur bei optimalem Wetter',
+    '⬇️ Weniger empfehlenswert',
     '⬇️ Weniger empfehlenswert',
     '⬇️ Weniger empfehlenswert',
     '⬇️ Weniger empfehlenswert',
