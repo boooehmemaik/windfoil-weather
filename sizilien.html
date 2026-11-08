@@ -137,7 +137,7 @@
     .hist-axis{display:flex;justify-content:space-between;font-size:9px;color:#5a7a96;margin-top:4px;margin-left:32px}
     .hist-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:#5a7a96}
     .hist-stats b{font-weight:700}
-    .hist-temp-strip{display:flex;height:8px;margin:3px 0 0;border-radius:2px;overflow:hidden;gap:1px}
+    .hist-temp-strip{display:flex;height:8px;margin:3px 0 0 32px;border-radius:2px;overflow:hidden;gap:1px}
     .hist-temp-strip div{flex:1;border-radius:1px}
 
     /* ── Footer ── */
@@ -749,8 +749,8 @@ function buildHistCard(spot, histData) {
   const tempStrip=histData.map(d=>{
     const t=d.avgTemp;
     const col=t!=null?tempColor(t):'#1e2d3d';
-    const lbl=t!=null?`${new Date(d.date+'T12:00').toLocaleDateString('de-DE',{day:'numeric',month:'numeric'})}: Ø ${t.toFixed(1)}°C`:'keine Temp-Daten';
-    return`<div style="flex:1;background:${col};border-radius:1px;opacity:.85" title="${lbl}"></div>`;
+    const lbl=t!=null?new Date(d.date+'T12:00').toLocaleDateString('de-DE',{day:'numeric',month:'numeric'})+': Ø '+t.toFixed(1)+'°C':'keine Temp-Daten';
+    return '<div style="flex:1;background:'+col+';border-radius:1px;opacity:.85" title="'+lbl+'"></div>';
   }).join('');
 
   return `<div class="hist-card">
@@ -765,7 +765,7 @@ function buildHistCard(spot, histData) {
       <span>Ø Score: <b style="color:${scoreColor(avgScore)}">${avgScore}</b></span>
       <span>Best: <b style="color:#3ddc84">${bestLabel} · ${best.score}</b></span>
       <span>Ø Wind: <b style="color:#d8e4f0">${avgKn} kn</b></span>
-      ${avgTempVal!=null?`<span>Ø Temp: <b style="color:${tempColor(avgTempVal)}">${avgTempVal.toFixed(1)}°C</b></span>`:''}
+      ${avgTempVal!=null?'<span>Ø Temp: <b style="color:'+tempColor(avgTempVal)+'">'+avgTempVal.toFixed(1)+'°C</b></span>':''}
     </div>
   </div>`;
 }
