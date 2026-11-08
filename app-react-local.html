@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de" id="htmlRoot"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.28.17 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.28.19 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -11,7 +11,7 @@
 #boot .ring{width:42px;height:42px;border:3px solid #243040;border-top-color:#f07820;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select,button,textarea{font-size:inherit}}
-@media(max-width:600px){.wf-hdr-sardinia{display:none!important}.wf-hdr-sizilien{display:none!important}.wf-hdr-spanien{display:none!important}}</style>
+@media(max-width:600px){.wf-hdr-nav{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.wf-hdr-nav::-webkit-scrollbar{display:none}}</style>
 <script type="importmap">{"imports":{"react":"vendor/react-esm-shim.js","react-dom":"vendor/react-esm-shim.js"}}</script></head>
 <body><div id="boot"><div class="ring"></div><div id="bootMsg">WindFoil wird geladen…</div></div><div id="root"></div>
   <script>
@@ -59,7 +59,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.28.17",
+    version_label: "Weather Intelligence · v3.28.19",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -372,7 +372,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.28.17",
+    version_label: "Weather Intelligence · v3.28.19",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -688,8 +688,9 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.28.17
-// Changelog v3.28.17: Header zweizeilig — Spenden + Uhr in Zeile 1, Controls in Zeile 2; Sardinien-Link mobil ausgeblendet
+// WindFoil Weather Intelligence v3.28.19
+// Changelog v3.28.19: fix: Vergleichsseite sortiert wieder absteigend (bester Spot oben), Sortier-Indikator in der Tabellenkopfzeile
+// Changelog v3.28.18: Header zweizeilig — Spenden + Uhr in Zeile 1, Controls in Zeile 2; Sardinien-Link mobil ausgeblendet
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
 // Changelog v3.18.1: Wingfoiling & Kitesurfing sport toggle; Crazyfly Sculp wind ranges; weight-adjusted kite window; Spot Chioggia (Garbìn)
 // Changelog v3.19.0: Fix thermal boost (Eric/Meltemi) applied per-hour to scores, dayScore, session, dayScores[]; fix seaBreeze peakHour (was hardcoded 14)
@@ -2256,52 +2257,41 @@ function AuthGate({children}){
   return(
     <AuthCtx.Provider value={sess.user?.email||null}>
     <div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',
-          padding:'8px 16px',background:CA.deep,borderBottom:`1px solid ${CA.line}`}}>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          <a href="/sardinia.html"
-            title="Sardinien Wingfoil-Map"
-            className="wf-hdr-sardinia"
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
-              display:'inline-flex',alignItems:'center',gap:4}}>
-            Sardinien
-          </a>
-          <a href="/sizilien.html"
-            title="Sizilien Wingfoil-Map"
-            className="wf-hdr-sizilien"
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
-              display:'inline-flex',alignItems:'center',gap:4}}>
-            Sizilien
-          </a>
-          <a href="/spanien.html"
-            title="Spanien Wingfoil-Map"
-            className="wf-hdr-spanien"
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
-              display:'inline-flex',alignItems:'center',gap:4}}>
-            Spanien
-          </a>
+      <div style={{display:'flex',alignItems:'center',gap:8,
+          padding:'8px 16px',background:CA.deep,borderBottom:`1px solid ${CA.line}`,minWidth:0}}>
+        <div className="wf-hdr-nav" style={{display:'flex',gap:6,alignItems:'center',flexWrap:'nowrap',flex:1,minWidth:0}}>
+          {[
+            {href:'/sardinia.html',    label:'Sardinien'},
+            {href:'/sizilien.html',    label:'Sizilien'},
+            {href:'/spanien.html',     label:'Spanien'},
+            {href:'/skandinavien.html',label:'Skandinavien'},
+            {href:'/vergleich.html',   label:'Vergleich'},
+            {href:'/watcher.html',     label:'Watcher'},
+          ].map(({href,label})=>(
+            <a key={href} href={href}
+              style={{padding:'6px 10px',borderRadius:8,cursor:'pointer',flexShrink:0,
+                border:`1px solid ${CA.line}`,background:'transparent',
+                color:CA.foam,fontSize:13,fontWeight:600,textDecoration:'none',
+                display:'inline-flex',alignItems:'center',whiteSpace:'nowrap'}}>
+              {label}
+            </a>
+          ))}
           {isHistUser && (
             <button onClick={()=>setHistOpen(o=>!o)}
-              style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
+              style={{padding:'6px 10px',borderRadius:8,cursor:'pointer',flexShrink:0,
                 border:`1px solid ${histOpen?CA.lift:CA.line}`,
                 background:histOpen?CA.lift:'transparent',
-                color:histOpen?'#fff':CA.foam,fontSize:13,fontWeight:600}}>
+                color:histOpen?'#fff':CA.foam,fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>
               History
             </button>
           )}
-          <button onClick={doSignOut}
-            style={{padding:'6px 12px',borderRadius:8,cursor:'pointer',
-              border:`1px solid ${CA.line}`,background:'transparent',
-              color:CA.foam,fontSize:13,fontWeight:600}}>
-            {t('auth_signout')}
-          </button>
         </div>
+        <button onClick={doSignOut}
+          style={{padding:'6px 10px',borderRadius:8,cursor:'pointer',flexShrink:0,
+            border:`1px solid ${CA.line}`,background:'transparent',
+            color:CA.foam,fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>
+          {t('auth_signout')}
+        </button>
       </div>
       {histOpen && isHistUser
         ? <HistoryView onClose={()=>setHistOpen(false)}/>
@@ -4232,13 +4222,15 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.17</span>
+        <span>WindFoil Weather Intelligence v3.28.19</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
         <a href="/sardinia.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sardinien</a>
         <a href="/sizilien.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sizilien</a>
         <a href="/spanien.html" style={{color:C.sky,textDecoration:"none"}}>🇪🇸 Spanien</a>
+        <a href="/vergleich.html" style={{color:C.sky,textDecoration:"none"}}>📊 Vergleich</a>
+        <a href="/watcher.html" style={{color:C.sky,textDecoration:"none"}}>🔭 Watcher</a>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>{t('footer_help')}</a>
         <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
           title="Admin"

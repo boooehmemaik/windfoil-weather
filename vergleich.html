@@ -184,17 +184,17 @@
     <table id="compare-table">
       <thead>
         <tr>
-          <th onclick="sortBy('rank')">#<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('name')">Spot<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('d0')" id="th-d0">Heute<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('d1')" id="th-d1">Tag 2<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('d2')" id="th-d2">Tag 3<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('d3')" id="th-d3">Tag 4<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('d4')" id="th-d4">Tag 5<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('avg')">Ø Score<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('wind')">Ø Wind<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('temp')">Ø Temp<span class="sort-arrow">↕</span></th>
-          <th onclick="sortBy('sst')">🌊 SST<span class="sort-arrow">↕</span></th>
+          <th data-sk="rank" onclick="sortBy('rank')">#<span class="sort-arrow">↕</span></th>
+          <th data-sk="name" onclick="sortBy('name')">Spot<span class="sort-arrow">↕</span></th>
+          <th data-sk="d0" onclick="sortBy('d0')" id="th-d0">Heute<span class="sort-arrow">↕</span></th>
+          <th data-sk="d1" onclick="sortBy('d1')" id="th-d1">Tag 2<span class="sort-arrow">↕</span></th>
+          <th data-sk="d2" onclick="sortBy('d2')" id="th-d2">Tag 3<span class="sort-arrow">↕</span></th>
+          <th data-sk="d3" onclick="sortBy('d3')" id="th-d3">Tag 4<span class="sort-arrow">↕</span></th>
+          <th data-sk="d4" onclick="sortBy('d4')" id="th-d4">Tag 5<span class="sort-arrow">↕</span></th>
+          <th data-sk="avg" onclick="sortBy('avg')">Ø Score<span class="sort-arrow">↕</span></th>
+          <th data-sk="wind" onclick="sortBy('wind')">Ø Wind<span class="sort-arrow">↕</span></th>
+          <th data-sk="temp" onclick="sortBy('temp')">Ø Temp<span class="sort-arrow">↕</span></th>
+          <th data-sk="sst" onclick="sortBy('sst')">🌊 SST<span class="sort-arrow">↕</span></th>
           <th></th>
         </tr>
       </thead>
@@ -412,13 +412,29 @@ let sortDir = -1; // -1 = desc
 let activeFilter = 'all';
 let dayLabels = ['Heute','Tag 2','Tag 3','Tag 4','Tag 5'];
 
+// Rang und Name starten aufsteigend, alle Scores absteigend (best zuerst)
+const ASC_FIRST = {rank:1, name:1};
+
+function compareRows(a, b) {
+  if(sortKey==='name') return sortDir*a.spot.name.localeCompare(b.spot.name,'de');
+  const va=a[sortKey]??-999, vb=b[sortKey]??-999;
+  return sortDir*(va-vb);
+}
+
+function updateSortIndicators() {
+  document.querySelectorAll('thead th[data-sk]').forEach(th=>{
+    const active = th.dataset.sk===sortKey;
+    th.classList.toggle('sorted', active);
+    const arrow = th.querySelector('.sort-arrow');
+    if(arrow) arrow.textContent = active ? (sortDir===-1?'↓':'↑') : '↕';
+  });
+}
+
 // ── Render table ───────────────────────────────────────────
 function renderTable() {
   let rows = tableData.filter(r => activeFilter==='all' || r.spot.region===activeFilter);
-  rows = [...rows].sort((a,b)=>{
-    const va=a[sortKey]??-999, vb=b[sortKey]??-999;
-    return sortDir*(vb-va);
-  });
+  rows = [...rows].sort(compareRows);
+  updateSortIndicators();
 
   // Update day header labels
   dayLabels.forEach((lbl,i)=>{
@@ -503,8 +519,7 @@ function renderWinners() {
 // ── Sort handler ───────────────────────────────────────────
 function sortBy(key) {
   if(sortKey===key) sortDir*=-1;
-  else{ sortKey=key; sortDir=-1; }
-  document.querySelectorAll('thead th').forEach(th=>th.classList.remove('sorted'));
+  else{ sortKey=key; sortDir=ASC_FIRST[key]?1:-1; }
   renderTable();
 }
 
