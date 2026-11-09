@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/wf-scoring.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{overflow-x:clip}
@@ -150,6 +151,7 @@
   <span>Nächste Aktualisierung in <span id="refresh-countdown">30:00</span></span>
   <button class="refresh-btn" onclick="triggerRefresh()">↺ Jetzt aktualisieren</button>
   <span id="last-updated"></span>
+  <span id="rider-note" style="color:#5a7a96"></span>
   <span style="margin-left:auto;color:#3a9ad9;font-weight:600" id="load-status"></span>
 </div>
 
@@ -287,26 +289,14 @@ const ALL_SPOTS = [
 ];
 
 // ── Scoring ────────────────────────────────────────────────
-const msToKn = ms => ms * 1.94384;
+// Windfenster + Foil-Score kommen aus /js/wf-scoring.js (kanonische Quelle).
+const msToKn = WF.msToKn;
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = deg => deg==null?"?":COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-function calcWindow(wt,w,f,sk){
-  const sm={beginner:1.3,intermediate:1.15,advanced:1.0,pro:0.9}[sk]??1.1;
-  const load=wt/w,foilF=1800/f;
-  const minW=Math.max(2.5,(3.5+load*0.15+foilF*0.8)*sm*0.85);
-  return{minWind:Math.round(minW*10)/10,optMin:Math.round(minW*1.08*10)/10,
-         optMax:Math.round(minW*2.6*10)/10,maxWind:Math.round(minW*2.6*(1+(2-sm)*0.3)*10)/10};
-}
-const DEFAULT_WIN = calcWindow(75,6,1200,'intermediate');
+// Wird nach dem Profil-Fetch durch das echte Fahrerfenster ersetzt.
+let RIDER_WIN = WF.calcWindow(WF.GUEST_RIDER.weight, WF.GUEST_RIDER.wingM2, WF.GUEST_RIDER.skill);
 
-function scoreHour(w,win){
-  if(w<win.minWind)return Math.max(0,Math.round((w/win.minWind)*30));
-  if(w<win.optMin) return Math.round(30+((w-win.minWind)/(win.optMin-win.minWind))*30);
-  if(w<=win.optMax)return 100;
-  if(w<=win.maxWind)return Math.round(100-((w-win.optMax)/(win.maxWind-win.optMax))*50);
-  return Math.max(0,Math.round(50-(w-win.maxWind)*10));
-}
 function scoreColor(s){return s>=70?'#3ddc84':s>=40?'#f5b942':'#e84040';}
 function tempColor(t){
   if(t<10)return'#4a9ed8';if(t<15)return'#74bcd5';if(t<19)return'#98d4c5';
@@ -314,29 +304,19 @@ function tempColor(t){
   return'#e84040';
 }
 
-// Wind within 45° of pure-offshore (cosine > 0.7) → score 0
-function offshoreMultiplier(windDir, offshoreDir){
-  if(windDir==null||offshoreDir==null) return 1;
-  const diff=((windDir-offshoreDir+540)%360)-180;
-  return Math.cos(diff*Math.PI/180)>0.7?0:1;
-}
-
 function dayStats5(fc, dayIdx, spot) {
-  if(!fc?.hourly?.windspeed_10m) return{score:0,avgWindKn:0,avgTemp:null};
+  if(!fc?.hourly?.windspeed_10m) return{score:0,avgWindKn:0,avgTemp:null,session:null};
   const h=fc.hourly, start=dayIdx*24;
-  const sw=h.windspeed_10m.slice(start+9,start+19);
-  const sd=h.winddirection_10m?h.winddirection_10m.slice(start+9,start+19):[];
+  const opts={start,dirs:h.winddirection_10m||null,offshoreDir:spot?.offshoreDir??null};
+  const session=WF.bestSession(h.windspeed_10m,RIDER_WIN,opts);
+  const validW=h.windspeed_10m.slice(start+9,start+19).filter(v=>v!=null);
   const st=h.temperature_2m?h.temperature_2m.slice(start+9,start+19).filter(v=>v!=null):[];
-  const validW=sw.filter(v=>v!=null);
-  const scores=sw.map((w,i)=>{
-    if(w==null) return null;
-    const s=scoreHour(w,DEFAULT_WIN);
-    return s*offshoreMultiplier(sd[i]??null,spot?.offshoreDir??null);
-  }).filter(v=>v!=null);
-  const score=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
-  const avgWindKn=validW.length?msToKn(validW.reduce((a,b)=>a+b,0)/validW.length):0;
-  const avgTemp=st.length?st.reduce((a,b)=>a+b,0)/st.length:null;
-  return{score,avgWindKn,avgTemp};
+  return{
+    score:session.score,
+    avgWindKn:validW.length?msToKn(validW.reduce((a,b)=>a+b,0)/validW.length):0,
+    avgTemp:st.length?st.reduce((a,b)=>a+b,0)/st.length:null,
+    session,
+  };
 }
 
 function dayLabel5(fc, dayIdx) {
@@ -568,10 +548,20 @@ function sstColor(t) {
   if(t<22)return'#c8d882';if(t<26)return'#f5c842';return'#f07820';
 }
 
+// ── Rider-Profil ───────────────────────────────────────────
+async function loadRiderProfile(){
+  const { rider, win } = await WF.loadRider();
+  RIDER_WIN = win;
+  const el = document.getElementById('rider-note');
+  if(el) el.textContent = WF.describeRider(rider);
+}
+
 // ── Main load ──────────────────────────────────────────────
 async function loadAll() {
   const statusEl=document.getElementById('load-status');
   if(statusEl) statusEl.textContent='⟳ Lade…';
+
+  await loadRiderProfile();
 
   let loaded=0;
   const [results, marineResults] = await Promise.all([

@@ -1,10 +1,11 @@
 {
   "name": "windfoil-station-proxy",
   "version": "3.8.16",
-  "description": "WindFoil Weather Intelligence — backend server with auth, feedback loop and SQLite persistence.",
+  "description": "WindFoil Weather Intelligence \u2014 backend server with auth, feedback loop and SQLite persistence.",
   "main": "proxy-server.js",
   "scripts": {
-    "start": "node proxy-server.js"
+    "start": "node proxy-server.js",
+    "test": "node --test *.test.mjs"
   },
   "dependencies": {
     "better-auth": "^1.6.18",

@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/wf-scoring.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{overflow-x:clip}
@@ -149,6 +150,7 @@
   </div>
 </header>
 
+<div id="rider-note" style="padding:6px 20px;font-size:11px;color:#5a7a96;background:#0d1420;border-bottom:1px solid #1e2d3d"></div>
 <div id="winner-bar">
   <div>
     <div class="label">⭐ Bester Spot heute</div>
@@ -233,35 +235,10 @@ const msToKn = ms => ms * 1.94384;
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = deg => deg==null?"?":COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-function calcWindow(weight,wingM2,foilCm2,skill){
-  const sm={beginner:1.3,intermediate:1.15,advanced:1.0,pro:0.9}[skill]??1.1;
-  const load=weight/wingM2,foilF=1800/foilCm2;
-  const minW=Math.max(2.5,(3.5+load*0.15+foilF*0.8)*sm*0.85);
-  return{minWind:Math.round(minW*10)/10,optMin:Math.round(minW*1.08*10)/10,
-         optMax:Math.round(minW*2.6*10)/10,maxWind:Math.round(minW*2.6*(1+(2-sm)*0.3)*10)/10};
-}
-const DEFAULT_WIN = calcWindow(75,6,1200,'intermediate');
+// Windfenster + Foil-Score kommen aus /js/wf-scoring.js (kanonische Quelle).
+// Wird nach dem Profil-Fetch durch das echte Fahrerfenster ersetzt.
+let RIDER_WIN = WF.calcWindow(WF.GUEST_RIDER.weight, WF.GUEST_RIDER.wingM2, WF.GUEST_RIDER.skill);
 
-function scoreHour(w,win){
-  if(w<win.minWind) return Math.max(0,Math.round((w/win.minWind)*30));
-  if(w<win.optMin)  return Math.round(30+((w-win.minWind)/(win.optMin-win.minWind))*30);
-  if(w<=win.optMax) return 100;
-  if(w<=win.maxWind)return Math.round(100-((w-win.optMax)/(win.maxWind-win.optMax))*50);
-  return Math.max(0,Math.round(50-(w-win.maxWind)*10));
-}
-function offshoreMultiplier(windDir,offshoreDir){
-  if(windDir==null||offshoreDir==null) return 1;
-  const diff=((windDir-offshoreDir+540)%360)-180;
-  return Math.cos(diff*Math.PI/180)>0.7?0:1;
-}
-function scoreDay(winds,dirs,start=0,offshoreDir){
-  const hrs=[];
-  for(let h=9;h<=18;h++){
-    if(winds[start+h]===undefined) continue;
-    hrs.push(scoreHour(winds[start+h],DEFAULT_WIN)*offshoreMultiplier(dirs?.[start+h]??null,offshoreDir??null));
-  }
-  return hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
-}
 function scoreColor(s){return s>=70?'#3ddc84':s>=40?'#f5b942':'#e84040';}
 function scoreEmoji(s){return s>=70?'🟢':s>=40?'🟡':'🔴';}
 
@@ -308,9 +285,11 @@ function dayStats(fc,dayIdx,spot){
   const maxGust=sg.length?Math.max(...sg):0;
   let sx=0,sy=0;sd.forEach(d=>{sx+=Math.cos(d*Math.PI/180);sy+=Math.sin(d*Math.PI/180);});
   const avgDir=sd.length?((Math.atan2(sy/sd.length,sx/sd.length)*180/Math.PI)+360)%360:0;
-  const score=scoreDay(h.windspeed_10m,h.winddirection_10m,start,spot?.offshoreDir);
-  const spark=[],sparkCodes=[],codes=h.weathercode,dirs=h.winddirection_10m;
-  for(let h2=9;h2<=18;h2++){spark.push(scoreHour(h.windspeed_10m[start+h2]??0,DEFAULT_WIN)*offshoreMultiplier(dirs?.[start+h2]??null,spot?.offshoreDir??null));sparkCodes.push(codes?(codes[start+h2]??null):null);}
+  const sOpts={start,dirs:h.winddirection_10m,offshoreDir:spot?.offshoreDir??null};
+  const score=WF.scoreDay(h.windspeed_10m,RIDER_WIN,sOpts);
+  const spark=WF.hourlyScores(h.windspeed_10m,RIDER_WIN,sOpts);
+  const sparkCodes=[],codes=h.weathercode;
+  for(let h2=9;h2<=18;h2++) sparkCodes.push(codes?(codes[start+h2]??null):null);
   return{avgWind,maxGust,avgDir,score,spark,sparkCodes,avgWindKn:msToKn(avgWind)};
 }
 
@@ -379,6 +358,11 @@ SPOTS.forEach(spot=>{
 });
 
 async function loadAll(){
+  const prof = await WF.loadRider();
+  RIDER_WIN = prof.win;
+  const rn = document.getElementById('rider-note');
+  if (rn) rn.textContent = WF.describeRider(prof.rider);
+
   const grid=document.getElementById('spots-grid');
   grid.innerHTML=SPOTS.map(()=>`<div class="loading"><span class="spin">⟳</span></div>`).join('');
   const results={};
@@ -445,7 +429,7 @@ async function fetchSpotHistoryERA5(lat,lon,days=14){
   return Object.entries(dayMap).map(([date,d])=>{
     const avgWind=d.winds.length?d.winds.reduce((a,b)=>a+b,0)/d.winds.length:0;
     const avgTemp=d.temps.length?d.temps.reduce((a,b)=>a+b,0)/d.temps.length:null;
-    const scores=d.winds.map(w=>scoreHour(w,DEFAULT_WIN));
+    const scores=d.winds.map(w=>WF.scoreHour(w,RIDER_WIN));
     const score=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
     return{date,avgWind,score,avgWindKn:msToKn(avgWind),avgTemp};
   }).sort((a,b)=>a.date.localeCompare(b.date));

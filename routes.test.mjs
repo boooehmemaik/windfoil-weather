@@ -1,17 +1,24 @@
 // ============================================================================
 // WindFoil — Route-logic test harness (the SQL behind the new endpoints)
-// File version: 1.0.0  |  App target: v2.5.0
-//   Run:  node --experimental-sqlite db/routes.test.mjs
+// File version: 1.1.0  |  App target: v3.28.19
+//   Run:  node --test routes.test.mjs   (oder npm test)
 // ============================================================================
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID as uuid } from 'node:crypto';
 
 const nowUtc = () => new Date().toISOString();
 const db = new DatabaseSync(':memory:');
 db.exec('PRAGMA foreign_keys = ON;');
 db.exec(`CREATE TABLE user (id TEXT PRIMARY KEY, email TEXT, name TEXT, created_at TEXT);`);
-db.exec(readFileSync(new URL('./migrations/001_init.sql', import.meta.url), 'utf8'));
+
+// ALLE Migrationen anwenden, nicht nur 001 — sonst testet das Harness ein
+// Schema, das es in Produktion nie gibt. (Der Pfad lautete './migrations/',
+// die Dateien liegen aber in 'db/migrations/'; der Test lief dadurch nie.)
+const MIG_DIR = new URL('./db/migrations/', import.meta.url);
+for (const file of readdirSync(MIG_DIR).filter(f => f.endsWith('.sql')).sort()) {
+  db.exec(readFileSync(new URL(file, MIG_DIR), 'utf8'));
+}
 
 const uid = uuid();
 db.prepare('INSERT INTO user VALUES (?,?,?,?)').run(uid, 'maik@example.com', 'Maik', nowUtc());

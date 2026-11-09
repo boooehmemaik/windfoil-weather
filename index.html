@@ -41,6 +41,7 @@ input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select
   <script src="vendor/react-is.production.min.js"></script>
   <script src="vendor/Recharts.js"></script>
   <script src="vendor/babel.min.js"></script>
+  <script src="/js/wf-scoring.js"></script>
   <script type="text/babel" data-presets="react">
 const { useState, useEffect, useCallback, useRef } = React;
 const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, ReferenceDot, Cell } = Recharts;
@@ -1559,24 +1560,10 @@ function seaBreeze(windDir, hour, month, regime) {
 }
 
 // <<wing-scoring>>
-// ── FoilScore ─────────────────────────────────────────────────────────────────
-const REF_FOIL_TERM = 0.8;   // = altes foilF*0.8 bei Referenz-Foil 1800 cm²
-function calcWindow(weight, wingM2, skill, knownPlaneMs) {   // foilCm2 ENTFERNT
-  const sMin = {beginner:1.50,intermediate:1.25,advanced:1.00,pro:0.85}[skill]??1.15;
-  const sOpt = {beginner:1.60,intermediate:2.00,advanced:2.60,pro:3.20}[skill]??2.00;
-  const sMax = {beginner:2.00,intermediate:2.60,advanced:3.50,pro:4.50}[skill]??2.60;
-  let minW;
-  if (knownPlaneMs && knownPlaneMs > 0) {
-    minW = knownPlaneMs;
-  } else {
-    const load = weight / wingM2;
-    minW = Math.max(2.5, (3.5 + load*0.15 + REF_FOIL_TERM) * sMin * 0.85);
-  }
-  return { minWind:Math.round(minW*10)/10,
-           optMin: Math.round(minW*1.2*10)/10,
-           optMax: Math.round(minW*sOpt*10)/10,
-           maxWind:Math.round(minW*sMax*10)/10 };
-}
+// ── FoilScore — Aliase auf WF (wf-scoring.js ist die kanonische Quelle) ───────
+// var statt const: der wing-scoring.test.mjs-Sandbox liest diese via vm-Context,
+// und vm-Sandbox exportiert nur var-Deklarationen an den Context, keine const.
+var calcWindow = WF.calcWindow;
 // ── Wing manufacturer windrange tables (extensible) ──────────────────────────
 // Per Marke/Modell: Hersteller-Windrange (kn) + Wing-Masse (kg) je Größe (m²).
 // Die Ranges gelten für ein Referenzgewicht; das echte Gewicht skaliert sie
@@ -1630,21 +1617,8 @@ function wingTableWindow(weight, wingM2, brandKey = DEFAULT_WING_BRAND) {
     outOfRange: false,
   };
 }
-// Fenster {min,opt,opt,max} aus einer erlebten kn-Range (opt-Band 25/75 wie Tabelle).
-function rangeToWindow(minKn, maxKn) {
-  const lo=knToMs(minKn), hi=knToMs(maxKn);
-  return { minWind:Math.round(lo*10)/10,
-           optMin:Math.round((lo+0.25*(hi-lo))*10)/10,
-           optMax:Math.round((lo+0.75*(hi-lo))*10)/10,
-           maxWind:Math.round(hi*10)/10 };
-}
-function blendWindows(a, b, w) {   // kantenweise, p=1-w
-  const p=1-w;
-  return { minWind:Math.round((p*a.minWind+w*b.minWind)*10)/10,
-           optMin :Math.round((p*a.optMin +w*b.optMin )*10)/10,
-           optMax :Math.round((p*a.optMax +w*b.optMax )*10)/10,
-           maxWind:Math.round((p*a.maxWind+w*b.maxWind)*10)/10 };
-}
+var rangeToWindow = WF.rangeToWindow;
+var blendWindows  = WF.blendWindows;
 // EINZIGE kanonische Scoring-Quelle: Physikmodell, geblendet mit der
 // Herstellertabelle, wenn die Wing-Größe abgedeckt ist. Überall konsumiert
 // (Chart, Tages-Scores, pickBestSetup).
@@ -1663,30 +1637,9 @@ function wingWindow(weight, wingM2, skill, knownPlaneMs,
   }
   return base;
 }
-function scoreHour(w,win) {
-  if(w<win.minWind) return Math.max(0,Math.round((w/win.minWind)*45));
-  if(w<win.optMin) return Math.round(55+((w-win.minWind)/(win.optMin-win.minWind))*30); // "fahrbar aber zäh" 55→85
-  if(w<=win.optMax) return 100;
-  if(w<=win.maxWind) return Math.round(100-((w-win.optMax)/(win.maxWind-win.optMax))*50);
-  return Math.max(0,Math.round(50-(w-win.maxWind)*10));
-}
-function scoreDay(winds,win,start=0) {
-  // Tages-Score = bestes zusammenhängendes 4h-Fenster zwischen 9 und 19 Uhr.
-  // Schwache Vormittage drücken den Score nicht mehr; es zählt die beste Session.
-  return bestSession(winds,win,start).score;
-}
-// Findet das beste 4h-Fenster (Score + Start/Endstunde) für den Tag
-function bestSession(winds,win,start=0) {
-  let best={score:0,startHour:null,endHour:null};
-  for(let s=9;s<=15;s++){
-    const hrs=[];
-    for(let h=s;h<s+4;h++){ const v=winds[start+h]; if(v!==undefined) hrs.push(scoreHour(v,win)); }
-    if(!hrs.length) continue;
-    const avg=Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length);
-    if(avg>best.score) best={score:avg,startHour:s,endHour:s+4};
-  }
-  return best;
-}
+var scoreHour   = WF.scoreHour;
+var scoreDay    = (winds, win, start=0) => WF.scoreDay(winds, win, { start });
+var bestSession = (winds, win, start=0) => WF.bestSession(winds, win, { start });
 
 // ── Equipment selection v2.2.0 ────────────────────────────────────────────────
 // Given the rider's gear list and the day's representative wind (m/s),

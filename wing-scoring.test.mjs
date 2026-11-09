@@ -11,6 +11,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const WF = require('./js/wf-scoring.js');
 
 // ── Setup: extract scoring block from index.html ──────────────────────────────
 const html = fs.readFileSync('/var/www/windfoil/index.html', 'utf8');
@@ -29,6 +33,7 @@ const knToMs = kn => kn / 1.94384;
 const msToKn = ms => ms * 1.94384;
 
 const ctx = vm.createContext({
+  WF,
   knToMs,
   msToKn,
   Math,
