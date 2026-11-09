@@ -1,0 +1,577 @@
+{
+  "$comment": "Generiert aus den Spot-Seiten und vergleich.html. Einzige Datenquelle fuer Spots — Seiten und Vergleich lesen hieraus.",
+  "version": 1,
+  "regions": {
+    "sardinia": {
+      "title": "Sardinien",
+      "emoji": "🇮🇹",
+      "page": "/sardinia.html",
+      "center": [
+        40.1,
+        9.07
+      ],
+      "zoom": 8,
+      "model": "meteofrance_arome_france_hd",
+      "sst": false,
+      "spots": [
+        {
+          "id": "porto_pollo",
+          "name": "Porto Pollo",
+          "emoji": "🌊",
+          "desc": "Maestrale · Nordostküste",
+          "lat": 41.13,
+          "lon": 9.32,
+          "shoreNote": "NW-Exposition, Mistral-Spot",
+          "color": "#3a9ad9",
+          "offshoreDir": 225,
+          "camper": true,
+          "camperNote": "Direkter Strandparkplatz, Kite-Camp-Services vorhanden",
+          "vergleichRegion": "Sardinien"
+        },
+        {
+          "id": "stintino",
+          "name": "Stintino",
+          "emoji": "⛵",
+          "desc": "Libeccio · Nordwestspitze",
+          "lat": 40.934,
+          "lon": 8.226,
+          "shoreNote": "Flaches Wasser, Maestrale",
+          "color": "#f07820",
+          "offshoreDir": 90,
+          "vergleichRegion": "Sardinien"
+        },
+        {
+          "id": "putzu_idu",
+          "name": "Putzu Idu",
+          "emoji": "💨",
+          "desc": "Thermik-W · Westküste",
+          "lat": 40.013,
+          "lon": 8.377,
+          "shoreNote": "Nachmittags-Thermik, Lagune",
+          "color": "#f5b942",
+          "offshoreDir": 90,
+          "camper": true,
+          "camperNote": "Sa Mesa Longa – freies Campieren am Strand möglich",
+          "vergleichRegion": "Sardinien"
+        },
+        {
+          "id": "porto_botte",
+          "name": "Porto Botte",
+          "emoji": "🌅",
+          "desc": "Maestrale · Südwest-Lagune",
+          "lat": 39.054,
+          "lon": 8.566,
+          "shoreNote": "Flachwasser-Lagune, Maestrale",
+          "color": "#a78bfa",
+          "offshoreDir": 45,
+          "camper": true,
+          "camperNote": "Ruhige Lagunenbucht, Camper-freundlicher Strandbereich",
+          "vergleichRegion": "Sardinien"
+        },
+        {
+          "id": "cala_gonone",
+          "name": "Cala Gonone",
+          "emoji": "🏔",
+          "desc": "Levante · Nordostküste",
+          "lat": 40.283,
+          "lon": 9.629,
+          "shoreNote": "Ostexposition, Levante-Wind",
+          "color": "#3ddc84",
+          "offshoreDir": 270,
+          "vergleichRegion": "Sardinien"
+        },
+        {
+          "id": "villasimius",
+          "name": "Villasimius",
+          "emoji": "🐠",
+          "desc": "Mistral + Scirocco · Südost",
+          "lat": 39.118,
+          "lon": 9.533,
+          "shoreNote": "Südostspitze, Scirocco-Fetch",
+          "color": "#f472b6",
+          "offshoreDir": 315,
+          "camper": true,
+          "camperNote": "Camping Capo Ferrato nahe Villasimius",
+          "vergleichRegion": "Sardinien"
+        }
+      ],
+      "vergleichRegions": [
+        "Sardinien"
+      ]
+    },
+    "sizilien": {
+      "title": "Sizilien",
+      "emoji": "🇮🇹",
+      "page": "/sizilien.html",
+      "center": [
+        37.5,
+        14
+      ],
+      "zoom": 8,
+      "model": null,
+      "sst": false,
+      "spots": [
+        {
+          "id": "puzziteddu",
+          "name": "Puzziteddu / Granitola",
+          "emoji": "🌊",
+          "desc": "Maestrale/Scirocco · SW-Küste · Wave",
+          "lat": 37.634,
+          "lon": 12.665,
+          "shoreNote": "Sandeinstieg, Wave bei NW/SO",
+          "color": "#3a9ad9",
+          "offshoreDir": 45,
+          "camper": true,
+          "camperNote": "Strandparkplatz Granitola, Campervans regelmäßig vor Ort",
+          "vergleichRegion": "Sizilien"
+        },
+        {
+          "id": "marina_di_ragusa",
+          "name": "Marina di Ragusa",
+          "emoji": "🌅",
+          "desc": "Scirocco · Südostküste",
+          "lat": 36.868,
+          "lon": 14.555,
+          "shoreNote": "Scirocco-Fetch, Hafenmole Westseite",
+          "color": "#a78bfa",
+          "offshoreDir": 0,
+          "camper": true,
+          "camperNote": "Ausgestatteter Strand, Camper-Stellplätze nahe der Promenade",
+          "vergleichRegion": "Sizilien"
+        },
+        {
+          "id": "maganuco",
+          "name": "Spiaggia Maganuco",
+          "emoji": "⛵",
+          "desc": "Levante · Pozzallo · Sandstrand",
+          "lat": 36.726,
+          "lon": 14.858,
+          "shoreNote": "Ostwind sideshore, Mole schützt",
+          "color": "#f07820",
+          "offshoreDir": 315,
+          "camper": true,
+          "camperNote": "Breiter Sandstrand mit freiem Zugang, gute Zufahrt für Camper",
+          "vergleichRegion": "Sizilien"
+        },
+        {
+          "id": "avola",
+          "name": "Avola",
+          "emoji": "💎",
+          "desc": "Grecale (NO) · Südlich Syrakus",
+          "lat": 36.906,
+          "lon": 15.099,
+          "shoreNote": "Türkisblaues Wasser, NE onshore",
+          "color": "#f5b942",
+          "offshoreDir": 315,
+          "vergleichRegion": "Sizilien"
+        },
+        {
+          "id": "isola_correnti",
+          "name": "Isola delle Correnti",
+          "emoji": "🌊",
+          "desc": "Scirocco/W · Südspitze · Wave",
+          "lat": 36.679,
+          "lon": 15.137,
+          "shoreNote": "Stärkster Scirocco-Fetch, Strömung!",
+          "color": "#3ddc84",
+          "offshoreDir": 0,
+          "vergleichRegion": "Sizilien"
+        },
+        {
+          "id": "capo_dorlando",
+          "name": "Capo d'Orlando",
+          "emoji": "💨",
+          "desc": "Levante/W-NO · Nordostküste",
+          "lat": 38.157,
+          "lon": 14.758,
+          "shoreNote": "Sofort tiefes Wasser",
+          "color": "#f472b6",
+          "offshoreDir": 180,
+          "vergleichRegion": "Sizilien"
+        },
+        {
+          "id": "messina",
+          "name": "Messina / Capo Peloro",
+          "emoji": "🌊",
+          "desc": "Düseneffekt · Straße von Messina",
+          "lat": 38.267,
+          "lon": 15.636,
+          "shoreNote": "Stetigster Wind, Gezeitenströmung",
+          "color": "#6de8c0",
+          "offshoreDir": 270,
+          "vergleichRegion": "Sizilien"
+        }
+      ],
+      "vergleichRegions": [
+        "Sizilien"
+      ]
+    },
+    "spanien": {
+      "title": "Spanien",
+      "emoji": "🇪🇸",
+      "page": "/spanien.html",
+      "center": [
+        39.5,
+        -1.5
+      ],
+      "zoom": 6,
+      "model": null,
+      "sst": false,
+      "spots": [
+        {
+          "id": "roses",
+          "name": "Roses",
+          "emoji": "🌊",
+          "desc": "Tramuntana · Costa Brava Nord",
+          "lat": 42.267,
+          "lon": 3.185,
+          "shoreNote": "Pyrenäen-Fallwind, Golf de Roses",
+          "color": "#3a9ad9",
+          "offshoreDir": 315,
+          "camper": true,
+          "camperNote": "Camping La Siesta & weitere Campingplätze direkt am Strand",
+          "vergleichRegion": "Spanien"
+        },
+        {
+          "id": "delta_ebre",
+          "name": "Delta de l'Ebre",
+          "emoji": "🏞",
+          "desc": "Tramuntana · Flachwasser-Delta",
+          "lat": 40.73,
+          "lon": 0.868,
+          "shoreNote": "Sandwatt, Tramuntana/Mistral",
+          "color": "#f07820",
+          "offshoreDir": 315,
+          "camper": true,
+          "camperNote": "Naturpark Ebro-Delta, freies Campieren und Stellplätze verfügbar",
+          "vergleichRegion": "Spanien"
+        },
+        {
+          "id": "peniscola",
+          "name": "Peñíscola",
+          "emoji": "🏰",
+          "desc": "Levante · Costa del Azahar",
+          "lat": 40.36,
+          "lon": 0.421,
+          "shoreNote": "Levante-Thermik, O-Exposition",
+          "color": "#f5b942",
+          "offshoreDir": 270,
+          "vergleichRegion": "Spanien"
+        },
+        {
+          "id": "denia",
+          "name": "Denia",
+          "emoji": "☀️",
+          "desc": "Levante · Costa Blanca",
+          "lat": 38.846,
+          "lon": 0.118,
+          "shoreNote": "Levante + Montgo-Katabatik",
+          "color": "#a78bfa",
+          "offshoreDir": 315,
+          "vergleichRegion": "Spanien"
+        },
+        {
+          "id": "tarifa",
+          "name": "Tarifa",
+          "emoji": "💨",
+          "desc": "Levante + Poniente · Gibraltar",
+          "lat": 36.012,
+          "lon": -5.598,
+          "shoreNote": "Stärkster Windspot Europas",
+          "color": "#3ddc84",
+          "offshoreDir": 0,
+          "camper": true,
+          "camperNote": "Campingparadies Europas — Dos Mares, 100 Patos, Los Lances, viele Spots",
+          "vergleichRegion": "Spanien"
+        }
+      ],
+      "vergleichRegions": [
+        "Spanien"
+      ]
+    },
+    "skandinavien": {
+      "title": "Skandinavien",
+      "emoji": "🇸🇪",
+      "page": "/skandinavien.html",
+      "center": [
+        57,
+        15
+      ],
+      "zoom": 5,
+      "model": null,
+      "sst": true,
+      "spots": [
+        {
+          "id": "haga_park",
+          "name": "Haga Park (Öland)",
+          "emoji": "🌊",
+          "desc": "Westwind · Westküste Öland · Wingsurf-Hauptstadt",
+          "lat": 56.65,
+          "lon": 16.42,
+          "shoreNote": "Stetigster Wind Schwedens, schnell tiefes Wasser",
+          "color": "#3a9ad9",
+          "offshoreDir": 90,
+          "camper": true,
+          "camperNote": "Campingplätze direkt am Strand, sehr gute Infrastruktur",
+          "vergleichRegion": "Schweden"
+        },
+        {
+          "id": "gronhogen",
+          "name": "Grönhögen (Öland)",
+          "emoji": "💨",
+          "desc": "Südwind · Südspitze Öland · Flachwasser",
+          "lat": 56.264,
+          "lon": 16.47,
+          "shoreNote": "Fällt schnell tief ab, Südwind onshore",
+          "color": "#5ba8e5",
+          "offshoreDir": 315,
+          "camper": true,
+          "camperNote": "Direkter Strandcamping und Campingplätze in der Nähe",
+          "vergleichRegion": "Schweden"
+        },
+        {
+          "id": "lomma",
+          "name": "Lomma",
+          "emoji": "⛵",
+          "desc": "Westwind · Öresund · Skåne",
+          "lat": 55.682,
+          "lon": 12.955,
+          "shoreNote": "Südlich des Hafens tief, perfekt für Foil-Start",
+          "color": "#74bcd5",
+          "offshoreDir": 90,
+          "vergleichRegion": "Schweden"
+        },
+        {
+          "id": "skalderviken",
+          "name": "Skälderviken (Ängelholm)",
+          "emoji": "🏖",
+          "desc": "SW-Wind · Schöner Sandstrand · Kabbelwasser",
+          "lat": 56.232,
+          "lon": 12.862,
+          "shoreNote": "Tiefe Einflugszonen, moderates Kabbelwasser",
+          "color": "#98d4c5",
+          "offshoreDir": 45,
+          "vergleichRegion": "Schweden"
+        },
+        {
+          "id": "naset_falsterbo",
+          "name": "Näset / Falsterbo",
+          "emoji": "🏄",
+          "desc": "Freeride · SW-Spitze Skåne · viele Windrichtungen",
+          "lat": 55.39,
+          "lon": 12.84,
+          "shoreNote": "Ausweich für fast alle Windrichtungen, kleine Wellen",
+          "color": "#3ddc84",
+          "offshoreDir": 45,
+          "vergleichRegion": "Schweden"
+        },
+        {
+          "id": "varberg_apelviken",
+          "name": "Varberg / Apelviken",
+          "emoji": "🌊",
+          "desc": "SW-Wind · Halland · Top-Spot Schwedens",
+          "lat": 57.112,
+          "lon": 12.22,
+          "shoreNote": "Bekanntester Surfspot Schwedens, tiefes Wasser",
+          "color": "#f07820",
+          "offshoreDir": 90,
+          "camper": true,
+          "camperNote": "Camping Apelviken direkt am Strand",
+          "vergleichRegion": "Schweden"
+        },
+        {
+          "id": "ringenas",
+          "name": "Ringenäs (Halmstad)",
+          "emoji": "⛵",
+          "desc": "NW–SW Wind · Halland · feiner Sandstrand",
+          "lat": 56.698,
+          "lon": 12.665,
+          "shoreNote": "Gute Alternative bei NW/SW, schnell tiefes Wasser",
+          "color": "#a78bfa",
+          "offshoreDir": 90,
+          "vergleichRegion": "Schweden"
+        },
+        {
+          "id": "hanko_tulliniemi",
+          "name": "Hanko / Tulliniemi",
+          "emoji": "🌊",
+          "desc": "Südwind · Südspitze Finnlands · Tarifa des Nordens",
+          "lat": 59.82,
+          "lon": 22.91,
+          "shoreNote": "Wärmster, windreichster Ort Finnlands",
+          "color": "#60a5fa",
+          "offshoreDir": 0,
+          "camper": true,
+          "camperNote": "Campingplätze direkt am Strand, hervorragende Infrastruktur",
+          "vergleichRegion": "Finnland"
+        },
+        {
+          "id": "pori_yyteri",
+          "name": "Pori / Yyteri Beach",
+          "emoji": "🌊",
+          "desc": "W/NW Wind · Bottnischer Meerbusen",
+          "lat": 61.6,
+          "lon": 21.44,
+          "shoreNote": "Längster Sandstrand Nordeuropas, langer Swell",
+          "color": "#34d399",
+          "offshoreDir": 90,
+          "camper": true,
+          "camperNote": "Ferienpark Yyteri mit Strandcamping",
+          "vergleichRegion": "Finnland"
+        },
+        {
+          "id": "lauttasaari",
+          "name": "Lauttasaari / Helsinki",
+          "emoji": "💨",
+          "desc": "Foil-Community · Helsinki-Bucht · Tiefwasser",
+          "lat": 60.148,
+          "lon": 24.886,
+          "shoreNote": "Tiefes Wasser zwischen den Inseln, lokale Community",
+          "color": "#f472b6",
+          "offshoreDir": 0,
+          "vergleichRegion": "Finnland"
+        },
+        {
+          "id": "lahti_vesijarvi",
+          "name": "Lahti / Vesijärvi",
+          "emoji": "🏞",
+          "desc": "Thermik · Süßwasser · Flachwasser-Perfekt",
+          "lat": 60.98,
+          "lon": 25.66,
+          "shoreNote": "Finnische Seenplatte, kein Salzwasser",
+          "color": "#94a3b8",
+          "offshoreDir": 180,
+          "noMarine": true,
+          "vergleichRegion": "Finnland"
+        }
+      ],
+      "vergleichRegions": [
+        "Schweden",
+        "Finnland"
+      ]
+    }
+  },
+  "unpagedSpots": [
+    {
+      "region": "Nordspanien",
+      "regionColor": "#10b981",
+      "regionUrl": "/",
+      "id": "n_valdovino",
+      "name": "Valdoviño",
+      "emoji": "🌊",
+      "lat": 43.569,
+      "lon": -8.172,
+      "offshoreDir": 90
+    },
+    {
+      "region": "Nordspanien",
+      "regionColor": "#10b981",
+      "regionUrl": "/",
+      "id": "n_zarautz",
+      "name": "Zarautz",
+      "emoji": "🏄",
+      "lat": 43.284,
+      "lon": -2.167,
+      "offshoreDir": 180
+    },
+    {
+      "region": "Nordspanien",
+      "regionColor": "#10b981",
+      "regionUrl": "/",
+      "id": "n_liencres",
+      "name": "Liencres (Cantabria)",
+      "emoji": "💨",
+      "lat": 43.449,
+      "lon": -3.964,
+      "offshoreDir": 180
+    },
+    {
+      "region": "Apulien",
+      "regionColor": "#fb923c",
+      "regionUrl": "/",
+      "id": "a_vieste",
+      "name": "Vieste",
+      "emoji": "🏖",
+      "lat": 41.886,
+      "lon": 16.183,
+      "offshoreDir": 270
+    },
+    {
+      "region": "Kroatien",
+      "regionColor": "#f43f5e",
+      "regionUrl": "/",
+      "id": "k_viganj",
+      "name": "Viganj",
+      "emoji": "💨",
+      "lat": 43.027,
+      "lon": 17.277,
+      "offshoreDir": 45
+    },
+    {
+      "region": "Kroatien",
+      "regionColor": "#f43f5e",
+      "regionUrl": "/",
+      "id": "k_bol",
+      "name": "Bol / Zlatni Rat",
+      "emoji": "⛵",
+      "lat": 43.258,
+      "lon": 16.634,
+      "offshoreDir": 0
+    },
+    {
+      "region": "Kroatien",
+      "regionColor": "#f43f5e",
+      "regionUrl": "/",
+      "id": "k_nin",
+      "name": "Nin Lagune",
+      "emoji": "🌊",
+      "lat": 44.238,
+      "lon": 15.185,
+      "offshoreDir": 90
+    },
+    {
+      "region": "Kroatien",
+      "regionColor": "#f43f5e",
+      "regionUrl": "/",
+      "id": "k_baska",
+      "name": "Baška (Krk)",
+      "emoji": "🏔",
+      "lat": 44.967,
+      "lon": 14.741,
+      "offshoreDir": 180
+    },
+    {
+      "region": "Griechenland",
+      "regionColor": "#60a5fa",
+      "regionUrl": "/",
+      "id": "g_vasiliki",
+      "name": "Vasiliki",
+      "emoji": "💨",
+      "lat": 38.63,
+      "lon": 20.61,
+      "offshoreDir": 45
+    },
+    {
+      "region": "Griechenland",
+      "regionColor": "#60a5fa",
+      "regionUrl": "/",
+      "id": "g_lefkada_nw",
+      "name": "Lefkada NW",
+      "emoji": "🌊",
+      "lat": 38.752,
+      "lon": 20.579,
+      "offshoreDir": 135
+    },
+    {
+      "region": "Griechenland",
+      "regionColor": "#60a5fa",
+      "regionUrl": "/",
+      "id": "g_gialova",
+      "name": "Gialova / Navarino",
+      "emoji": "🏖",
+      "lat": 36.983,
+      "lon": 21.667,
+      "offshoreDir": 45
+    }
+  ]
+}

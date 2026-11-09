@@ -689,7 +689,7 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.28.20
+// WindFoil Weather Intelligence v3.28.21
 // Changelog v3.28.20: fix(hotfix): sizilien.html + skandinavien.html — Renderer-Funktionen (dayLabel, windArrowSvg, buildCard, switchDay) und dayStats-return wiederhergestellt, durch Scoring-Refactor e9f86c4 versehentlich gelöscht; pages-integrity.test.mjs als Regressions-Guard hinzugefügt
 // Changelog v3.28.18: Header zweizeilig — Spenden + Uhr in Zeile 1, Controls in Zeile 2; Sardinien-Link mobil ausgeblendet
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
@@ -4175,7 +4175,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.20</span>
+        <span>WindFoil Weather Intelligence v3.28.21</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
