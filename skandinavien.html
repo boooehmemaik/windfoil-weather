@@ -404,6 +404,121 @@ function dayStats(fc, dayIdx, spot) {
   const codes = h.weathercode;
   const sparkCodes = [];
   for (let h2 = 9; h2 <= 18; h2++) sparkCodes.push(codes ? (codes[start + h2] ?? null) : null);
+  return { avgWind, maxGust, avgDir, score, spark, sparkCodes, avgWindKn: msToKn(avgWind) };
+}
+
+// ── Day label ──────────────────────────────────────────────
+function dayLabel(fc, dayIdx) {
+  const t = fc.hourly?.time?.[dayIdx * 24];
+  if (!t) return `Tag ${dayIdx + 1}`;
+  const d = new Date(t);
+  if (dayIdx === 0) return 'Heute';
+  if (dayIdx === 1) return 'Morgen';
+  return d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' });
+}
+
+// ── Wind arrow SVG ─────────────────────────────────────────
+function windArrowSvg(deg, color, size) {
+  color = color || '#3a9ad9';
+  size = size || 20;
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 20 20" style="display:inline-block;vertical-align:middle;transform:rotate('+deg+'deg)"><polygon points="10,2 14,16 10,13 6,16" fill="'+color+'" opacity=".85"/></svg>';
+}
+
+// ── Build spot card HTML ───────────────────────────────────
+function buildCard(spot, forecasts, bestId, sstData) {
+  const isBest = spot.id === bestId;
+  const sst = sstData ? sstData[spot.id] : null;
+  if (!forecasts[spot.id]) return `
+    <div class="spot-card" id="card-${spot.id}">
+      <div class="spot-head">
+        <div>
+          <div class="spot-name">${spot.emoji} ${spot.name}</div>
+          <div class="spot-desc">${spot.desc}</div>
+        </div>
+      </div>
+      <div style="padding:20px;text-align:center;color:#5a7a96;font-size:11px;font-family:monospace">
+        ⚠ Forecast nicht verfügbar
+      </div>
+    </div>`;
+  const days = [0, 1, 2].map(d => dayStats(forecasts[spot.id], d, spot));
+  const labels = [0, 1, 2].map(d => dayLabel(forecasts[spot.id], d));
+
+  const tabsHtml = days.map((ds, i) => `
+    <div class="day-tab ${i === 0 ? 'active' : ''}" onclick="switchDay('${spot.id}', ${i})" id="tab-${spot.id}-${i}">
+      <span class="score-mini" style="color:${scoreColor(ds.score)}">${ds.score}</span>
+      ${labels[i]}
+    </div>`).join('');
+
+  const detailHtml = days.map((ds, i) => {
+    const sparkHtml = ds.spark.map((s, si) => {
+      const pct = Math.max(4, s);
+      const icon = wmoIcon(ds.sparkCodes ? ds.sparkCodes[si] : null);
+      return `<div class="spark-col"><div class="spark-bar" style="background:${scoreColor(s)};height:${pct}%;opacity:.8"></div>${icon ? `<span class="spark-icon">${icon}</span>` : ''}</div>`;
+    }).join('');
+
+    return `<div class="day-detail" id="detail-${spot.id}-${i}" style="${i === 0 ? '' : 'display:none'}">
+      <div class="score-row" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div>
+          <div class="score-big" style="color:${scoreColor(ds.score)}">${ds.score}</div>
+          <div class="score-label">Foil-Score</div>
+        </div>
+        <div style="flex:1">
+          <div style="background:#1e2d3d;border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
+            <div style="width:${ds.score}%;height:6px;border-radius:4px;background:${scoreColor(ds.score)}"></div>
+          </div>
+          <div style="font-family:monospace;font-size:9px;color:#5a7a96">9–18 Uhr Fenster</div>
+        </div>
+      </div>
+      <div class="wind-row">
+        <div class="wind-stat">
+          <div class="wind-stat-label">Ø Wind</div>
+          <div class="wind-stat-val">${ds.avgWindKn.toFixed(1)}<span class="wind-stat-unit"> kn</span></div>
+        </div>
+        <div class="wind-stat">
+          <div class="wind-stat-label">Max Böe</div>
+          <div class="wind-stat-val">${msToKn(ds.maxGust).toFixed(1)}<span class="wind-stat-unit"> kn</span></div>
+        </div>
+        <div class="wind-stat">
+          <div class="wind-stat-label">🌊 Wassertemp</div>
+          <div class="wind-stat-val" style="color:${sstColor(sst)}">${sst!=null?sst.toFixed(1)+'°C':'–'}</div>
+        </div>
+      </div>
+      <div class="dir-row">
+        ${windArrowSvg(ds.avgDir, '#3a9ad9', 18)}
+        <span class="dir-label">Windrichtung:</span>
+        <span class="dir-val">${compass(ds.avgDir)} (${Math.round(ds.avgDir)}°)</span>
+      </div>
+      <div class="spark" title="Stündlicher Score 9–18 Uhr">${sparkHtml}</div>
+      <div style="font-family:monospace;font-size:9px;color:#5a7a96;margin-top:3px">▲ Score-Profil 9–18 Uhr</div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="spot-card ${isBest ? 'best' : ''}" id="card-${spot.id}">
+      <div class="spot-head">
+        <div>
+          <div class="spot-name">${spot.emoji} ${spot.name}</div>
+          <div class="spot-desc">${spot.desc}</div>
+          <div class="spot-coords">${spot.lat.toFixed(3)}°N ${spot.lon.toFixed(3)}°E</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+          ${isBest ? '<div class="spot-best-badge">⭐ BEST</div>' : ''}
+          ${spot.camper ? '<div class="camper-badge" title="'+spot.camperNote+'">🚐 Camper</div>' : ''}
+        </div>
+      </div>
+      <div class="day-tabs">${tabsHtml}</div>
+      ${detailHtml}
+    </div>`;
+}
+
+// ── Day-switcher ───────────────────────────────────────────
+function switchDay(spotId, dayIdx) {
+  for (let i = 0; i < 3; i++) {
+    const tab = document.getElementById(`tab-${spotId}-${i}`);
+    const det = document.getElementById(`detail-${spotId}-${i}`);
+    if (tab) tab.classList.toggle('active', i === dayIdx);
+    if (det) det.style.display = i === dayIdx ? '' : 'none';
+  }
 }
 
 // ── Leaflet map ────────────────────────────────────────────

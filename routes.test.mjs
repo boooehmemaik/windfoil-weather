@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Route-logic test harness (the SQL behind the new endpoints)
-// File version: 1.1.0  |  App target: v3.28.19
+// File version: 1.1.0  |  App target: v3.28.20
 //   Run:  node --test routes.test.mjs   (oder npm test)
 // ============================================================================
 import { DatabaseSync } from 'node:sqlite';
