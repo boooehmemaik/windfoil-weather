@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Windalarm · WindFoil</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a0e14" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:#0a0e14;color:#d8e4f0;min-height:100vh;overflow-x:clip;
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif}
+    a{color:#3a9ad9;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    .hdr{background:rgba(10,14,20,.92);border-bottom:1px solid #1e2d3d;padding:12px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+      position:sticky;top:0;z-index:200;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+    .hdr-title{font-weight:900;font-size:15px;letter-spacing:.12em}
+    .hdr-sub{font-size:10px;color:#5a7a96;letter-spacing:.05em;margin-top:1px}
+    .hdr-btn{font-size:12px;color:#8fa8c0;border:1px solid #1e2d3d;border-radius:10px;
+      padding:7px 11px;display:inline-block}
+
+    .wrap{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+    h1{font-size:22px;font-weight:800;margin-bottom:6px}
+    .lead{color:#8fa8c0;font-size:14px;line-height:1.55;margin-bottom:20px}
+
+    .card{background:#101822;border:1px solid #1e2d3d;border-radius:14px;padding:16px;margin-bottom:16px}
+    .card h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#5a7a96;margin-bottom:10px}
+
+    .btn{background:#f07820;color:#0a0e14;border:0;border-radius:12px;font-weight:700;
+      font-size:15px;padding:13px 20px;min-height:44px;cursor:pointer}
+    .btn:disabled{opacity:.45;cursor:default}
+    .btn.ghost{background:transparent;color:#8fa8c0;border:1px solid #1e2d3d;font-weight:500}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+    .note{font-size:13px;line-height:1.5;color:#8fa8c0;margin-top:10px}
+    .note.warn{color:#e0b050}
+    .note.err{color:#e06060}
+    .note.ok{color:#60c080}
+
+    .region{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5a7a96;
+      margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid #1e2d3d}
+    .spot{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid #16212e}
+    .spot:last-child{border-bottom:0}
+    .spot-name{flex:1;min-width:0;font-size:15px}
+    .spot-name small{display:block;color:#5a7a96;font-size:11px;margin-top:2px}
+    .thr{width:72px;background:#0a0e14;color:#d8e4f0;border:1px solid #1e2d3d;
+      border-radius:9px;padding:8px;font-size:13px;text-align:center}
+    .bell{width:44px;height:44px;border-radius:12px;border:1px solid #1e2d3d;background:transparent;
+      font-size:18px;cursor:pointer;flex-shrink:0;line-height:1}
+    .bell[aria-pressed="true"]{background:#f07820;border-color:#f07820}
+
+    .ftr{border-top:1px solid #1e2d3d;padding:18px 16px;display:flex;gap:14px;flex-wrap:wrap;
+      justify-content:center;font-size:12px;color:#5a7a96}
+    .hide{display:none}
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <div>
+    <div class="hdr-title">WINDFOIL</div>
+    <div class="hdr-sub">Windalarm</div>
+  </div>
+  <div class="row">
+    <a href="/vergleich.html" class="hdr-btn">Vergleich</a>
+    <a href="/" class="hdr-btn">← Hauptseite</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <h1>🔔 Windalarm</h1>
+  <p class="lead" id="lead">Wird geladen…</p>
+
+  <div class="card" id="card-push">
+    <h2>Benachrichtigungen</h2>
+    <div class="row">
+      <button class="btn" id="btn-enable">Alarm auf diesem Gerät aktivieren</button>
+      <button class="btn ghost hide" id="btn-test">Probe senden</button>
+      <button class="btn ghost hide" id="btn-disable">Gerät abmelden</button>
+    </div>
+    <p class="note" id="push-note"></p>
+  </div>
+
+  <div class="card" id="card-spots">
+    <h2>Spots</h2>
+    <p class="note">Score-Schwelle je Spot. Gemeldet wird einmal pro Spot und Tag, sobald im
+       5-Tage-Forecast eine Session darüber liegt — bewertet mit deinem Fahrerprofil.</p>
+    <div id="spots"></div>
+  </div>
+</div>
+
+<footer class="ftr">
+  <a href="/vergleich.html">Spot-Vergleich</a>
+  <a href="/help.html">Hilfe</a>
+  <a href="/">← Hauptseite</a>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// WindFoil Windalarm — Abos verwalten und Web Push einrichten
+// ═══════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const state = { cfg: null, spots: null, sub: null };
+
+const setNote = (txt, cls) => { const n = $('push-note'); n.textContent = txt; n.className = 'note ' + (cls || ''); };
+
+// iOS liefert Push ausschließlich an eine zum Home-Bildschirm hinzugefügte
+// App aus. Im normalen Safari-Tab fehlt PushManager komplett — ohne diesen
+// Hinweis sucht der Nutzer den Fehler bei sich.
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone === true;
+
+function urlB64ToUint8Array(base64) {
+  const pad = '='.repeat((4 - base64.length % 4) % 4);
+  const raw = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function api(path, opts) {
+  const r = await fetch('/api/alerts' + path, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (r.status === 401) { location.href = '/?alarm=login'; throw new Error('nicht angemeldet'); }
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.error || ('HTTP ' + r.status));
+  return body;
+}
+
+// ── Spotliste ───────────────────────────────────────────────
+
+async function loadSpots() {
+  const j = await (await fetch('/spots.json')).json();
+  const groups = Object.entries(j.regions).map(([key, r]) => ({
+    title: (r.emoji ? r.emoji + ' ' : '') + r.title, spots: r.spots,
+  }));
+  if (j.unpagedSpots?.length) groups.push({ title: '🌍 Weitere Spots', spots: j.unpagedSpots });
+  return groups;
+}
+
+function spotRow(spot, alert) {
+  const on = !!alert;
+  return '<div class="spot" data-id="' + spot.id + '">'
+    + '<div class="spot-name">' + (spot.emoji || '') + ' ' + spot.name
+    + '<small>' + (spot.desc || '') + '</small></div>'
+    + '<input class="thr" type="number" min="1" max="100" step="5" value="' + (alert?.minScore ?? 70)
+    + '" aria-label="Score-Schwelle" ' + (on ? '' : 'disabled') + ' />'
+    + '<button class="bell" aria-pressed="' + on + '" aria-label="Alarm umschalten">'
+    + (on ? '🔔' : '🔕') + '</button></div>';
+}
+
+function renderSpots() {
+  const byId = Object.fromEntries(state.cfg.alerts.map(a => [a.spotId, a]));
+  $('spots').innerHTML = state.spots.map(g =>
+    '<div class="region">' + g.title + '</div>'
+    + g.spots.map(s => spotRow(s, byId[s.id])).join('')).join('');
+}
+
+$('spots').addEventListener('click', async e => {
+  const bell = e.target.closest('.bell');
+  if (!bell) return;
+  const row = bell.closest('.spot');
+  const id = row.dataset.id;
+  const thr = row.querySelector('.thr');
+  const turnOn = bell.getAttribute('aria-pressed') !== 'true';
+  bell.disabled = true;
+  try {
+    if (turnOn) await api('/' + encodeURIComponent(id), {
+      method: 'PUT', body: JSON.stringify({ minScore: Number(thr.value) || 70 }),
+    });
+    else await api('/' + encodeURIComponent(id), { method: 'DELETE' });
+    bell.setAttribute('aria-pressed', String(turnOn));
+    bell.textContent = turnOn ? '🔔' : '🔕';
+    thr.disabled = !turnOn;
+    state.cfg = await api('/');
+  } catch (err) { setNote('Konnte nicht gespeichert werden: ' + err.message, 'err'); }
+  bell.disabled = false;
+});
+
+// Schwelle erst beim Verlassen des Feldes schreiben — bei jedem Tastendruck
+// wäre das ein Request je Ziffer.
+$('spots').addEventListener('change', async e => {
+  if (!e.target.classList.contains('thr')) return;
+  const row = e.target.closest('.spot');
+  try {
+    await api('/' + encodeURIComponent(row.dataset.id), {
+      method: 'PUT', body: JSON.stringify({ minScore: Number(e.target.value) }),
+    });
+    setNote('Schwelle gespeichert.', 'ok');
+  } catch (err) { setNote('Schwelle nicht gespeichert: ' + err.message, 'err'); }
+});
+
+// ── Push einrichten ─────────────────────────────────────────
+
+function pushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+async function currentSubscription() {
+  if (!pushSupported()) return null;
+  const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+
+async function enablePush() {
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new Error('Benachrichtigungen wurden abgelehnt');
+
+  const reg = await navigator.serviceWorker.register('/sw.js');
+  await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlB64ToUint8Array(state.cfg.publicKey),
+  });
+  const j = sub.toJSON();
+  await api('/devices', { method: 'POST', body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }) });
+  return sub;
+}
+
+async function disablePush() {
+  const sub = await currentSubscription();
+  if (!sub) return;
+  await api('/devices', { method: 'DELETE', body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {});
+  await sub.unsubscribe();
+}
+
+$('btn-enable').addEventListener('click', async () => {
+  $('btn-enable').disabled = true;
+  setNote('Wird eingerichtet…');
+  try {
+    state.sub = await enablePush();
+    state.cfg = await api('/');
+    setNote('Aktiv auf diesem Gerät.', 'ok');
+  } catch (e) { setNote(e.message, 'err'); }
+  $('btn-enable').disabled = false;
+  paintPush();
+});
+
+$('btn-disable').addEventListener('click', async () => {
+  try { await disablePush(); state.sub = null; state.cfg = await api('/'); setNote('Gerät abgemeldet.'); }
+  catch (e) { setNote(e.message, 'err'); }
+  paintPush();
+});
+
+$('btn-test').addEventListener('click', async () => {
+  setNote('Probe unterwegs…');
+  try {
+    const r = await api('/test', { method: 'POST' });
+    setNote(r.ok ? 'Probe verschickt — sie sollte gleich erscheinen.'
+                 : 'Kein Gerät erreichbar. Nochmal aktivieren?', r.ok ? 'ok' : 'warn');
+  } catch (e) { setNote('Probe fehlgeschlagen: ' + e.message, 'err'); }
+});
+
+function paintPush() {
+  const active = !!state.sub;
+  $('btn-enable').classList.toggle('hide', active);
+  $('btn-test').classList.toggle('hide', !active);
+  $('btn-disable').classList.toggle('hide', !active);
+  $('lead').textContent = state.cfg.alerts.length
+    ? state.cfg.alerts.length + ' Spot(s) überwacht · ' + state.cfg.devices + ' Gerät(e) angemeldet.'
+    : 'Wähle unten die Spots, bei denen du Bescheid bekommen willst.';
+}
+
+async function init() {
+  try { state.cfg = await api('/'); } catch { return; }
+
+  if (!state.cfg.pushEnabled) {
+    $('btn-enable').disabled = true;
+    setNote('Push ist auf dem Server noch nicht eingerichtet (' + state.cfg.reason + ').', 'warn');
+  } else if (!pushSupported()) {
+    $('btn-enable').disabled = true;
+    setNote(isIOS() && !isStandalone()
+      ? 'Auf dem iPhone liefert nur die installierte App Benachrichtigungen: Teilen → '
+        + '„Zum Home-Bildschirm" → diese Seite dort erneut öffnen.'
+      : 'Dieser Browser unterstützt keine Web-Benachrichtigungen.', 'warn');
+  } else {
+    state.sub = await currentSubscription();
+    if (Notification.permission === 'denied') {
+      setNote('Benachrichtigungen sind für maik.surf blockiert — in den Browser-Einstellungen freigeben.', 'warn');
+    }
+  }
+
+  state.spots = await loadSpots();
+  renderSpots();
+  paintPush();
+}
+
+init();
+</script>
+</body>
+</html>

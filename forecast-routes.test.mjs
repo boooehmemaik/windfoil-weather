@@ -58,12 +58,14 @@ globalThis.fetch = async url => {
 
   const days = Number(u.searchParams.get('forecast_days') || 3);
   const vars = u.searchParams.get('hourly');
-  const body = Array.from({ length: n }, () => {
+  const body = Array.from({ length: n }, (_, i) => {
     if (u.host.startsWith('archive')) return { hourly: archiveHourly(14) };
     if (u.host.startsWith('marine')) return { hourly: { sea_surface_temperature: [...SST_SERIES] } };
     if (vars === 'weathercode') return { hourly: { time: [], weathercode: Array(days * 24).fill(3) } };
     const extra = vars.includes('weathercode') ? { weathercode: Array(days * 24).fill(61) } : {};
-    return { hourly: hourly(days * 24, extra) };
+    // Je Spot ein anderer Offset — ein konstanter Wert würde eine vertauschte
+    // Zuordnung von Koordinate zu Antwort nicht zeigen.
+    return { utc_offset_seconds: 3600 + i * 60, hourly: hourly(days * 24, extra) };
   });
   return { ok: true, status: 200, json: async () => body };
 };
@@ -121,6 +123,10 @@ for (const [key, cfg] of Object.entries(SPOTS.regions)) {
       assert.strictEqual(r.body.spots[id].hourly.windspeed_10m.length, 72, `${id}: Stundenzahl`);
       assert.ok(r.body.spots[id].hourly.weathercode, `${id}: weathercode fehlt`);
     }
+    // timezone=auto liefert Ortszeit ohne Zone. Ohne diesen Offset kann der
+    // Windalarm nicht entscheiden, ob eine Session schon gelaufen ist.
+    cfg.spots.forEach((s, i) => assert.strictEqual(
+      r.body.spots[s.id].utcOffsetSeconds, 3600 + i * 60, `${s.id}: Zeitzonen-Offset`));
   });
 }
 

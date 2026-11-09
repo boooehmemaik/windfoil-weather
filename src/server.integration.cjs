@@ -38,7 +38,12 @@ async function mountWindfoil(app) {
     { analyticsRouter },
     { locationRouter },
     { prefsRouter },
-    { forecastRouter },
+    { forecastRouter, getRegionForecast, spotsById },
+    { alertsRouter },
+    { alertStore },
+    { initPush, sendPush },
+    { startAlertScheduler },
+    { LOOKAHEAD_DAYS },
   ] = await Promise.all([
     import('./auth.mjs'),
     import('better-auth/node'),
@@ -51,6 +56,11 @@ async function mountWindfoil(app) {
     import('./locations.routes.mjs'),
     import('./prefs.routes.mjs'),
     import('./forecast.routes.mjs'),
+    import('./alerts.routes.mjs'),
+    import('./alerts.store.mjs'),
+    import('./push.mjs'),
+    import('./alerts.scheduler.mjs'),
+    import('./alerts.mjs'),
   ]);
 
   // Domain migrations on boot (Better Auth tables are created by the CLI/deploy).
@@ -92,6 +102,24 @@ async function mountWindfoil(app) {
   // Wetterdaten sind öffentlich — die Spot-Seiten funktionieren für Gäste.
   // Hinter requireAuth wäre der Gastzugang kaputt.
   app.use('/api/forecast', forecastRouter);
+
+  // Windalarm braucht ein Konto — anonyme Abos sind nicht zustellbar.
+  app.use('/api/alerts', requireAuth, alertsRouter);
+
+  const push = await initPush();
+  if (!push.enabled) {
+    console.warn(`[alerts] Push deaktiviert: ${push.reason}`);
+  } else {
+    // Der Alarm liest denselben Cache-Eintrag, den vergleich.html füllt —
+    // region=all mit genau LOOKAHEAD_DAYS Tagen, sonst wäre es ein zweiter.
+    startAlertScheduler({
+      store: alertStore,
+      send: sendPush,
+      spots: spotsById,
+      loadForecast: () => getRegionForecast('all', LOOKAHEAD_DAYS),
+    });
+    console.log('[alerts] Windalarm aktiv');
+  }
 
   return app;
 }

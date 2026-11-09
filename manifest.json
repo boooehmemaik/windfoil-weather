@@ -1,0 +1,22 @@
+{
+  "name": "WindFoil Weather Intelligence",
+  "short_name": "WindFoil",
+  "description": "Foil-Score, Spot-Vergleich und Windalarm für 40 Spots in Europa.",
+  "lang": "de",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0e14",
+  "theme_color": "#0a0e14",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "Spot-Vergleich", "url": "/vergleich.html" },
+    { "name": "Windalarm", "url": "/alarm.html" }
+  ]
+}

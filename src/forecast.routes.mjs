@@ -145,7 +145,9 @@ async function buildForecast(region, days) {
     const hourly = wind[i]?.hourly;
     if (!hourly?.windspeed_10m) { spots[s.id] = null; return; }
     if (wx?.[i]?.hourly?.weathercode) hourly.weathercode = wx[i].hourly.weathercode;
-    spots[s.id] = { hourly };
+    // timezone=auto liefert Ortszeit ohne Zone — ohne den Offset kann der
+    // Windalarm nicht entscheiden, ob eine Session schon vorbei ist.
+    spots[s.id] = { hourly, utcOffsetSeconds: wind[i]?.utc_offset_seconds ?? null };
   });
   return { region: region.key, days, spots };
 }
@@ -259,6 +261,22 @@ forecastRouter.get('/cache', (_req, res) => {
     })),
   });
 });
+
+/** Derselbe Cache-Eintrag, den die Vergleichsseite füllt. Der Windalarm liest
+ *  darüber mit und kostet so keinen zusätzlichen Open-Meteo-Call. */
+export async function getRegionForecast(regionKey, days) {
+  const region = resolveRegion(regionKey);
+  if (!region) throw new Error(`unbekannte Region: ${regionKey}`);
+  const { body } = await withCache(`fc|${region.key}|${days}`, () => buildForecast(region, days));
+  return JSON.parse(body);
+}
+
+/** Spot-Metadaten (Name, Emoji, offshoreDir) nach ID — für Alarmtexte. */
+export function spotsById() {
+  const out = {};
+  for (const s of resolveRegion('all').spots) out[s.id] = s;
+  return out;
+}
 
 export const _internals = {
   resolveRegion, buildForecast, buildMarine, buildHistory, trimToDaylight, chunk, withCache, cache,

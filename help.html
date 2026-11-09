@@ -384,6 +384,7 @@
         <li><a href="#score">Score verstehen</a></li>
         <li><a href="#thermik">Thermik &amp; Meeresbrise</a></li>
         <li><a href="#tipps">Tipps &amp; Hinweise</a></li>
+        <li><a href="#windalarm">Windalarm</a></li>
       </ol>
     </nav>
   </aside>
@@ -717,6 +718,84 @@
 
       <h3>Datenschutz</h3>
       <p>Die App speichert ausschließlich Standort-Koordinaten lokal im Browser. Es werden keine persönlichen Daten an Dritte übertragen. Wetterdaten werden direkt von Open-Meteo abgerufen — ohne Zwischenspeicherung.</p>
+    </section>
+
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="windalarm">
+      <h2><span class="section-num">08</span> Windalarm 🔔</h2>
+
+      <p>Der Windalarm benachrichtigt dich automatisch per <strong>Web Push</strong>, sobald an einem deiner gespeicherten Spots ein guter Session-Tag in Sicht ist — auch wenn die App geschlossen ist.</p>
+
+      <div class="tip blue">
+        <strong>Voraussetzung</strong>
+        Du benötigst ein <strong>WindFoil-Konto</strong>. Ohne Anmeldung leitet dich die App automatisch auf die Hauptseite. Die Alarmseite erreichst du über <span class="chip chip-blue">🔔 Windalarm</span> in der Kopf- oder Fußzeile.
+      </div>
+
+      <h3>Spots und Schwellenwert</h3>
+      <div class="panel">
+        <div class="panel-title">Alarmkonfiguration</div>
+        <table>
+          <thead>
+            <tr><th>Einstellung</th><th>Details</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Spots</td><td>Bis zu <strong>20 Spots</strong> gleichzeitig überwachen — jeder Spot hat seinen eigenen Schwellenwert</td></tr>
+            <tr><td>Score-Schwelle</td><td>Standard <span class="chip chip-orange">70</span>, einstellbar von 1 bis 100 — ein Alarm wird ausgelöst, sobald die beste 4-Stunden-Session eines Tages diesen Wert erreicht</td></tr>
+            <tr><td>Vorhersagefenster</td><td>Die App prüft die nächsten <strong>5 Tage</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Bewertungsgrundlage</h3>
+      <p>Der Score wird mit <strong>deinem Rider-Profil</strong> berechnet (Gewicht, Wingsize, Fahrkönnen). Wenn noch kein Profil hinterlegt ist, rechnet die App mit dem Referenzfahrer <span class="chip chip-gray">75 kg / 6 m²</span>.</p>
+
+      <h3>Wann kommt ein Alarm?</h3>
+      <ul>
+        <li>Pro Spot und Tag wird <strong>höchstens eine</strong> Benachrichtigung verschickt.</li>
+        <li>Treffen mehrere Spots an einem Tag die Schwelle, werden sie zu <strong>einer einzigen Nachricht</strong> zusammengefasst.</li>
+        <li>Bei <strong>ablandigem Wind</strong> (offshore) wird kein Alarm ausgelöst.</li>
+        <li>Nachts passiert nichts: zwischen <span class="chip chip-gray">21:00</span> und <span class="chip chip-gray">07:00</span> Uhr werden keine Benachrichtigungen verschickt.</li>
+      </ul>
+
+      <h3>Geräte anmelden</h3>
+      <p>Du kannst <strong>mehrere Geräte</strong> (z. B. Handy und Laptop) gleichzeitig anmelden. Jedes Gerät meldet sich einzeln an und kann auch einzeln wieder abgemeldet werden. Mit der Schaltfläche <span class="chip chip-orange">Probe senden</span> kannst du jederzeit eine Test-Benachrichtigung an alle angemeldeten Geräte schicken.</p>
+
+      <h3>Browser-Kompatibilität</h3>
+      <div class="panel">
+        <div class="panel-title">Plattformen im Überblick</div>
+        <table>
+          <thead>
+            <tr><th>Plattform</th><th>Funktioniert?</th><th>Hinweis</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Android · Chrome · Firefox</td>
+              <td><span class="chip chip-green">Ja</span></td>
+              <td>Direkt im Browser, nach einmaliger Erlaubnis</td>
+            </tr>
+            <tr>
+              <td>Desktop-Safari · Desktop-Chrome</td>
+              <td><span class="chip chip-green">Ja</span></td>
+              <td>Direkt im Browser, nach einmaliger Erlaubnis</td>
+            </tr>
+            <tr>
+              <td>iPhone / iPad (Safari)</td>
+              <td><span class="chip chip-yellow">Nur als App</span></td>
+              <td>Siehe Hinweis unten</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip red">
+        <strong>iPhone &amp; iPad — wichtiger Hinweis</strong>
+        Web-Push-Benachrichtigungen funktionieren auf iOS <strong>nur</strong>, wenn WindFoil als Home-Bildschirm-App installiert wurde und von dort gestartet wird. So gehst du vor: Öffne <strong>maik.surf</strong> in Safari, tippe auf das Teilen-Symbol und wähle <strong>„Zum Home-Bildschirm"</strong>. Starte die App anschließend immer über dieses Symbol — nicht über den Safari-Browser. Im normalen Safari-Tab können keine Benachrichtigungen ankommen. Das ist eine Einschränkung von iOS, kein Fehler der App.
+      </div>
+
+      <div class="panel" style="margin-bottom:10px;">
+        <div class="panel-title">Erlaubnis wurde blockiert</div>
+        <p>Wenn du die Benachrichtigungs-Erlaubnis einmal abgelehnt hast, zeigt der Browser keine erneute Anfrage. Um die Erlaubnis wieder zu erteilen, öffne die Browser-Einstellungen für <strong>maik.surf</strong> (Schloss-Symbol in der Adressleiste) und setze Benachrichtigungen auf <strong>Erlauben</strong>.</p>
+      </div>
     </section>
 
   </main>
