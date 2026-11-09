@@ -110,6 +110,89 @@ for (const [key, cfg] of Object.entries(REGIONS)) {
   });
 }
 
+// ── Batch-Proxy vs. Direktabruf ─────────────────────────────────────────────
+// Die vier Tests oben stubben /api/ als 401 und decken damit den Rückfall ab.
+// Hier kommt der Batch-Endpunkt dazu — und die Fälle, in denen ihm nicht zu
+// trauen ist.
+
+function batchBody(cfg, omit) {
+  const spots = {};
+  cfg.spots.forEach((s, i) => { if (s.id !== omit) spots[s.id] = forecast(i + 1); });
+  return { region: 'x', days: 3, spots };
+}
+
+function marineBody(cfg, omit) {
+  const sst = {};
+  cfg.spots.forEach(s => { if (s.id !== omit) sst[s.id] = s.noMarine ? null : 13.7; });
+  return { region: 'x', sst };
+}
+
+function histBody(cfg, omit) {
+  const spots = {};
+  cfg.spots.forEach(s => { if (s.id !== omit) spots[s.id] = archive(); });
+  return { region: 'x', days: 14, spots };
+}
+
+function stubWithBatch(cfg, opts = {}) {
+  const env = stubEnv();
+  const base = globalThis.fetch;
+  globalThis.fetch = async url => {
+    const u = String(url);
+    if (u.includes('/api/forecast/batch')) {
+      env.calls.batch = (env.calls.batch || 0) + 1;
+      if (opts.batchFails) return { ok: false, status: 502, json: async () => ({ error: 'upstream_unavailable' }) };
+      return { ok: true, status: 200, json: async () => batchBody(cfg, opts.omit) };
+    }
+    if (u.includes('/api/forecast/marine')) {
+      env.calls.sstBatch = (env.calls.sstBatch || 0) + 1;
+      return { ok: true, status: 200, json: async () => marineBody(cfg, opts.omit) };
+    }
+    if (u.includes('/api/forecast/history')) {
+      env.calls.histBatch = (env.calls.histBatch || 0) + 1;
+      return { ok: true, status: 200, json: async () => histBody(cfg, opts.omit) };
+    }
+    return base(url);
+  };
+  return env;
+}
+
+test('init(): der Batch-Endpunkt ersetzt die Einzelabrufe', async () => {
+  const cfg = REGIONS.skandinavien;
+  const { nodes, calls } = stubWithBatch(cfg);
+  await R.init('skandinavien');
+
+  assert.strictEqual(calls.batch, 1, 'ein Forecast-Request für die ganze Region');
+  assert.strictEqual(calls.sstBatch, 1, 'ein Marine-Request für die ganze Region');
+  assert.strictEqual(calls.histBatch, 1, 'ein Verlaufs-Request für die ganze Region');
+  assert.strictEqual(calls.wind || 0, 0, 'trotz Batch direkt bei Open-Meteo geholt');
+  assert.strictEqual(calls.marine || 0, 0, 'trotz Batch direkt bei marine-api geholt');
+  assert.strictEqual(calls.archive || 0, 0, 'trotz Batch direkt bei archive-api geholt');
+  assert.strictEqual((nodes['rec-body'].innerHTML.match(/<tr>/g) || []).length, cfg.spots.length);
+  assert.strictEqual((nodes['hist-grid'].innerHTML.match(/class="hist-card"/g) || []).length, cfg.spots.length);
+  assert.match(nodes['spots-grid'].innerHTML, /Wassertemp/);
+  assert.match(nodes['winner-name'].textContent, /Score \d+$/);
+});
+
+test('init(): fällt der Proxy aus, holt die Seite direkt bei Open-Meteo', async () => {
+  const cfg = REGIONS.sardinia;
+  const { nodes, calls } = stubWithBatch(cfg, { batchFails: true });
+  await R.init('sardinia');
+
+  assert.strictEqual(calls.wind, cfg.spots.length, 'Direktabrufe fehlen');
+  assert.strictEqual((nodes['rec-body'].innerHTML.match(/<tr>/g) || []).length, cfg.spots.length);
+  assert.match(nodes['winner-name'].textContent, /Score \d+$/);
+});
+
+test('init(): ein im Batch fehlender Spot löst den Direktabruf aus', async () => {
+  // Der Server-Cache kann älter sein als spots.json — dann fehlt ein neuer Spot.
+  const cfg = REGIONS.sardinia;
+  const { calls } = stubWithBatch(cfg, { omit: cfg.spots[0].id });
+  await R.init('sardinia');
+
+  assert.strictEqual(calls.batch, 1);
+  assert.strictEqual(calls.wind, cfg.spots.length, 'Teilantwort hätte nicht genügen dürfen');
+});
+
 test('init(): unbekannte Region bricht laut ab, statt leer zu rendern', async () => {
   const { nodes } = stubEnv();
   await assert.rejects(() => R.init('atlantis'), /nicht in spots\.json/);

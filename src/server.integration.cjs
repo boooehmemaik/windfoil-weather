@@ -38,6 +38,7 @@ async function mountWindfoil(app) {
     { analyticsRouter },
     { locationRouter },
     { prefsRouter },
+    { forecastRouter },
   ] = await Promise.all([
     import('./auth.mjs'),
     import('better-auth/node'),
@@ -49,6 +50,7 @@ async function mountWindfoil(app) {
     import('./analytics.routes.mjs'),
     import('./locations.routes.mjs'),
     import('./prefs.routes.mjs'),
+    import('./forecast.routes.mjs'),
   ]);
 
   // Domain migrations on boot (Better Auth tables are created by the CLI/deploy).
@@ -86,6 +88,10 @@ async function mountWindfoil(app) {
   app.use('/api/analytics', requireAuth, analyticsRouter);
   app.use('/api/locations', requireAuth, locationRouter);
   app.use('/api/prefs',     requireAuth, prefsRouter);
+
+  // Wetterdaten sind öffentlich — die Spot-Seiten funktionieren für Gäste.
+  // Hinter requireAuth wäre der Gastzugang kaputt.
+  app.use('/api/forecast', forecastRouter);
 
   return app;
 }

@@ -38,6 +38,21 @@ test('spots.json: enthält alle Spots aus vergleich.html', () => {
   assert.strictEqual(known.size, all.length);
 });
 
+// Dieser Test fehlte, und deshalb liefen zwei ID-Namensräume nebeneinander:
+// spots.json hatte "porto_pollo", die Seiten "s_porto_pollo". Die ID ist der
+// Join-Key zu /api/forecast/batch — bei Drift verwirft der Client den Batch
+// stillschweigend und macht wieder 79 Einzelrequests. Der Koordinatenvergleich
+// oben hat das nicht gesehen.
+test('spots.json: IDs stimmen mit vergleich.html und watcher.html überein', () => {
+  const known = new Set(allSpots().map(s => s.id));
+  for (const file of ['vergleich.html', 'watcher.html']) {
+    const arr = pageArray(file, 'ALL_SPOTS');
+    assert.deepStrictEqual(
+      arr.filter(s => !known.has(s.id)).map(s => `${s.name} (${s.id})`), [],
+      `${file}: IDs nicht in spots.json`);
+  }
+});
+
 test('spots.json: jeder Spot hat die Felder, die wf-region.js rendert', () => {
   for (const [key, r] of Object.entries(SPOTS.regions)) {
     for (const s of r.spots) {

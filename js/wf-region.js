@@ -111,6 +111,63 @@
     } catch { return null; }
   }
 
+  /** Ein Request für die ganze Region statt einem pro Spot — der Server bündelt
+   *  und cacht. Schlägt er fehl, holen die Spots ihre Daten wieder direkt bei
+   *  Open-Meteo: die Seite soll nicht an unserem Proxy hängen. */
+  async function loadForecasts(key, spots, cfg) {
+    try {
+      const r = await fetch(`/api/forecast/batch?region=${encodeURIComponent(key)}&days=3`,
+                            { signal: AbortSignal.timeout(15000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      // Ein fehlender Spot heißt: spots.json ist neuer als der Server-Cache.
+      if (!j.spots || spots.some(s => !(s.id in j.spots))) throw new Error('Batch unvollständig');
+      return j.spots;
+    } catch (e) {
+      console.warn('[wf-region] Batch-Forecast nicht verfügbar, Direktabruf:', e.message);
+      const out = {};
+      await Promise.all(spots.map(async s => {
+        try { out[s.id] = await fetchForecast(s.lat, s.lon, cfg); }
+        catch (err) { console.error(`[wf-region] ${s.id}:`, err); out[s.id] = null; }
+      }));
+      return out;
+    }
+  }
+
+  async function loadSst(key, spots) {
+    try {
+      const r = await fetch(`/api/forecast/marine?region=${encodeURIComponent(key)}`,
+                            { signal: AbortSignal.timeout(12000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      if (!j.sst || spots.some(s => !(s.id in j.sst))) throw new Error('Marine unvollständig');
+      return j.sst;
+    } catch (e) {
+      console.warn('[wf-region] Batch-Marine nicht verfügbar, Direktabruf:', e.message);
+      const m = await Promise.allSettled(spots.map(s => s.noMarine ? Promise.resolve(null) : fetchMarine(s.lat, s.lon)));
+      const sst = {};
+      spots.forEach((s, i) => { sst[s.id] = m[i].status === 'fulfilled' ? m[i].value : null; });
+      return sst;
+    }
+  }
+
+  /** Der Rückblick kommt gebündelt und auf 9–18 Uhr beschnitten; aggregateHistory
+   *  filtert dasselbe Fenster, arbeitet also auf beiden Quellen gleich. */
+  async function loadHistory(key, spots, win) {
+    try {
+      const r = await fetch(`/api/forecast/history?region=${encodeURIComponent(key)}`,
+                            { signal: AbortSignal.timeout(20000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      if (!j.spots || spots.some(s => !(s.id in j.spots))) throw new Error('Verlauf unvollständig');
+      return spots.map(s => j.spots[s.id] ? aggregateHistory(j.spots[s.id], win) : null);
+    } catch (e) {
+      console.warn('[wf-region] Batch-Verlauf nicht verfügbar, Direktabruf:', e.message);
+      const h = await Promise.allSettled(spots.map(s => fetchSpotHistoryERA5(s.lat, s.lon, win)));
+      return h.map(x => x.status === 'fulfilled' ? x.value : null);
+    }
+  }
+
   async function fetchSpotHistoryERA5(lat, lon, win, days) {
     const n = days || 14;
     const end = new Date(); end.setDate(end.getDate() - 1);
@@ -479,18 +536,8 @@
     const grid = document.getElementById('spots-grid');
     grid.innerHTML = SPOTS.map(() => '<div class="loading"><span class="spin">⟳</span></div>').join('');
 
-    const results = {};
-    await Promise.all(SPOTS.map(async spot => {
-      try { results[spot.id] = await fetchForecast(spot.lat, spot.lon, cfg); }
-      catch (e) { console.error(`[${key}] fetch failed for ${spot.id}:`, e); results[spot.id] = null; }
-    }));
-
-    let sstData = null;
-    if (cfg.sst) {
-      const marine = await Promise.allSettled(SPOTS.map(s => s.noMarine ? Promise.resolve(null) : fetchMarine(s.lat, s.lon)));
-      sstData = {};
-      SPOTS.forEach((s, i) => { sstData[s.id] = marine[i].status === 'fulfilled' ? marine[i].value : null; });
-    }
+    const results = await loadForecasts(key, SPOTS, cfg);
+    const sstData = cfg.sst ? await loadSst(key, SPOTS) : null;
     const ctx = { win, sstData };
 
     const ranking = rankSpots(SPOTS, results, win);
@@ -518,15 +565,15 @@
 
     const histGrid = document.getElementById('hist-grid');
     if (histGrid) {
-      const hist = await Promise.allSettled(SPOTS.map(s => fetchSpotHistoryERA5(s.lat, s.lon, win)));
-      histGrid.innerHTML = SPOTS.map((s, i) =>
-        buildHistCard(s, hist[i].status === 'fulfilled' ? hist[i].value : null)).join('');
+      const hist = await loadHistory(key, SPOTS, win);
+      histGrid.innerHTML = SPOTS.map((s, i) => buildHistCard(s, hist[i])).join('');
     }
   }
 
   return {
     COMPASS16, compass, coord, scoreColor, scoreEmoji, tempColor, sstColor, wmoIcon,
     fetchForecast, fetchMarine, fetchSpotHistoryERA5, aggregateHistory,
+    loadForecasts, loadSst, loadHistory,
     dayStats, dayLabel, rankSpots, windArrowSvg, rankClass, rankLabel, RANK_LABELS,
     buildCard, buildRankingRows, buildHistCard,
     switchDay, tickClock, placeholderMarker, updateMarker, init,

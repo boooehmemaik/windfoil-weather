@@ -548,6 +548,49 @@ function sstColor(t) {
   if(t<22)return'#c8d882';if(t<26)return'#f5c842';return'#f07820';
 }
 
+// ── Gebündelter Abruf über den eigenen Server ──────────────
+// 40 Forecasts + 39 Wassertemperaturen waren 79 Requests pro Seitenaufruf —
+// Open-Meteos Tageskontingent war damit nach rund 126 Aufrufen erschöpft.
+// Der Proxy bündelt und cacht; schlägt er fehl, bleibt der Direktabruf.
+async function fetchBatch(path, field) {
+  const r = await fetch('/api/forecast/'+path, {signal:AbortSignal.timeout(20000)});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j = await r.json();
+  if(!j[field] || ALL_SPOTS.some(s => !(s.id in j[field]))) throw new Error('Batch unvollständig');
+  return j[field];
+}
+
+// Form von Promise.allSettled nachbauen, damit der Tabellenaufbau nicht
+// wissen muss, woher die Daten kamen.
+const fulfilled = value => ({status:'fulfilled', value});
+
+async function loadForecasts(statusEl) {
+  try {
+    const spots = await fetchBatch('batch?region=all&days=5','spots');
+    return ALL_SPOTS.map(spot =>
+      spots[spot.id] ? fulfilled({spot, fc:spots[spot.id]}) : {status:'rejected'});
+  } catch(e) {
+    console.warn('[vergleich] Batch-Forecast nicht verfügbar, Direktabruf:', e.message);
+    let loaded=0;
+    return Promise.allSettled(ALL_SPOTS.map(async spot=>{
+      const fc=await fetchForecast5(spot.lat,spot.lon);
+      loaded++;
+      if(statusEl) statusEl.textContent='⟳ '+loaded+'/'+ALL_SPOTS.length+' geladen…';
+      return{spot,fc};
+    }));
+  }
+}
+
+async function loadMarine() {
+  try {
+    const sst = await fetchBatch('marine?region=all','sst');
+    return ALL_SPOTS.map(s => fulfilled(sst[s.id]));
+  } catch(e) {
+    console.warn('[vergleich] Batch-Marine nicht verfügbar, Direktabruf:', e.message);
+    return Promise.allSettled(ALL_SPOTS.map(s => s.noMarine ? Promise.resolve(null) : fetchMarine(s.lat,s.lon)));
+  }
+}
+
 // ── Rider-Profil ───────────────────────────────────────────
 async function loadRiderProfile(){
   const { rider, win } = await WF.loadRider();
@@ -563,20 +606,7 @@ async function loadAll() {
 
   await loadRiderProfile();
 
-  let loaded=0;
-  const [results, marineResults] = await Promise.all([
-    Promise.allSettled(
-      ALL_SPOTS.map(async spot=>{
-        const fc=await fetchForecast5(spot.lat,spot.lon);
-        loaded++;
-        if(statusEl) statusEl.textContent='⟳ '+loaded+'/'+ALL_SPOTS.length+' geladen…';
-        return{spot,fc};
-      })
-    ),
-    Promise.allSettled(
-      ALL_SPOTS.map(s => s.noMarine ? Promise.resolve(null) : fetchMarine(s.lat, s.lon))
-    ),
-  ]);
+  const [results, marineResults] = await Promise.all([loadForecasts(statusEl), loadMarine()]);
 
   // Build day labels from first successful result
   const firstOk=results.find(r=>r.status==='fulfilled');

@@ -15,7 +15,7 @@
       "sst": false,
       "spots": [
         {
-          "id": "porto_pollo",
+          "id": "s_porto_pollo",
           "name": "Porto Pollo",
           "emoji": "🌊",
           "desc": "Maestrale · Nordostküste",
@@ -29,7 +29,7 @@
           "vergleichRegion": "Sardinien"
         },
         {
-          "id": "stintino",
+          "id": "s_stintino",
           "name": "Stintino",
           "emoji": "⛵",
           "desc": "Libeccio · Nordwestspitze",
@@ -41,7 +41,7 @@
           "vergleichRegion": "Sardinien"
         },
         {
-          "id": "putzu_idu",
+          "id": "s_putzu_idu",
           "name": "Putzu Idu",
           "emoji": "💨",
           "desc": "Thermik-W · Westküste",
@@ -55,7 +55,7 @@
           "vergleichRegion": "Sardinien"
         },
         {
-          "id": "porto_botte",
+          "id": "s_porto_botte",
           "name": "Porto Botte",
           "emoji": "🌅",
           "desc": "Maestrale · Südwest-Lagune",
@@ -69,7 +69,7 @@
           "vergleichRegion": "Sardinien"
         },
         {
-          "id": "cala_gonone",
+          "id": "s_cala_gonone",
           "name": "Cala Gonone",
           "emoji": "🏔",
           "desc": "Levante · Nordostküste",
@@ -81,7 +81,7 @@
           "vergleichRegion": "Sardinien"
         },
         {
-          "id": "villasimius",
+          "id": "s_villasimius",
           "name": "Villasimius",
           "emoji": "🐠",
           "desc": "Mistral + Scirocco · Südost",
@@ -112,7 +112,7 @@
       "sst": false,
       "spots": [
         {
-          "id": "puzziteddu",
+          "id": "z_puzziteddu",
           "name": "Puzziteddu / Granitola",
           "emoji": "🌊",
           "desc": "Maestrale/Scirocco · SW-Küste · Wave",
@@ -126,7 +126,7 @@
           "vergleichRegion": "Sizilien"
         },
         {
-          "id": "marina_di_ragusa",
+          "id": "z_ragusa",
           "name": "Marina di Ragusa",
           "emoji": "🌅",
           "desc": "Scirocco · Südostküste",
@@ -140,7 +140,7 @@
           "vergleichRegion": "Sizilien"
         },
         {
-          "id": "maganuco",
+          "id": "z_maganuco",
           "name": "Spiaggia Maganuco",
           "emoji": "⛵",
           "desc": "Levante · Pozzallo · Sandstrand",
@@ -154,7 +154,7 @@
           "vergleichRegion": "Sizilien"
         },
         {
-          "id": "avola",
+          "id": "z_avola",
           "name": "Avola",
           "emoji": "💎",
           "desc": "Grecale (NO) · Südlich Syrakus",
@@ -166,7 +166,7 @@
           "vergleichRegion": "Sizilien"
         },
         {
-          "id": "isola_correnti",
+          "id": "z_correnti",
           "name": "Isola delle Correnti",
           "emoji": "🌊",
           "desc": "Scirocco/W · Südspitze · Wave",
@@ -178,7 +178,7 @@
           "vergleichRegion": "Sizilien"
         },
         {
-          "id": "capo_dorlando",
+          "id": "z_capo_dorlando",
           "name": "Capo d'Orlando",
           "emoji": "💨",
           "desc": "Levante/W-NO · Nordostküste",
@@ -190,7 +190,7 @@
           "vergleichRegion": "Sizilien"
         },
         {
-          "id": "messina",
+          "id": "z_messina",
           "name": "Messina / Capo Peloro",
           "emoji": "🌊",
           "desc": "Düseneffekt · Straße von Messina",
@@ -219,7 +219,7 @@
       "sst": false,
       "spots": [
         {
-          "id": "roses",
+          "id": "p_roses",
           "name": "Roses",
           "emoji": "🌊",
           "desc": "Tramuntana · Costa Brava Nord",
@@ -233,7 +233,7 @@
           "vergleichRegion": "Spanien"
         },
         {
-          "id": "delta_ebre",
+          "id": "p_delta_ebre",
           "name": "Delta de l'Ebre",
           "emoji": "🏞",
           "desc": "Tramuntana · Flachwasser-Delta",
@@ -247,7 +247,7 @@
           "vergleichRegion": "Spanien"
         },
         {
-          "id": "peniscola",
+          "id": "p_peniscola",
           "name": "Peñíscola",
           "emoji": "🏰",
           "desc": "Levante · Costa del Azahar",
@@ -259,7 +259,7 @@
           "vergleichRegion": "Spanien"
         },
         {
-          "id": "denia",
+          "id": "p_denia",
           "name": "Denia",
           "emoji": "☀️",
           "desc": "Levante · Costa Blanca",
@@ -271,7 +271,7 @@
           "vergleichRegion": "Spanien"
         },
         {
-          "id": "tarifa",
+          "id": "p_tarifa",
           "name": "Tarifa",
           "emoji": "💨",
           "desc": "Levante + Poniente · Gibraltar",
@@ -302,7 +302,7 @@
       "sst": true,
       "spots": [
         {
-          "id": "haga_park",
+          "id": "sk_haga_park",
           "name": "Haga Park (Öland)",
           "emoji": "🌊",
           "desc": "Westwind · Westküste Öland · Wingsurf-Hauptstadt",
@@ -316,7 +316,7 @@
           "vergleichRegion": "Schweden"
         },
         {
-          "id": "gronhogen",
+          "id": "sk_gronhogen",
           "name": "Grönhögen (Öland)",
           "emoji": "💨",
           "desc": "Südwind · Südspitze Öland · Flachwasser",
@@ -330,7 +330,7 @@
           "vergleichRegion": "Schweden"
         },
         {
-          "id": "lomma",
+          "id": "sk_lomma",
           "name": "Lomma",
           "emoji": "⛵",
           "desc": "Westwind · Öresund · Skåne",
@@ -342,7 +342,7 @@
           "vergleichRegion": "Schweden"
         },
         {
-          "id": "skalderviken",
+          "id": "sk_skalderviken",
           "name": "Skälderviken (Ängelholm)",
           "emoji": "🏖",
           "desc": "SW-Wind · Schöner Sandstrand · Kabbelwasser",
@@ -354,7 +354,7 @@
           "vergleichRegion": "Schweden"
         },
         {
-          "id": "naset_falsterbo",
+          "id": "sk_naset_falsterbo",
           "name": "Näset / Falsterbo",
           "emoji": "🏄",
           "desc": "Freeride · SW-Spitze Skåne · viele Windrichtungen",
@@ -366,7 +366,7 @@
           "vergleichRegion": "Schweden"
         },
         {
-          "id": "varberg_apelviken",
+          "id": "sk_varberg",
           "name": "Varberg / Apelviken",
           "emoji": "🌊",
           "desc": "SW-Wind · Halland · Top-Spot Schwedens",
@@ -380,7 +380,7 @@
           "vergleichRegion": "Schweden"
         },
         {
-          "id": "ringenas",
+          "id": "sk_ringenas",
           "name": "Ringenäs (Halmstad)",
           "emoji": "⛵",
           "desc": "NW–SW Wind · Halland · feiner Sandstrand",
@@ -392,7 +392,7 @@
           "vergleichRegion": "Schweden"
         },
         {
-          "id": "hanko_tulliniemi",
+          "id": "sk_hanko",
           "name": "Hanko / Tulliniemi",
           "emoji": "🌊",
           "desc": "Südwind · Südspitze Finnlands · Tarifa des Nordens",
@@ -406,7 +406,7 @@
           "vergleichRegion": "Finnland"
         },
         {
-          "id": "pori_yyteri",
+          "id": "sk_pori_yyteri",
           "name": "Pori / Yyteri Beach",
           "emoji": "🌊",
           "desc": "W/NW Wind · Bottnischer Meerbusen",
@@ -420,7 +420,7 @@
           "vergleichRegion": "Finnland"
         },
         {
-          "id": "lauttasaari",
+          "id": "sk_lauttasaari",
           "name": "Lauttasaari / Helsinki",
           "emoji": "💨",
           "desc": "Foil-Community · Helsinki-Bucht · Tiefwasser",
@@ -432,7 +432,7 @@
           "vergleichRegion": "Finnland"
         },
         {
-          "id": "lahti_vesijarvi",
+          "id": "sk_lahti",
           "name": "Lahti / Vesijärvi",
           "emoji": "🏞",
           "desc": "Thermik · Süßwasser · Flachwasser-Perfekt",
