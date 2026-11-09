@@ -1,140 +1,152 @@
 // ============================================================================
 // WindFoil — Statik-Check der buildfreien Seiten
 // ----------------------------------------------------------------------------
-// Die Spot-Seiten haben keinen Build-Step und keine Tests, die den DOM fahren.
-// Ein Refactor (e9f86c4) hat deshalb unbemerkt vier Funktionen und das
-// return-Statement von dayStats aus sizilien.html/skandinavien.html gelöscht —
-// beide Seiten waren live kaputt, ohne dass ein Test rot wurde.
+// Die Seiten haben keinen Build-Step. Ein Refactor (e9f86c4) hat deshalb
+// unbemerkt vier Renderer und das return von dayStats aus zwei Seiten
+// gelöscht — beide waren live kaputt, ohne dass ein Test rot wurde.
 //
-// Dieser Test parst den Seiten-JS und prüft:
-//   1. syntaktische Gültigkeit
-//   2. jeder lokal aufgerufene Name ist auch definiert
-//   3. jede Funktion mit Rückgabewert-Nutzung hat ein return
+// Seit dem Shell-Umbau tragen die Regionsseiten keine Logik mehr: sie laden
+// js/wf-region.js und rufen init(region). Geprüft wird darum sinngemäß
+// dasselbe, nur an der neuen Nahtstelle:
+//   1. jede Shell lädt Modul + Stylesheet und ruft init mit gültiger Region
+//   2. die Platzhalter-IDs, die init() befüllt, existieren im Markup
+//   3. die Spaltenzahl der Ranking-Tabelle passt zu den erzeugten Zellen
+//   4. vergleich.html (noch mit Inline-Script) bleibt statisch geprüft
 // ============================================================================
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 
-const PAGES = ['sardinia.html', 'sizilien.html', 'spanien.html', 'skandinavien.html', 'vergleich.html'];
+const require = createRequire(import.meta.url);
+const read = f => readFileSync(new URL(`./${f}`, import.meta.url), 'utf8');
 
-// Browser-Globals + Bibliotheken, die zur Laufzeit da sind, aber nicht im Script stehen.
-const AMBIENT = new Set([
-  'Array', 'Boolean', 'Date', 'Error', 'JSON', 'Map', 'Math', 'Number', 'Object',
-  'Promise', 'Set', 'String', 'AbortSignal', 'Intl',
-  'parseFloat', 'parseInt', 'isNaN', 'isFinite', 'encodeURIComponent',
-  'decodeURIComponent', 'fetch', 'setTimeout', 'setInterval', 'clearTimeout',
-  'clearInterval', 'requestAnimationFrame', 'alert', 'confirm',
-  'console', 'document', 'window', 'localStorage', 'navigator', 'location',
-  'URLSearchParams', 'URL', 'RegExp',
-  'L',   // Leaflet
-  'WF',  // js/wf-scoring.js
-  'if', 'for', 'while', 'switch', 'catch', 'return', 'typeof', 'function',
-  'new', 'await', 'else', 'do', 'in', 'of', 'case',
-]);
+const WF = require('./js/wf-scoring.js');
+globalThis.WF = WF;
+const R = require('./js/wf-region.js');
 
-/** Alle <script>-Blöcke ohne src zusammenfassen. */
-function pageScript(html) {
-  return [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
+const SPOTS = JSON.parse(read('spots.json'));
+const REGION_PAGES = { sardinia: 'sardinia.html', sizilien: 'sizilien.html', spanien: 'spanien.html', skandinavien: 'skandinavien.html' };
+
+// IDs, die init() per getElementById befüllt. Fehlt eine, bricht init() ab —
+// genau die Klasse Fehler, die der Shell-Umbau einführen könnte.
+const REQUIRED_IDS = ['hdr-clock', 'rider-note', 'winner-name', 'winner-why', 'map',
+  'spots-grid', 'rec-loading', 'rec-table', 'rec-body', 'hist-grid'];
+
+for (const [key, page] of Object.entries(REGION_PAGES)) {
+  const html = read(page);
+
+  test(`${page}: lädt wf-region.js/.css und initialisiert "${key}"`, () => {
+    assert.match(html, /<script src="\/js\/wf-region\.js"><\/script>/, 'Modul nicht geladen');
+    assert.match(html, /<script src="\/js\/wf-scoring\.js"><\/script>/, 'Scoring nicht geladen');
+    assert.match(html, /<link rel="stylesheet" href="\/css\/wf-region\.css" \/>/, 'Stylesheet nicht geladen');
+    const m = html.match(/WFRegion\.init\('([a-z]+)'\)/);
+    assert.ok(m, 'WFRegion.init-Aufruf fehlt');
+    assert.strictEqual(m[1], key, 'init-Region passt nicht zur Seite');
+    assert.ok(SPOTS.regions[m[1]], `Region "${m[1]}" nicht in spots.json`);
+  });
+
+  test(`${page}: keine Inline-Logik mehr (nur der init-Aufruf)`, () => {
+    const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
+      .map(m => m[1].trim());
+    assert.deepStrictEqual(inline, [`WFRegion.init('${key}');`]);
+  });
+
+  test(`${page}: alle von init() befüllten IDs existieren`, () => {
+    const missing = REQUIRED_IDS.filter(id => !html.includes(`id="${id}"`));
+    assert.deepStrictEqual(missing, []);
+  });
+
+  // Vorher wurden die Ranking-Zellen je Seite von Hand gepflegt und waren
+  // auseinandergelaufen. Header und Zellen kommen jetzt aus zwei Quellen
+  // (Shell-Markup vs. Modul) — die müssen zusammenpassen.
+  test(`${page}: Ranking-Header passt zur Spaltenzahl von buildRankingRows`, () => {
+    const thead = html.match(/<thead>([\s\S]*?)<\/thead>/)[1];
+    const thCount = (thead.match(/<th>/g) || []).length;
+
+    const cfg = SPOTS.regions[key];
+    const spots = cfg.spots;
+    const results = {}, sstData = cfg.sst ? {} : null;
+    spots.forEach((s, i) => { results[s.id] = synthForecast(i); if (sstData) sstData[s.id] = 12 + i; });
+    const win = WF.guestWindow();
+    const rows = R.buildRankingRows(R.rankSpots(spots, results, win), results, { win, sstData });
+
+    const perRow = rows.split('<tr>').filter(Boolean)
+      .map(tr => (tr.match(/<td[ >]/g) || []).length);
+    assert.strictEqual(perRow.length, spots.length, 'Zeilenzahl != Spot-Zahl');
+    for (const n of perRow) assert.strictEqual(n, thCount, `td=${n} vs th=${thCount}`);
+  });
+
+  test(`${page}: Wassertemperatur-Spalte genau dann, wenn sst:true`, () => {
+    const thead = html.match(/<thead>([\s\S]*?)<\/thead>/)[1];
+    assert.strictEqual(thead.includes('Wassertemp'), SPOTS.regions[key].sst);
+  });
+}
+
+// ── vergleich.html trägt weiterhin Inline-Logik ─────────────────────────────
+
+test('vergleich.html: Inline-Script ist syntaktisch gültig', () => {
+  const js = [...read('vergleich.html').matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
     .map(m => m[1]).join('\n;\n');
-}
+  assert.ok(js.trim().length > 0, 'kein Inline-Script gefunden');
+  assert.doesNotThrow(() => new Function(js));
+});
 
-/** Bezeichner, die im Script als Funktion definiert werden. */
-function definedNames(js) {
-  const out = new Set();
-  for (const m of js.matchAll(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) out.add(m[1]);
-  // const foo = (…) => …   /   const foo = function …   /   const foo = async (…) =>
-  for (const m of js.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\(|[A-Za-z_$][\w$]*\s*=>)/g)) out.add(m[1]);
-  return out;
-}
+// ── Modul-Invarianten ───────────────────────────────────────────────────────
 
-/** Entfernt Kommentare, String- und Regex-Inhalte, behält aber `${…}`-Ausdrücke
- *  aus Template-Literalen — dort stehen die Renderer-Aufrufe der Seiten.
- *  Ohne das matcht ein naiver Regex Fließtext wie "7 Spots (…)" oder "rgba(". */
-function stripLiterals(src) {
-  let out = '', i = 0;
-  const tmplStack = [];           // offene `…` je ${}-Verschachtelungstiefe
-  let braceDepth = 0;
-  const prevSignificant = () => { const m = out.match(/([^\s])\s*$/); return m ? m[1] : ''; };
-
-  while (i < src.length) {
-    const c = src[i], d = src[i + 1];
-    if (c === '/' && d === '/') { i = src.indexOf('\n', i); if (i < 0) break; continue; }
-    if (c === '/' && d === '*') { i = src.indexOf('*/', i + 2) + 2; continue; }
-    if (c === '/' && !'})]'.includes(prevSignificant()) && !/[\w$]/.test(prevSignificant())) {
-      i++;                                                   // Regex-Literal überspringen
-      while (i < src.length && src[i] !== '/') i += src[i] === '\\' ? 2 : 1;
-      i++; out += ' '; continue;
-    }
-    if (c === "'" || c === '"') {
-      i++;
-      while (i < src.length && src[i] !== c) i += src[i] === '\\' ? 2 : 1;
-      i++; out += ' '; continue;
-    }
-    if (c === '`') { tmplStack.push(braceDepth); i++; out += ' '; continue; }
-    if (tmplStack.length && tmplStack[tmplStack.length - 1] === braceDepth) {
-      // innerhalb des Textteils eines Template-Literals
-      if (c === '\\') { i += 2; continue; }
-      if (c === '$' && d === '{') { braceDepth++; i += 2; out += ' '; continue; }
-      i++; continue;
-    }
-    if (c === '{') braceDepth++;
-    if (c === '}') {
-      braceDepth--;
-      if (tmplStack.length && tmplStack[tmplStack.length - 1] === braceDepth) { i++; out += ' '; continue; }
-    }
-    if (c === '`') { tmplStack.pop(); i++; out += ' '; continue; }
-    out += c; i++;
+test('wf-region.js: rankLabel/rankClass sind für jede Spot-Zahl definiert', () => {
+  // Vorher lagen das als handgepflegte Arrays je Seite, auf die jeweilige
+  // Spot-Anzahl gepolstert — bei einem neuen Spot wurde undefined gerendert.
+  const max = Math.max(...Object.values(SPOTS.regions).map(r => r.spots.length));
+  for (let i = 0; i < max + 5; i++) {
+    assert.match(R.rankClass(i), /^rank-[1-4]$/, `rankClass(${i})`);
+    assert.ok(R.rankLabel(i) && !/undefined/.test(R.rankLabel(i)), `rankLabel(${i})`);
   }
-  return out;
-}
+});
 
-/** Bezeichner, die als `name(` aufgerufen werden — ohne Methodenaufrufe `.name(`. */
-function calledNames(js) {
-  const out = new Set();
-  for (const m of stripLiterals(js).matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\s*\(/g)) out.add(m[1]);
-  return out;
-}
+test('wf-region.js: dayStats liefert die vollständige Form', () => {
+  const ds = R.dayStats(synthForecast(0), 0, { offshoreDir: null }, WF.guestWindow());
+  for (const k of ['avgWind', 'maxGust', 'avgDir', 'score', 'avgWindKn']) {
+    assert.strictEqual(typeof ds[k], 'number', `${k} fehlt oder ist keine Zahl`);
+  }
+  assert.strictEqual(ds.spark.length, 10);
+  assert.strictEqual(ds.sparkCodes.length, 10);
+});
 
-for (const page of PAGES) {
-  const html = readFileSync(new URL(`./${page}`, import.meta.url), 'utf8');
-  const js = pageScript(html);
+test('wf-region.js: coord() schreibt die Himmelsrichtung, nicht das Vorzeichen', () => {
+  assert.strictEqual(R.coord(36.0, -5.598, 3), '36.000°N 5.598°W');  // Tarifa
+  assert.strictEqual(R.coord(41.1, 9.07, 3), '41.100°N 9.070°E');    // Porto Pollo
+});
 
-  test(`${page}: Script ist syntaktisch gültig`, () => {
-    assert.ok(js.trim().length > 0, 'kein Inline-Script gefunden');
-    assert.doesNotThrow(() => new Function(js));
-  });
+test('wf-region.js: buildCard rendert Score, drei Tage und den Tag-Umschalter', () => {
+  const spot = { id: 'x', name: 'Test', emoji: '🌊', desc: 'd', lat: 40, lon: 9, offshoreDir: null, color: '#fff' };
+  const html = R.buildCard(spot, { x: synthForecast(1) }, 'x', { win: WF.guestWindow(), sstData: null });
+  assert.strictEqual((html.match(/class="day-tab /g) || []).length, 3);
+  assert.strictEqual((html.match(/class="day-detail"/g) || []).length, 3);
+  assert.strictEqual((html.match(/WFRegion\.switchDay\('x', \d\)/g) || []).length, 3);
+  assert.match(html, /class="score-big"/);
+  assert.ok(!html.includes('undefined'), 'undefined im Markup');
+  assert.ok(!html.includes('Wassertemp'), 'SST ohne sstData gerendert');
+});
 
-  test(`${page}: jeder Funktionsaufruf ist aufgelöst`, () => {
-    const defined = definedNames(js);
-    const missing = [...calledNames(js)]
-      .filter(n => !defined.has(n) && !AMBIENT.has(n))
-      // Bezeichner, die im Script irgendwo deklariert werden (Parameter, Destructuring),
-      // tauchen als Aufruf nur bei Callback-Durchreichung auf — die prüft der Parse-Test.
-      .filter(n => !new RegExp(`(?:const|let|var|function|,|\\()\\s*${n}\\b`).test(js));
-    assert.deepStrictEqual(missing, [], `undefinierte Aufrufe in ${page}: ${missing.join(', ')}`);
-  });
-}
+test('wf-region.js: buildCard rendert die Wassertemperatur nur mit sstData', () => {
+  const spot = { id: 'x', name: 'Test', emoji: '🌊', desc: 'd', lat: 57, lon: 16, offshoreDir: null, color: '#fff' };
+  const ctx = { win: WF.guestWindow(), sstData: { x: 12.4 } };
+  const html = R.buildCard(spot, { x: synthForecast(2) }, 'x', ctx);
+  assert.match(html, /🌊 Wassertemp/);
+  assert.match(html, /12\.4°C/);
+  assert.ok(!html.includes('undefined'));
+});
 
-// dayStats liefert das Objekt, aus dem Karten, Marker und Ranking gebaut werden.
-// Fehlt das return, rendert die Seite nichts — genau der Fall von e9f86c4.
-for (const page of PAGES.filter(p => p !== 'vergleich.html')) {
-  test(`${page}: dayStats gibt ein Objekt zurück`, () => {
-    const js = pageScript(readFileSync(new URL(`./${page}`, import.meta.url), 'utf8'));
-    const fn = js.match(/function dayStats[\s\S]*?\n\}/);
-    assert.ok(fn, 'dayStats nicht gefunden');
-    const returns = fn[0].match(/return\s*\{/g) || [];
-    assert.ok(returns.length >= 2,
-      `dayStats braucht Guard- und Ergebnis-return, gefunden: ${returns.length}`);
-    assert.match(fn[0], /avgWindKn/, 'avgWindKn fehlt im Rückgabeobjekt');
-  });
-}
-
-// Die vier Renderer wurden von e9f86c4 gelöscht. Sie sind seitenlokal (unterschiedliche
-// Signaturen je Region), gehören also nicht in wf-scoring.js — aber da sein müssen sie.
-const RENDERERS = ['dayLabel', 'windArrowSvg', 'buildCard', 'switchDay'];
-for (const page of ['sardinia.html', 'sizilien.html', 'spanien.html', 'skandinavien.html']) {
-  test(`${page}: Renderer ${RENDERERS.join('/')} definiert`, () => {
-    const defined = definedNames(pageScript(readFileSync(new URL(`./${page}`, import.meta.url), 'utf8')));
-    assert.deepStrictEqual(RENDERERS.filter(r => !defined.has(r)), []);
-  });
+function synthForecast(seed) {
+  const h = { time: [], windspeed_10m: [], windgusts_10m: [], winddirection_10m: [], temperature_2m: [], weathercode: [] };
+  for (let i = 0; i < 72; i++) {
+    h.time.push(new Date(Date.UTC(2026, 10, 9, i)).toISOString().slice(0, 16));
+    h.windspeed_10m.push(4 + 5 * Math.abs(Math.sin((i + seed) / 5)));
+    h.windgusts_10m.push(9 + (i % 7));
+    h.winddirection_10m.push((i * 13 + seed * 37) % 360);
+    h.temperature_2m.push(12 + (i % 11));
+    h.weathercode.push([0, 1, 3, 61, 95, 71][(i + seed) % 6]);
+  }
+  return { hourly: h };
 }

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de" id="htmlRoot"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.28.20 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.29.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="favicon.svg"/>
 <meta name="theme-color" content="#0a0e14"/>
@@ -60,7 +60,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.28.20",
+    version_label: "Weather Intelligence · v3.29.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -373,7 +373,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.28.20",
+    version_label: "Weather Intelligence · v3.29.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -689,7 +689,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.28.21
+// WindFoil Weather Intelligence v3.29.0
+// Changelog v3.29.0: refactor(regions): js/wf-region.js + css/wf-region.css — eine Implementierung für alle vier Regionsseiten; Header-Nav vereinheitlicht, coord()-Fix (W/E), score-big CSS Spanien, map-height 420px, wind-row auto-fit
 // Changelog v3.28.20: fix(hotfix): sizilien.html + skandinavien.html — Renderer-Funktionen (dayLabel, windArrowSvg, buildCard, switchDay) und dayStats-return wiederhergestellt, durch Scoring-Refactor e9f86c4 versehentlich gelöscht; pages-integrity.test.mjs als Regressions-Guard hinzugefügt
 // Changelog v3.28.18: Header zweizeilig — Spenden + Uhr in Zeile 1, Controls in Zeile 2; Sardinien-Link mobil ausgeblendet
 // Changelog: Robust API fallback, demo-mode, independent fetches, timeout handling
@@ -4175,7 +4176,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.28.21</span>
+        <span>WindFoil Weather Intelligence v3.29.0</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
