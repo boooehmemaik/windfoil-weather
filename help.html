@@ -482,8 +482,8 @@
             <tr><th>Feld</th><th>Beschreibung</th></tr>
           </thead>
           <tbody>
-            <tr><td>Gewicht</td><td>Körpergewicht in kg — beeinflusst Liftoff-Schwelle</td></tr>
-            <tr><td>Wing-Größe</td><td>Flächeninhalt des Wings in m² — größere Fläche = weniger Wind nötig</td></tr>
+            <tr><td>Gewicht</td><td>Körpergewicht in kg — beeinflusst die Liftoff-Schwelle jeder Wing-Größe. Die Herstellertabellen sind auf 78 kg Referenzgewicht angelegt und werden auf dein Gewicht skaliert.</td></tr>
+            <tr><td>Materialliste</td><td>Alle Wings, die du in deiner Tasche hast — z. B. 3, 4 und 6 m². Jede Größe wird einzeln bewertet. Trägst du kein eigenes Material ein, rechnet die App mit dem kompletten Harlem-Pace-Satz (3, 4, 5, 6 m²) als Annahme.</td></tr>
             <tr><td>Foil-Frontfläche</td><td>Frontflügel in cm² — größere Fläche = niedrigerer Liftoff</td></tr>
             <tr><td>Fahrkönnen</td>
               <td>
@@ -499,13 +499,24 @@
         </table>
       </div>
 
-      <h3>Berechnetes Windfenster</h3>
-      <p>Aus deinen Eingaben ermittelt die App drei Grenzwerte:</p>
-      <ul>
-        <li><span class="chip chip-blue">Min</span> — Liftoff-Wind: unter diesem Wert kein Abheben möglich</li>
-        <li><span class="chip chip-green">Optimal</span> — bestes Fahrgefühl, volle Kontrolle</li>
-        <li><span class="chip chip-red">Max</span> — Sicherheitsgrenze, ab hier Überpowerung</li>
-      </ul>
+      <h3>Wie die App aus deiner Tasche einen Score macht</h3>
+      <p>Die Bewertung läuft in vier Schritten — für jede Stunde des Tages:</p>
+      <ol class="steps">
+        <li><strong>Ganze Tasche betrachten.</strong> Alle eingetragenen Wing-Größen werden herangezogen, nicht nur eine.</li>
+        <li><strong>Windfenster je Größe berechnen.</strong> Für jede Größe ermittelt die App aus Gewicht, Können und Fläche drei Grenzwerte: <span class="chip chip-blue">Angleitschwelle</span> <span class="chip chip-green">Optimalband</span> <span class="chip chip-red">Obergrenze</span>.</li>
+        <li><strong>Score je Stunde = bestes Ergebnis der Tasche.</strong> Jede Stunde bekommt den höchsten Score, den irgendeine Größe dort erreicht — das Maximum, nicht die Summe.</li>
+        <li><strong>Größe benennen.</strong> Erst danach nennt die App, welche Größe zu dieser Stunde passt.</li>
+      </ol>
+
+      <div class="tip blue">
+        <strong>Größenwechsel über die Session</strong>
+        Wenn der Wind im Tagesverlauf aufbaut, kann die App jetzt einen Wechsel anzeigen — z. B. „6 → 3 m²". Das ist die Information, die du vor dem Packen brauchst, nicht eine einzige Größe für den ganzen Tag.
+      </div>
+
+      <div class="tip">
+        <strong>Keine Größe bei zu wenig Wind</strong>
+        Wenn keine Größe der Tasche den Wind einer Stunde trägt, erscheint dort auch keine Empfehlung — nicht die kleinste Größe als Notnagel. Kein Symbol bedeutet: diese Stunde liegt außerhalb aller Fenster.
+      </div>
 
       <h3>Charts im Foil-Modus</h3>
       <ul>
@@ -515,7 +526,7 @@
         <li><strong>Thermik-Index</strong> — CAPE und LI-Werte (Böenrisiko)</li>
         <li><strong>Luftdruck</strong> — Tendenz und absoluter Wert</li>
         <li><strong>Historischer Vergleich</strong> — ERA5-Klimadaten zum Vergleich</li>
-        <li><strong>Foil-Fenster-Analyse</strong> — visuell farblich markierter Bereich zwischen Min und Max</li>
+        <li><strong>Wing-Windranges</strong> — farblich markierte Windfenster je Größe; aktive Größe der Stunde ist hervorgehoben</li>
       </ul>
     </section>
 
@@ -610,10 +621,11 @@
 
       <h3>Score-Logik</h3>
       <ul>
-        <li><strong>100</strong> = Wind liegt mitten im optimalen Fenster, keine Böenspitzen, kein Thermikrisiko</li>
-        <li>Score sinkt, wenn Wind unter dem Min- oder über dem Max-Wert liegt</li>
+        <li><strong>100</strong> = Wind liegt mitten im optimalen Fenster mindestens einer Wing-Größe, keine Böenspitzen, kein Thermikrisiko</li>
+        <li>Jede Stunde bekommt den <strong>besten</strong> Score, den irgendeine Größe der Tasche dort erreicht</li>
+        <li>Score sinkt, wenn der Wind für alle Größen unter dem jeweiligen Min- oder über dem jeweiligen Max-Wert liegt</li>
         <li>Böen und Thermik-Warnungen reduzieren den Score zusätzlich</li>
-        <li>Kein Wind = Score 0 · Zu viel Wind = Score 0</li>
+        <li>Kein Wind = Score 0 · Zu viel Wind für die kleinste Größe = Score 0</li>
       </ul>
 
       <h3>Tages-Tabs</h3>
@@ -752,7 +764,7 @@
       </div>
 
       <h3>Bewertungsgrundlage</h3>
-      <p>Der Score wird mit <strong>deinem Rider-Profil</strong> berechnet (Gewicht, Wingsize, Fahrkönnen). Wenn noch kein Profil hinterlegt ist, rechnet die App mit dem Referenzfahrer <span class="chip chip-gray">75 kg / 6 m²</span>.</p>
+      <p>Der Score wird mit <strong>deinem Rider-Profil</strong> berechnet (Gewicht, Materialliste, Fahrkönnen). Wenn noch kein Profil hinterlegt ist, rechnet die App mit dem Referenzfahrer <span class="chip chip-gray">78 kg</span> und dem kompletten Harlem-Pace-Satz <span class="chip chip-gray">3 · 4 · 5 · 6 m²</span> als Annahme.</p>
 
       <h3>Wann kommt ein Alarm?</h3>
       <ul>

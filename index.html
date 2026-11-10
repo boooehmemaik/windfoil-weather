@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de" id="htmlRoot"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.36.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.36.1 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="/icon-192.png"/>
 <link rel="manifest" href="/manifest.json"/>
@@ -61,7 +61,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.36.0",
+    version_label: "Weather Intelligence · v3.36.1",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -375,7 +375,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.36.0",
+    version_label: "Weather Intelligence · v3.36.1",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -692,7 +692,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.36.0
+// WindFoil Weather Intelligence v3.36.1
+// Changelog v3.36.1: docs(help): Hilfe beschreibt die Quiver-Logik — ganze Tasche vor Fenster vor Score vor Größe, Harlem-Satz als Default ohne eigenes Material, 78 kg Referenzgewicht, Größenwechsel über die Session
 // Changelog v3.36.0: feat(gear): Gear-Empfehlung aus dem ganzen Quiver — Windfenster je Größe zuerst, Score als Maximum über alle fahrbaren Wings, dann die passende Größe; Harlem-Satz als Default ohne eigenes Material, Gewicht immer aus dem Profil; Größenwechsel-Hinweis über die Session; vergleich.html, Regionsseiten und reise.html rechnen mit demselben Quiver
 // Changelog v3.35.0: feat(alerts): Push-Alarm nennt den Tag — heute/morgen/übermorgen, danach Wochentag + Datum; dayOffset aus der Zeitzone des Spots statt aus dem Serverkalender · docs(help): Standardschwelle 40 korrigiert
 // Changelog v3.34.0: feat(reise): Reiseplaner reise.html — bester Spot im Radius über 7 Tage, Standort bleibt im Browser · fix(alerts): Abo-Abgleich gegen die Sackgasse nach einem verworfenen Endpunkt, Zustellfehler werden geloggt, Standardschwelle 40 und frei editierbar · fix(ux): Scrollen auf dem iPhone in admin.html und im Admin-Dialog
@@ -4124,7 +4125,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.36.0</span>
+        <span>WindFoil Weather Intelligence v3.36.1</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
