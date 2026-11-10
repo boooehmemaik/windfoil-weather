@@ -31,7 +31,7 @@ function forecast(seed, hours) {
 
 /** Browser-Umgebung so weit nachbauen, wie das Inline-Skript sie anfasst. */
 function stubEnv(net) {
-  const nodes = {}, calls = {};
+  const nodes = {}, calls = {}, icons = [], popups = [];
   // firstChild: renderTable schreibt die Tages-Labels in den ersten Kindknoten
   // der Spalten-Header, nicht in das <th> selbst.
   const node = () => ({
@@ -51,7 +51,10 @@ function stubEnv(net) {
     map: () => ({ addLayer() {} }),
     tileLayer: () => ({ addTo() { return this; } }),
     divIcon: o => o,
-    marker: () => ({ addTo() { return this; }, setIcon() {}, bindPopup() {}, openPopup() {}, getPopup: () => null }),
+    marker: () => ({
+      addTo() { return this; }, setIcon(i) { icons.push(i); },
+      bindPopup(h) { popups.push(h); }, openPopup() {}, getPopup: () => null,
+    }),
   };
   globalThis.fetch = async url => {
     const u = String(url);
@@ -65,8 +68,8 @@ function stubEnv(net) {
 
   // Das Inline-Skript ist ein klassisches Script ohne Exporte — der angehängte
   // return ist die einzige Naht, über die der Test an loadAll() kommt.
-  const api = new Function(`${INLINE}\nreturn { loadAll, ALL_SPOTS, getTableData: () => tableData };`)();
-  return { nodes, calls, api };
+  const api = new Function(`${INLINE}\nreturn { loadAll, ALL_SPOTS, getTableData: () => tableData, windArrowSvg };`)();
+  return { nodes, calls, icons, popups, api };
 }
 
 const miss = { ok: false, status: 404, json: async () => ({}) };
@@ -118,6 +121,59 @@ test('loadAll(): zwei Requests statt 79, Tabelle vollständig', async () => {
   assert.ok(nodes['winners'].innerHTML.length > 0, 'Gewinner-Box leer');
   assert.match(nodes['load-status'].textContent, new RegExp(`${n} Spots geladen`));
   assert.ok(nodes['rider-note'].textContent.length > 0, 'Fahrerhinweis leer');
+});
+
+const rotationOf = html => {
+  const m = html.match(/transform:rotate\(([-\d.]+)deg\)/);
+  return m ? Number(m[1]) : null;
+};
+
+test('loadAll(): Marker und Ø-Wind-Spalte tragen den Windrichtungspfeil', async () => {
+  const { nodes, icons, popups, api } = stubEnv(batchNet());
+  await api.loadAll();
+
+  const rows = api.getTableData();
+  assert.strictEqual(icons.length, rows.length, 'je Spot ein Icon-Update');
+
+  rows.forEach((r, i) => {
+    assert.ok(Number.isFinite(r.dir0), `${r.spot.id}: dir0 fehlt`);
+    assert.ok(Number.isFinite(r.dirAvg), `${r.spot.id}: dirAvg fehlt`);
+    // Der Marker zeigt den Heute-Score, also muss der Pfeil dir0 tragen —
+    // dirAvg wäre die Fünf-Tage-Richtung und damit ein anderer Zeitraum.
+    assert.strictEqual(rotationOf(icons[i].html), r.dir0,
+      `${r.spot.id}: Marker-Pfeil zeigt nicht die Heute-Richtung`);
+    assert.match(icons[i].html, /class="lm-score"[^>]*>\s*<svg/, 'Pfeil steht nicht vor der Zahl');
+  });
+
+  // Die Spalte mittelt fünf Tage — ihr Pfeil muss das auch tun.
+  const cellRots = [...nodes['compare-body'].innerHTML.matchAll(/transform:rotate\(([-\d.]+)deg\)/g)]
+    .map(m => Number(m[1]));
+  assert.strictEqual(cellRots.length, rows.length, 'je Zeile genau ein Pfeil');
+  assert.deepStrictEqual(cellRots, rows.map(r => r.dirAvg), 'Spaltenpfeil ≠ Fünf-Tage-Richtung');
+  assert.strictEqual((nodes['compare-body'].innerHTML.match(/class="dir-sub"/g) || []).length,
+    rows.length, 'Kompass-Kürzel unter dem kn-Wert fehlt');
+
+  // Beide Pfeile müssen unterscheidbar sein, sonst prüfen die Zeilen oben nichts.
+  assert.ok(rows.some(r => Math.abs(r.dir0 - r.dirAvg) > 1),
+    'Testdaten liefern für Heute und Ø dieselbe Richtung — der Vergleich wäre blind');
+
+  assert.ok(popups.some(p => /Ø 5 Tage: .* aus <svg/.test(p)), 'Popup ohne Richtungspfeil');
+});
+
+test('windArrowSvg(): identische Konvention in vergleich.html und js/wf-region.js', () => {
+  // Zwei Implementierungen, eine Bedeutung: die Spitze zeigt dorthin, WOHER
+  // der Wind kommt. Läuft eine davon weg, zeigen Karte und Regionsseite für
+  // denselben Wind in verschiedene Richtungen — ohne dass etwas kaputt wirkt.
+  const { api } = stubEnv(batchNet());
+  const region = require('./js/wf-region.js');
+  for (const deg of [0, 45, 90, 180, 270, 359.4]) {
+    assert.strictEqual(
+      api.windArrowSvg(deg, '#3a9ad9', 13).replace(/\s+/g, ' '),
+      region.windArrowSvg(deg, '#3a9ad9', 13).replace(/\s+/g, ' '),
+      `Pfeil bei ${deg}° weicht ab`);
+  }
+  assert.strictEqual(api.windArrowSvg(null), '', 'ohne Richtung kein Pfeil');
+  assert.strictEqual(region.windArrowSvg(null), '', 'ohne Richtung kein Pfeil');
 });
 
 test('loadAll(): fällt der Proxy aus, holt die Seite direkt bei Open-Meteo', async () => {

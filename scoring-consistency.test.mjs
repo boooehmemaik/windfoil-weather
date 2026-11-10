@@ -81,6 +81,32 @@ test('offshoreMultiplier: ablandig sperrt, auflandig und Seitenwind nicht', () =
   assert.equal(WF.offshoreMultiplier(5, 355), 0, 'Nordwrap korrekt');
 });
 
+test('meanDirection: Kreismittel, nicht arithmetisches Mittel', () => {
+  const near = (got, exp, msg) => assert.ok(Math.abs(got - exp) < 0.01, `${msg}: ${got} ≠ ${exp}`);
+  // Der Grund für die ganze Funktion: arithmetisch käme hier 180 heraus — Süd
+  // statt Nord. Dieser Fall ist auf der Karte die glatte Gegenrichtung.
+  near(WF.meanDirection([350, 10]), 0, 'Nordwrap');
+  near(WF.meanDirection([355, 5, 0]), 0, 'Nordwrap mit drei Werten');
+  near(WF.meanDirection([90, 90, 90]), 90, 'konstant Ost');
+  near(WF.meanDirection([80, 100]), 90, 'ohne Wrap wie das arithmetische Mittel');
+  near(WF.meanDirection([270, 350]), 310, 'Westnordwest');
+
+  // Lücken dürfen das Mittel nicht verschieben, nur verkleinern.
+  near(WF.meanDirection([null, 90, undefined, 90]), 90, 'Nullwerte übersprungen');
+  near(WF.meanDirection([NaN, 180]), 180, 'NaN übersprungen');
+
+  // null, nicht 0: 0 wäre Nord und damit eine erfundene Richtung.
+  assert.equal(WF.meanDirection([]), null, 'leere Reihe');
+  assert.equal(WF.meanDirection(null), null, 'keine Reihe');
+  assert.equal(WF.meanDirection([null, NaN]), null, 'nur Lücken');
+
+  // Ergebnis immer in [0,360) — atan2 liefert negative Winkel.
+  for (const dirs of [[200, 250], [181, 359], [300, 20], [120, 300]]) {
+    const r = WF.meanDirection(dirs);
+    assert.ok(r >= 0 && r < 360, `${dirs} → ${r} außerhalb [0,360)`);
+  }
+});
+
 const day = h => { const d = []; for (let i = 0; i < 24; i++) d.push(h[i] ?? 0); return d; };
 
 test('scoreDay: beste 4h-Session zählt, nicht der Tagesmittelwert', () => {

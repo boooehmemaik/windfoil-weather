@@ -229,11 +229,9 @@
     const sd = (dirs || []).slice(start + 9, start + 19).filter(v => v != null);
     const avgWind = sw.length ? sw.reduce((a, b) => a + b, 0) / sw.length : 0;
     const maxGust = sg.length ? Math.max(...sg) : 0;
-    // Dominante Richtung als Kreismittel — das arithmetische Mittel liefert
-    // bei Nordwind (350°/10°) sonst Süd.
-    let sx = 0, sy = 0;
-    sd.forEach(d => { sx += Math.cos(d * Math.PI / 180); sy += Math.sin(d * Math.PI / 180); });
-    const avgDir = sd.length ? ((Math.atan2(sy / sd.length, sx / sd.length) * 180 / Math.PI) + 360) % 360 : 0;
+    // 0 statt null bei leerer Reihe, damit die Form von dayStats stabil bleibt;
+    // ohne Richtungsdaten kommt die Seite ohnehin nicht an einen Score.
+    const avgDir = WFS.meanDirection(sd) ?? 0;
     const codes = h.weathercode;
     const sparkCodes = [];
     for (let h2 = 9; h2 <= 18; h2++) sparkCodes.push(codes ? (codes[start + h2] ?? null) : null);
@@ -271,10 +269,13 @@
 
   // ── Markup ───────────────────────────────────────────────────────────────
 
+  /** Spitze zeigt dorthin, WOHER der Wind kommt. Ohne Richtung lieber nichts
+   *  als ein ungedrehter Pfeil — der behauptete Nord. */
   function windArrowSvg(deg, color = '#3a9ad9', size = 20) {
-    return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" style="display:inline-block;vertical-align:middle;transform:rotate(${deg}deg)">
-    <polygon points="10,2 14,16 10,13 6,16" fill="${color}" opacity=".85"/>
-  </svg>`;
+    if (deg == null) return '';
+    return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" style="display:inline-block;vertical-align:middle;transform:rotate(${deg}deg)">`
+      + `<polygon points="10,2 14,16 10,13 6,16" fill="${color}" opacity=".85"/>`
+      + `</svg>`;
   }
 
   // Vorher lagen diese beiden als handgepflegte Arrays in jeder Seite, auf die
@@ -476,7 +477,7 @@
       html: `<div style="position:relative;width:90px;height:64px;pointer-events:none">
         <svg style="position:absolute;top:0;left:0;width:90px;height:64px;overflow:visible;pointer-events:none"><line x1="10" y1="54" x2="70" y2="16" stroke="${col}" stroke-width="1.5" stroke-opacity="0.75"/></svg>
         <div class="lm-dot" style="background:${col}"></div>
-        <div class="lm-badge" style="color:${col};border-color:${col}">${ds.score}</div>
+        <div class="lm-badge" style="color:${col};border-color:${col}">${windArrowSvg(ds.avgDir, '#3a9ad9', 12)}${ds.score}</div>
       </div>`,
       iconSize: [90, 64], iconAnchor: [10, 54],
     }));

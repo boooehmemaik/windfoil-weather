@@ -112,6 +112,7 @@
 
     /* ── Map ── */
     #spots-map{width:100%;height:380px;background:#111820}
+    .dir-sub{font-size:9px;font-weight:600;color:#5a7a96;letter-spacing:.3px}
     .lm-score{position:absolute;top:0;right:0;background:rgba(10,14,20,.9);border-radius:6px;
       padding:2px 6px;font-size:11px;font-weight:700;white-space:nowrap;border-width:1px;border-style:solid;line-height:1.6}
     .leaflet-popup-content-wrapper{background:#151d28;border:1px solid #243040;color:#d8e4f0;
@@ -300,6 +301,15 @@ const msToKn = WF.msToKn;
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = deg => deg==null?"?":COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
+// Spitze zeigt dorthin, WOHER der Wind kommt — gleiche Konvention wie in
+// js/wf-region.js. pages-integrity.test.mjs vergleicht beide Ausgaben.
+function windArrowSvg(deg, color='#3a9ad9', size=20){
+  if(deg==null) return '';
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 20 20" style="display:inline-block;vertical-align:middle;transform:rotate('+deg+'deg)">'+
+    '<polygon points="10,2 14,16 10,13 6,16" fill="'+color+'" opacity=".85"/>'+
+  '</svg>';
+}
+
 // Wird nach dem Profil-Fetch durch das echte Fahrerfenster ersetzt.
 let RIDER_WIN = WF.calcWindow(WF.GUEST_RIDER.weight, WF.GUEST_RIDER.wingM2, WF.GUEST_RIDER.skill);
 
@@ -311,16 +321,18 @@ function tempColor(t){
 }
 
 function dayStats5(fc, dayIdx, spot) {
-  if(!fc?.hourly?.windspeed_10m) return{score:0,avgWindKn:0,avgTemp:null,session:null};
+  if(!fc?.hourly?.windspeed_10m) return{score:0,avgWindKn:0,avgTemp:null,avgDir:null,session:null};
   const h=fc.hourly, start=dayIdx*24;
   const opts={start,dirs:h.winddirection_10m||null,offshoreDir:spot?.offshoreDir??null};
   const session=WF.bestSession(h.windspeed_10m,RIDER_WIN,opts);
   const validW=h.windspeed_10m.slice(start+9,start+19).filter(v=>v!=null);
   const st=h.temperature_2m?h.temperature_2m.slice(start+9,start+19).filter(v=>v!=null):[];
+  const sd=h.winddirection_10m?h.winddirection_10m.slice(start+9,start+19):[];
   return{
     score:session.score,
     avgWindKn:validW.length?msToKn(validW.reduce((a,b)=>a+b,0)/validW.length):0,
     avgTemp:st.length?st.reduce((a,b)=>a+b,0)/st.length:null,
+    avgDir:WF.meanDirection(sd),
     session,
   };
 }
@@ -371,22 +383,27 @@ function updateMapMarkers(){
     const s=r.d0!=null?r.d0:r.avg;
     const col=s!=null?scoreColor(s):r.spot.regionColor;
     const scoreText=s!=null?String(s):'?';
+    // Der Pfeil folgt dem Zeitraum des angezeigten Scores, nicht umgekehrt.
+    const badgeDir=r.d0!=null?r.dir0:r.dirAvg;
     const icon=L.divIcon({
       className:'',
-      html:'<div style="position:relative;width:52px;height:30px;pointer-events:none">'+
+      html:'<div style="position:relative;width:66px;height:30px;pointer-events:none">'+
         '<div style="position:absolute;top:16px;left:0;width:10px;height:10px;border-radius:50%;background:'+col+';border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(0,0,0,.7)"></div>'+
-        '<div class="lm-score" style="color:'+col+';border-color:'+col+'">'+scoreText+'</div>'+
+        '<div class="lm-score" style="color:'+col+';border-color:'+col+'">'+windArrowSvg(badgeDir,'#3a9ad9',11)+scoreText+'</div>'+
       '</div>',
-      iconSize:[52,30],iconAnchor:[5,26]
+      iconSize:[66,30],iconAnchor:[5,26]
     });
     m.setIcon(icon);
     const wind=r.wind!=null?r.wind.toFixed(1)+' kn':'–';
     const temp=r.temp!=null?r.temp.toFixed(1)+'°C':'–';
     const sst=r.sst!=null?r.sst.toFixed(1)+'°C':'–';
+    // Pfeil und kn mitteln beide die fünf Tage; der Score darüber ist Heute.
+    const dir=r.dirAvg!=null?windArrowSvg(r.dirAvg,'#3a9ad9',13)+' <b>'+compass(r.dirAvg)+'</b>':'–';
     m.bindPopup('<b>'+r.spot.emoji+' '+r.spot.name+'</b><br>'+
       '<span style="color:'+col+';font-size:13px;font-weight:700">Score '+scoreText+'</span>'+
       ' <span style="color:#5a7a96;font-size:10px">(Heute)</span><br>'+
-      '<span style="font-size:11px">Ø '+wind+' · 🌡 '+temp+' · 🌊 '+sst+'</span><br>'+
+      '<span style="font-size:11px">Ø 5 Tage: '+wind+' aus '+dir+'</span><br>'+
+      '<span style="font-size:11px">🌡 '+temp+' · 🌊 '+sst+'</span><br>'+
       '<span style="color:'+r.spot.regionColor+';font-size:10px">'+r.spot.region+'</span>');
   });
 }
@@ -436,7 +453,10 @@ function renderTable() {
       return '<td class="score-cell" style="color:'+scoreColor(s)+';background:'+scoreColor(s)+'18">'+s+'</td>';
     }).join('');
     const avgDisp = r.avg!=null?'<b style="color:'+scoreColor(r.avg)+'">'+r.avg+'</b>':'–';
-    const windDisp = r.wind!=null?(r.wind.toFixed(1)+' kn'):'–';
+    const windDisp = r.wind!=null
+      ? windArrowSvg(r.dirAvg,'#3a9ad9',13)+' '+r.wind.toFixed(1)+' kn'
+        +(r.dirAvg!=null?'<div class="dir-sub">'+compass(r.dirAvg)+'</div>':'')
+      : '–';
     const tempDisp = r.temp!=null?('<b style="color:'+tempColor(r.temp)+'">'+r.temp.toFixed(1)+'°C</b>'):'–';
     const sstDisp = r.sst!=null?('<b style="color:'+sstColor(r.sst)+'">'+r.sst.toFixed(1)+'°C</b>'):'–';
     const lon=r.spot.lon;
@@ -624,7 +644,7 @@ async function loadAll() {
   tableData = results.map((r,i)=>{
     const spot=ALL_SPOTS[i];
     const sst=marineResults[i]?.status==='fulfilled'?marineResults[i].value:null;
-    if(r.status!=='fulfilled') return{spot,avg:null,d0:null,d1:null,d2:null,d3:null,d4:null,wind:null,temp:null,sst};
+    if(r.status!=='fulfilled') return{spot,avg:null,d0:null,d1:null,d2:null,d3:null,d4:null,wind:null,temp:null,sst,dir0:null,dirAvg:null};
     const fc=r.value.fc;
     const days=[0,1,2,3,4].map(d=>dayStats5(fc,d,spot));
     const scores=days.map(d=>d.score);
@@ -632,7 +652,10 @@ async function loadAll() {
     const wind=days.reduce((a,d)=>a+d.avgWindKn,0)/days.length;
     const tempsValid=days.map(d=>d.avgTemp).filter(t=>t!=null);
     const temp=tempsValid.length?tempsValid.reduce((a,b)=>a+b,0)/tempsValid.length:null;
-    return{spot,avg,d0:scores[0],d1:scores[1],d2:scores[2],d3:scores[3],d4:scores[4],wind,temp,sst};
+    // dir0 für den Kartenmarker (zeigt den Heute-Score), dirAvg für die
+    // Ø-Wind-Spalte — beide mitteln denselben Zeitraum wie ihr Zahlenwert.
+    return{spot,avg,d0:scores[0],d1:scores[1],d2:scores[2],d3:scores[3],d4:scores[4],wind,temp,sst,
+      dir0:days[0].avgDir, dirAvg:WF.meanDirection(days.map(d=>d.avgDir))};
   });
 
   // Sort by avg score (default)

@@ -76,6 +76,21 @@
     return Math.cos(diff * Math.PI / 180) > 0.7 ? 0 : 1;
   }
 
+  /** Dominante Windrichtung einer Stundenreihe als Kreismittel.
+   *  Das arithmetische Mittel liefert bei Nordwind (350°/10°) sonst Süd.
+   *  Leere Reihe → null; 0 wäre hier Nord und damit eine erfundene Richtung. */
+  function meanDirection(dirs) {
+    let sx = 0, sy = 0, n = 0;
+    for (const d of dirs || []) {
+      if (d == null || !Number.isFinite(d)) continue;
+      sx += Math.cos(d * Math.PI / 180);
+      sy += Math.sin(d * Math.PI / 180);
+      n++;
+    }
+    if (!n) return null;
+    return ((Math.atan2(sy / n, sx / n) * 180 / Math.PI) + 360) % 360;
+  }
+
   const SESSION_H = 4;        // Sessionlänge in Stunden
   const FIRST_START = 9;      // frühester sinnvoller Start
   const LAST_END = 19;        // spätestes Ende
@@ -168,6 +183,6 @@
 
   return { msToKn, knToMs, REF_FOIL_TERM, SESSION_H, FIRST_START, LAST_END, GUEST_RIDER,
            calcWindow, rangeToWindow, blendWindows, scoreHour, offshoreMultiplier,
-           bestSession, scoreDay, hourlyScores,
+           meanDirection, bestSession, scoreDay, hourlyScores,
            guestWindow, windowFromRider, loadRider, describeRider };
 });

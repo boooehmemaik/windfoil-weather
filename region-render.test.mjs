@@ -45,7 +45,7 @@ function archive() {
 
 /** Browser-Umgebung so weit nachbauen, wie init() sie anfasst. */
 function stubEnv() {
-  const nodes = {}, popups = [], calls = {};
+  const nodes = {}, popups = [], icons = [], calls = {};
   const node = () => ({ innerHTML: '', textContent: '', style: {}, classList: { toggle() {} } });
 
   globalThis.fetch = async url => {
@@ -71,9 +71,9 @@ function stubEnv() {
     map: () => ({ addLayer() {} }),
     tileLayer: () => ({ addTo() { return this; } }),
     divIcon: o => o,
-    marker: () => ({ addTo() { return this; }, setIcon() {}, bindPopup(h) { popups.push(h); }, openPopup() {} }),
+    marker: () => ({ addTo() { return this; }, setIcon(i) { icons.push(i); }, bindPopup(h) { popups.push(h); }, openPopup() {} }),
   };
-  return { nodes, popups, calls };
+  return { nodes, popups, icons, calls };
 }
 
 const R = (() => { stubEnv(); return require('./js/wf-region.js'); })();
@@ -171,6 +171,29 @@ test('init(): der Batch-Endpunkt ersetzt die Einzelabrufe', async () => {
   assert.strictEqual((nodes['hist-grid'].innerHTML.match(/class="hist-card"/g) || []).length, cfg.spots.length);
   assert.match(nodes['spots-grid'].innerHTML, /Wassertemp/);
   assert.match(nodes['winner-name'].textContent, /Score \d+$/);
+});
+
+test('init(): das Marker-Badge trägt den Windrichtungspfeil mit dem Wert aus dayStats', async () => {
+  // Ein „irgendwo ein Pfeil"-Test wäre wertlos: entscheidend ist, dass die
+  // Drehung dem avgDir desselben Spots entspricht. Eine vertauschte Zuordnung
+  // zeigt auf jedem Marker die Richtung des Nachbarspots.
+  const cfg = REGIONS.skandinavien;
+  const { icons } = stubWithBatch(cfg);
+  await R.init('skandinavien');
+
+  assert.strictEqual(icons.length, cfg.spots.length, 'je Spot ein Icon-Update');
+
+  const win = WF.guestWindow();
+  cfg.spots.forEach((spot, i) => {
+    const expected = R.dayStats(forecast(i + 1), 0, spot, win).avgDir;
+    const html = icons[i].html;
+    const m = html.match(/transform:rotate\(([-\d.]+)deg\)/);
+    assert.ok(m, `kein gedrehter Pfeil im Badge von ${spot.name}`);
+    assert.ok(Math.abs(Number(m[1]) - expected) < 1e-6,
+      `${spot.name}: Pfeil zeigt ${m[1]}°, dayStats sagt ${expected}°`);
+    assert.match(html, /<polygon points="10,2 14,16 10,13 6,16"/, 'Pfeilgeometrie fehlt');
+    assert.match(html, /class="lm-badge"[^>]*>\s*<svg/, 'Pfeil steht nicht vor der Zahl');
+  });
 });
 
 test('init(): fällt der Proxy aus, holt die Seite direkt bei Open-Meteo', async () => {
