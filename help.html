@@ -367,6 +367,7 @@
     </a>
     <a class="back-link" href="/index.html">← Zurück zur App</a>
     <a class="back-link" href="/alarm.html">🔔 Windalarm</a>
+    <a class="back-link" href="/logbuch.html">🛶 Logbuch</a>
   </div>
 </header>
 
@@ -386,6 +387,7 @@
         <li><a href="#thermik">Thermik &amp; Meeresbrise</a></li>
         <li><a href="#tipps">Tipps &amp; Hinweise</a></li>
         <li><a href="#windalarm">Windalarm</a></li>
+        <li><a href="#logbuch">Session-Logbuch</a></li>
       </ol>
     </nav>
   </aside>
@@ -799,6 +801,90 @@
       </div>
     </section>
 
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="logbuch">
+      <h2><span class="section-num">09</span> Session-Logbuch 🛶</h2>
+
+      <p>Das Session-Logbuch auf <a href="/logbuch.html" style="color:var(--blue);">/logbuch.html</a> ermöglicht es dir, deine Wassersport-Sessions festzuhalten und im Nachhinein zu prüfen, wie gut die Vorhersage mit dem tatsächlichen Wind übereinstimmt.</p>
+
+      <div class="tip blue">
+        <strong>Voraussetzung</strong>
+        Du benötigst ein <strong>WindFoil-Konto</strong>. Ohne Anmeldung leitet dich die App automatisch auf die Hauptseite. Das Logbuch erreichst du über <span class="chip chip-blue">🛶 Logbuch</span> in der Kopf- oder Fußzeile.
+      </div>
+
+      <h3>Session eintragen</h3>
+      <div class="panel">
+        <div class="panel-title">Felder beim Eintrag</div>
+        <table>
+          <thead>
+            <tr><th>Feld</th><th>Details</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Spot</td><td>Der Spot, an dem du gefahren bist</td></tr>
+            <tr><td>Tag</td><td>Datum der Session — wählbar bis zu <strong>7 Tage zurück</strong>; die Zukunft ist immer gesperrt</td></tr>
+            <tr><td>Wing-Größe</td><td>Verwendetes Wing in m²</td></tr>
+            <tr><td>Bewertung</td><td>1 bis 5 Sterne — deine persönliche Einschätzung der Session</td></tr>
+            <tr><td>Angefoilt?</td><td>Ja oder nein — hat es gereicht, um dauerhaft aufs Foil zu kommen</td></tr>
+            <tr><td>Notiz</td><td>Freitext, z. B. Besonderheiten, Ausrüstungsprobleme, Wetter-Eindrücke</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip">
+        <strong>Nachtragen</strong>
+        Sessions lassen sich bis zu <strong>7 Tage rückwirkend</strong> eintragen. Danach ist der Tag gesperrt. Nachgetragene Einträge sind in der Liste mit dem Marker <span class="chip chip-gray">nachgetragen</span> gekennzeichnet. Das Tagesdatum gilt immer in der <strong>Zeitzone des Spots</strong> — nicht in der des Handys. Die Tagesauswahl kommt daher vom Server.
+      </div>
+
+      <h3>Vorhersage vs. Tatsächlich</h3>
+      <p>Zu jeder Session stehen zwei Score-Werte nebeneinander:</p>
+
+      <div class="panel">
+        <div class="panel-title">Die zwei Score-Spalten</div>
+        <table>
+          <thead>
+            <tr><th>Spalte</th><th>Erklärung</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Vorhergesagt</strong></td>
+              <td>Der Foil-Score, der beim Eintragen aus dem aktuellen Forecast berechnet und als Snapshot gespeichert wurde. Dieser Wert wird <strong>einmalig</strong> geschrieben und danach nie aktualisiert — sonst würde sich die Vorhersage im Rückblick selbst schönrechnen.</td>
+            </tr>
+            <tr>
+              <td><strong>Tatsächlich</strong></td>
+              <td>Derselbe Foil-Score, aber auf Basis gemessener Winddaten aus dem <strong>ERA5-Archiv</strong>. Beide Werte verwenden dasselbe Fahrerprofil und dieselbe Score-Logik, damit der Vergleich fair ist.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip">
+        <strong>„Tatsächlich" erscheint erst am Folgetag</strong>
+        Das ERA5-Archiv endet gestern — für den heutigen Tag steht noch kein Messwert zur Verfügung. Der Wert erscheint automatisch einen Tag später. Solange er fehlt, zeigt die Spalte einen Strich.
+      </div>
+
+      <p>Aus der Abweichung beider Werte ergibt sich ein automatisches Urteil:</p>
+      <ul>
+        <li><span class="chip chip-green">getroffen</span> — Abweichung ≤ 8 Punkte</li>
+        <li><span class="chip chip-yellow">zu optimistisch</span> — Vorhersage lag deutlich über dem tatsächlichen Wind</li>
+        <li><span class="chip chip-red">zu pessimistisch</span> — Vorhersage lag deutlich unter dem tatsächlichen Wind</li>
+      </ul>
+
+      <h3>Bilanz oben</h3>
+      <p>Über der Eintrags-Liste zeigt eine Bilanz auf einen Blick:</p>
+      <ul>
+        <li>Gesamtzahl der eingetragenen Sessions</li>
+        <li>Anzahl besuchter Spots</li>
+        <li>Durchschnittliche Bewertung in Sternen</li>
+        <li>Anzahl nachgetragener Einträge</li>
+      </ul>
+
+      <h3>Gemessene Windspanne</h3>
+      <p>Wenn für einen Spot in der Nähe eine Wetterstation vorhanden war, wird die gemessene Windspanne in Knoten direkt beim Eintrag angezeigt. Dieser Wert baut auf dem bestehenden Feedback-Mechanismus der App auf.</p>
+
+      <h3>Einträge löschen</h3>
+      <p>Jeder Eintrag lässt sich einzeln aus dem Logbuch löschen. Die Löschung kann nicht rückgängig gemacht werden.</p>
+    </section>
+
   </main>
 </div>
 
@@ -810,6 +896,8 @@
     <a href="/index.html">← Zurück zur App</a>
     &nbsp;·&nbsp;
     <a href="/alarm.html">🔔 Windalarm</a>
+    &nbsp;·&nbsp;
+    <a href="/logbuch.html">🛶 Logbuch</a>
     &nbsp;·&nbsp;
     Wetterdaten: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
     &nbsp;·&nbsp;

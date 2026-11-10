@@ -690,7 +690,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.31.1
+// WindFoil Weather Intelligence v3.32.0
+// Changelog v3.32.0: feat(logbuch): Session-Logbuch mit Forecast-Abgleich — logbuch.html, Nachtragen bis 7 Tage, Soll/Ist je Session (Snapshot vs. ERA5), Urteil bei ±8 Punkten, /api/sessions hinter requireAuth
 // Changelog v3.31.1: fix(deploy): Schritt 2b prüft Dependencies statt sie neu zu installieren — npm install ohne Version hatte package.json-Ranges überschrieben (nodemailer 9 → 10)
 // Changelog v3.31.0: feat(alerts): Windalarm via Web Push — alarm.html, VAPID/Service-Worker, stündlicher Scheduler auf dem bestehenden Forecast-Cache, Entprellung je Spot-Tag, Ruhezeiten 21–7 Uhr, PWA-Manifest + Home-Bildschirm-Icons
 // Changelog v3.28.20: fix(hotfix): sizilien.html + skandinavien.html — Renderer-Funktionen (dayLabel, windArrowSvg, buildCard, switchDay) und dayStats-return wiederhergestellt, durch Scoring-Refactor e9f86c4 versehentlich gelöscht; pages-integrity.test.mjs als Regressions-Guard hinzugefügt
@@ -2224,6 +2225,7 @@ function AuthGate({children}){
             {href:'/vergleich.html',   label:'Vergleich'},
             {href:'/watcher.html',     label:'Watcher'},
             {href:'/alarm.html',       label:'🔔 Windalarm'},
+            {href:'/logbuch.html',     label:'🛶 Logbuch'},
           ].map(({href,label})=>(
             <a key={href} href={href}
               style={{padding:'6px 10px',borderRadius:8,cursor:'pointer',flexShrink:0,
@@ -4189,6 +4191,7 @@ function App() {
         <a href="/vergleich.html" style={{color:C.sky,textDecoration:"none"}}>📊 Vergleich</a>
         <a href="/watcher.html" style={{color:C.sky,textDecoration:"none"}}>🔭 Watcher</a>
         <a href="/alarm.html" style={{color:C.sky,textDecoration:"none"}}>🔔 Windalarm</a>
+        <a href="/logbuch.html" style={{color:C.sky,textDecoration:"none"}}>🛶 Logbuch</a>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>{t('footer_help')}</a>
         <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
           title="Admin"

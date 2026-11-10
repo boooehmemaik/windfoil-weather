@@ -72,10 +72,10 @@ globalThis.fetch = async url => {
 
 // ── Server ──────────────────────────────────────────────────────────────────
 
-let base, server, internals;
+let base, server, internals, mod;
 
 before(async () => {
-  const mod = await import('./src/forecast.routes.mjs');
+  mod = await import('./src/forecast.routes.mjs');
   internals = mod._internals;
   const app = express();
   app.use('/api/forecast', mod.forecastRouter);
@@ -271,6 +271,29 @@ test('fehlendes weathercode lässt den Forecast nicht scheitern', async () => {
   globalThis.fetch = real;
   assert.strictEqual(r.status, 200);
   assert.ok(Object.values(r.body.spots)[0].hourly.windspeed_10m.length > 0);
+});
+
+test('getRegionHistory teilt den Cache-Eintrag mit /history', async () => {
+  // Das Logbuch holt den Ist-Wert über diese Funktion. Teilte sie den Eintrag
+  // nicht, käme je Logbuchaufruf ein zweiter Archive-Call für 40 Spots dazu.
+  reset();
+  await get('/history?region=all');
+  const n = upstream.length;
+  assert.ok(n > 0, 'der erste Aufruf muss upstream gehen');
+
+  const h = await mod.getRegionHistory('all');
+  assert.strictEqual(upstream.length, n, 'kein zusätzlicher Archive-Call');
+  assert.strictEqual(h.days, 14);
+  assert.ok(Object.keys(h.spots).length >= 40);
+  // Dieselbe Beschneidung wie über HTTP — sonst wäre rateDay() auf einer
+  // anderen Reihenform unterwegs als dayStart erwartet.
+  const first = Object.values(h.spots).find(Boolean).hourly;
+  assert.deepStrictEqual([...new Set(first.windspeed_10m)].sort((a, b) => a - b),
+    [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
+});
+
+test('getRegionHistory weist unbekannte Regionen ab statt leer zu liefern', async () => {
+  await assert.rejects(() => mod.getRegionHistory('atlantis'), /atlantis/);
 });
 
 test('Stückelung: mehr Koordinaten als ein Call trägt', () => {

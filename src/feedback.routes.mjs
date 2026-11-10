@@ -15,6 +15,10 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { db, localDay, recalibrateSpotPlaningThreshold, getSpotCalibration, hasEntitlement,
          recalibrateSpotWingRange, getSpotWingCalibration, getObservedWindRange } from './db.mjs';
+import { writableDay, rateDay, MAX_BACKFILL_DAYS } from './sessions.mjs';
+import { riderWindow, saveSnapshot, hasSnapshot, SNAPSHOT_SOURCE } from './sessions.store.mjs';
+import { getRegionForecast, spotsById } from './forecast.routes.mjs';
+import { LOOKAHEAD_DAYS } from './alerts.mjs';
 
 // ── Station-Key-Lookup: spiegelt findLiveStation / findMeasuredStation aus
 // proxy-server.js, ohne dessen Modul hier importieren zu müssen.
@@ -135,15 +139,34 @@ feedbackRouter.get('/today', (req, res) => {
 //     planed?, rating?, conditionsMatched?, notes?, forecast? }
 // Wind-Range wird serverseitig aus geloggten station_obs abgeleitet.
 // Response: { ok, sessionId, observed, wingCalibration }
-feedbackRouter.post('/', (req, res) => {
+/** Soll-Wert serverseitig rechnen. Nutzt bewusst denselben Cache-Eintrag
+ *  (region=all, LOOKAHEAD_DAYS), den der Windalarm und vergleich.html ohnehin
+ *  füllen — das Logbuch kostet damit keinen zusätzlichen Open-Meteo-Call.
+ *  Scheitert nie: ohne Soll wird die Session trotzdem gespeichert. */
+async function ratePredicted(spotId, date, userId) {
+  try {
+    const fc = await getRegionForecast('all', LOOKAHEAD_DAYS);
+    return rateDay(fc?.spots?.[spotId], riderWindow(userId), spotsById()[spotId], date);
+  } catch {
+    return null;
+  }
+}
+
+feedbackRouter.post('/', async (req, res) => {
   const b = req.body || {};
   const spotRow = getSpot(b.spotId, req.user.id);
   if (!spotRow) return res.status(404).json({ error: 'spot_not_found' });
 
-  // --- the gate: only today's spot-local day is writable ---
+  // --- das Schreibfenster: heute und bis MAX_BACKFILL_DAYS zurück ---
+  // `today` stammt aus der Zeitzone des Spots. Das Datum des Clients wird nie
+  // geglaubt, sonst könnte man sich beliebige Tage ins Logbuch schreiben.
   const today = localDay(spotRow.timezone);
-  if (b.sessionDate && b.sessionDate !== today) {
-    return res.status(403).json({ error: 'feedback_locked', reason: 'only_today', today });
+  const date = b.sessionDate || today;
+  const gate = writableDay(date, today);
+  if (!gate.ok) {
+    return res.status(403).json({
+      error: 'feedback_locked', reason: gate.reason, today, maxBackfillDays: MAX_BACKFILL_DAYS,
+    });
   }
 
   // --- Validierung ---
@@ -184,10 +207,17 @@ feedbackRouter.post('/', (req, res) => {
 
   const planed = b.planed == null ? null : (b.planed ? 1 : 0);
 
+  // Vor der Transaktion, weil der Forecast-Abruf asynchron ist und eine
+  // better-sqlite3-Transaktion kein await verträgt.
+  const serverRated = await ratePredicted(b.spotId, date, req.user.id);
+
   const tx = db.transaction(() => {
     let session = db.prepare(
       'SELECT id FROM sessions WHERE user_id = ? AND spot_id = ? AND session_date = ?')
-      .get(req.user.id, b.spotId, today);
+      .get(req.user.id, b.spotId, date);
+
+    // backfilled wird nur beim INSERT gesetzt: wer am Sessiontag geloggt und
+    // später nur die Notiz ergänzt hat, hat nicht nachgetragen.
 
     let sessionId;
     if (session) {
@@ -208,27 +238,41 @@ feedbackRouter.post('/', (req, res) => {
       db.prepare(`INSERT INTO sessions
           (id,user_id,spot_id,session_date,started_at,ended_at,
            planed,planing_wind_kt,rating,conditions_matched,notes,
-           wing_m2,range_low_kt,range_high_kt,created_at,updated_at)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-        .run(sessionId, req.user.id, b.spotId, today, startedAt,
+           wing_m2,range_low_kt,range_high_kt,backfilled,created_at,updated_at)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(sessionId, req.user.id, b.spotId, date, startedAt,
              endedAt, planed, planingWindKt, b.rating ?? null,
              b.conditionsMatched ?? null, b.notes ?? null,
              b.wingM2 ?? null, rangeLowKt, rangeHighKt,
-             nowIso(), nowIso());
+             gate.backfilled ? 1 : 0, nowIso(), nowIso());
     }
 
-    // Forecast-Snapshot für Drift-Analyse (optional, unverändert).
-    if (b.forecast) {
+    // Soll-Wert. Der serverseitig gerechnete hat Vorrang; `b.forecast` springt
+    // nur ein, wenn der Spot nicht in spots.json steht (selbst angelegte
+    // Koordinaten über POST /api/feedback/spot). Sonst wäre die „Vorhersage"
+    // eine Behauptung des Clients.
+    if (serverRated) {
+      saveSnapshot({ id: randomUUID(), sessionId, rated: serverRated, date, now: nowIso() });
+    } else if (b.forecast) {
       const f = b.forecast;
-      db.prepare(`INSERT INTO forecast_snapshots
-          (id,session_id,source,predicted_score,predicted_wind_kt,
-           predicted_window_start,predicted_window_end,station_model_confidence,
-           raw_json,captured_at)
-          VALUES (?,?,?,?,?,?,?,?,?,?)`)
-        .run(randomUUID(), sessionId, f.source || 'foil-score',
-             f.predictedScore ?? null, f.predictedWindKt ?? null,
-             f.windowStart ?? null, f.windowEnd ?? null,
-             f.stationModelConfidence ?? null, JSON.stringify(f.raw ?? {}), nowIso());
+      const source = f.source || SNAPSHOT_SOURCE;
+      // Nur der erste Snapshot zählt. Vorher legte jede Bearbeitung einen
+      // weiteren an — der wäre schon nachgeführt und würde den Abgleich
+      // schönrechnen.
+      if (!hasSnapshot(sessionId, source)) {
+        db.prepare(`INSERT INTO forecast_snapshots
+            (id,session_id,source,predicted_score,predicted_wind_kt,
+             predicted_window_start,predicted_window_end,station_model_confidence,
+             raw_json,captured_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)`)
+          .run(randomUUID(), sessionId, source,
+               f.predictedScore ?? null, f.predictedWindKt ?? null,
+               f.windowStart ?? null, f.windowEnd ?? null,
+               f.stationModelConfidence ?? null,
+               // Herkunft mitschreiben: raw_json ist formfrei, die CHECK-Liste
+               // auf `source` ist es nicht.
+               JSON.stringify({ origin: 'client', ...(f.raw ?? {}) }), nowIso());
+      }
     }
     return sessionId;
   });

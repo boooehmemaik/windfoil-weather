@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Logbuch · WindFoil</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a0e14" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:#0a0e14;color:#d8e4f0;min-height:100vh;overflow-x:clip;
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif}
+    a{color:#3a9ad9;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    .hdr{background:rgba(10,14,20,.92);border-bottom:1px solid #1e2d3d;padding:12px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+      position:sticky;top:0;z-index:200;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+    .hdr-title{font-weight:900;font-size:15px;letter-spacing:.12em}
+    .hdr-sub{font-size:10px;color:#5a7a96;letter-spacing:.05em;margin-top:1px}
+    .hdr-btn{font-size:12px;color:#8fa8c0;border:1px solid #1e2d3d;border-radius:10px;
+      padding:7px 11px;display:inline-block}
+
+    .wrap{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+    h1{font-size:22px;font-weight:800;margin-bottom:6px}
+    .lead{color:#8fa8c0;font-size:14px;line-height:1.55;margin-bottom:20px}
+
+    .card{background:#101822;border:1px solid #1e2d3d;border-radius:14px;padding:16px;margin-bottom:16px}
+    .card h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#5a7a96;margin-bottom:10px}
+
+    .btn{background:#f07820;color:#0a0e14;border:0;border-radius:12px;font-weight:700;
+      font-size:15px;padding:13px 20px;min-height:44px;cursor:pointer}
+    .btn:disabled{opacity:.45;cursor:default}
+    .btn.ghost{background:transparent;color:#8fa8c0;border:1px solid #1e2d3d;font-weight:500}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+    .note{font-size:13px;line-height:1.5;color:#8fa8c0;margin-top:10px}
+    .note.warn{color:#e0b050}
+    .note.err{color:#e06060}
+    .note.ok{color:#60c080}
+
+    .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+    label{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+      color:#5a7a96;margin-bottom:5px}
+    select,input,textarea{width:100%;background:#0a0e14;color:#d8e4f0;border:1px solid #1e2d3d;
+      border-radius:10px;padding:11px;font-size:15px;min-height:44px;font-family:inherit}
+    textarea{min-height:66px;resize:vertical}
+
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px}
+    .stat{background:#0a0e14;border:1px solid #1e2d3d;border-radius:12px;padding:11px;text-align:center}
+    .stat b{display:block;font-size:20px;font-weight:800;color:#d8e4f0}
+    .stat span{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#5a7a96}
+
+    .entry{background:#101822;border:1px solid #1e2d3d;border-radius:14px;padding:14px;margin-bottom:12px}
+    .entry-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+    .entry-date{font-size:15px;font-weight:700}
+    .entry-spot{flex:1;min-width:0;color:#8fa8c0;font-size:14px}
+    .del{width:36px;height:36px;border-radius:10px;border:1px solid #1e2d3d;background:transparent;
+      color:#5a7a96;font-size:15px;cursor:pointer;flex-shrink:0;line-height:1}
+    .tag{font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-radius:7px;
+      padding:3px 7px;border:1px solid #1e2d3d;color:#5a7a96}
+    .tag.hit{color:#60c080;border-color:#2c5540}
+    .tag.over{color:#e0b050;border-color:#5a4a20}
+    .tag.under{color:#3a9ad9;border-color:#204a66}
+
+    .cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .cmp div{background:#0a0e14;border:1px solid #1e2d3d;border-radius:11px;padding:10px}
+    .cmp h3{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#5a7a96;margin-bottom:5px}
+    .cmp b{font-size:19px;font-weight:800}
+    .cmp small{display:block;color:#5a7a96;font-size:11px;margin-top:3px}
+    .meta{font-size:12px;color:#8fa8c0;line-height:1.6}
+    .meta em{color:#5a7a96;font-style:normal}
+
+    .ftr{border-top:1px solid #1e2d3d;padding:18px 16px;display:flex;gap:14px;flex-wrap:wrap;
+      justify-content:center;font-size:12px;color:#5a7a96}
+    .hide{display:none}
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <div>
+    <div class="hdr-title">WINDFOIL</div>
+    <div class="hdr-sub">Logbuch</div>
+  </div>
+  <div class="row">
+    <a href="/vergleich.html" class="hdr-btn">Vergleich</a>
+    <a href="/" class="hdr-btn">← Hauptseite</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <h1>🛶 Logbuch</h1>
+  <p class="lead" id="lead">Wird geladen…</p>
+
+  <div class="card">
+    <h2>Bilanz</h2>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <h2>Session eintragen</h2>
+    <div class="fields">
+      <div>
+        <label for="f-spot">Spot</label>
+        <select id="f-spot"></select>
+      </div>
+      <div>
+        <label for="f-date">Tag</label>
+        <select id="f-date"></select>
+      </div>
+      <div>
+        <label for="f-wing">Wing (m²)</label>
+        <input id="f-wing" type="number" min="0.5" max="20" step="0.5" placeholder="z. B. 5" />
+      </div>
+      <div>
+        <label for="f-rating">Bewertung</label>
+        <select id="f-rating">
+          <option value="">—</option>
+          <option value="5">★★★★★</option>
+          <option value="4">★★★★</option>
+          <option value="3">★★★</option>
+          <option value="2">★★</option>
+          <option value="1">★</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-planed">Angefoilt</label>
+        <select id="f-planed">
+          <option value="">—</option>
+          <option value="1">Ja</option>
+          <option value="0">Nein</option>
+        </select>
+      </div>
+    </div>
+    <label for="f-notes">Notiz</label>
+    <textarea id="f-notes" placeholder="Wie war's? Material, Wasserstand, Böen…"></textarea>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btn-save">Eintragen</button>
+    </div>
+    <p class="note" id="form-note"></p>
+  </div>
+
+  <div id="entries"></div>
+  <div class="row" style="justify-content:center">
+    <button class="btn ghost hide" id="btn-more">Weitere laden</button>
+  </div>
+</div>
+
+<footer class="ftr">
+  <a href="/vergleich.html">Spot-Vergleich</a>
+  <a href="/alarm.html">Windalarm</a>
+  <a href="/help.html">Hilfe</a>
+  <a href="/">← Hauptseite</a>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// WindFoil Logbuch — Sessions eintragen und gegen die
+// Vorhersage abgleichen. Geschrieben wird über /api/feedback,
+// gelesen über /api/sessions.
+// ═══════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const state = { data: null, spots: null, entries: [], before: null, maxBackfillDays: 7 };
+
+const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const setNote = (txt, cls) => { const n = $('form-note'); n.textContent = txt; n.className = 'note ' + (cls || ''); };
+
+/** '2026-11-08' → 'Sa, 08.11.' — UTC-fest, damit die Zeitzone des Browsers
+ *  den Wochentag nicht um einen Tag verschiebt. */
+function labelDate(iso) {
+  const d = new Date(iso + 'T12:00:00Z');
+  return WEEKDAYS[d.getUTCDay()] + ', ' + iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.';
+}
+
+async function api(path, opts) {
+  const r = await fetch(path, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (r.status === 401) { location.href = '/?logbuch=login'; throw new Error('nicht angemeldet'); }
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    // Die Begründung steckt in `reason`, nicht in `error` — ohne sie stünde bei
+    // jedem gesperrten Tag nur „feedback_locked".
+    const err = new Error(body.error || ('HTTP ' + r.status));
+    err.body = body;
+    throw err;
+  }
+  return body;
+}
+
+// ── Formular ────────────────────────────────────────────────
+
+async function loadSpots() {
+  const j = await (await fetch('/spots.json')).json();
+  const out = [];
+  for (const r of Object.values(j.regions)) {
+    for (const s of r.spots) out.push({ id: s.id, label: (s.emoji || '') + ' ' + s.name, group: r.title });
+  }
+  for (const s of (j.unpagedSpots || [])) {
+    out.push({ id: s.id, label: (s.emoji || '') + ' ' + s.name, group: 'Weitere Spots' });
+  }
+  return out;
+}
+
+function renderSpotSelect() {
+  const groups = [...new Set(state.spots.map(s => s.group))];
+  $('f-spot').innerHTML = groups.map(g =>
+    '<optgroup label="' + esc(g) + '">'
+    + state.spots.filter(s => s.group === g)
+        .map(s => '<option value="' + esc(s.id) + '">' + esc(s.label) + '</option>').join('')
+    + '</optgroup>').join('');
+}
+
+/** Die erlaubten Tage kommen vom Server, nicht aus der Browseruhr: „heute"
+ *  gilt in der Zeitzone des Spots, und nur das akzeptiert /api/feedback. */
+async function loadDates() {
+  const sel = $('f-date');
+  sel.innerHTML = '<option value="">…</option>';
+  try {
+    const w = await api('/api/sessions/window?spot=' + encodeURIComponent($('f-spot').value));
+    state.maxBackfillDays = w.maxBackfillDays;
+    sel.innerHTML = w.dates.map((d, i) =>
+      '<option value="' + d + '">' + labelDate(d) + (i === 0 ? ' (heute)' : '') + '</option>').join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">—</option>';
+    setNote('Tage konnten nicht geladen werden: ' + e.message, 'err');
+  }
+}
+
+const LOCKED = {
+  future_day: 'Dieser Tag liegt noch in der Zukunft.',
+  too_old: 'Nachtragen geht nur bis ' + state.maxBackfillDays + ' Tage zurück.',
+  invalid_date: 'Der Tag wurde nicht verstanden.',
+};
+
+/** Fehlertext für den Nutzer. Ein gesperrter Tag ist kein Serverfehler,
+ *  sondern eine Regel — die soll auch so klingen. */
+function failText(e) {
+  const reason = e.body?.reason;
+  if (reason && LOCKED[reason]) {
+    return reason === 'too_old' && e.body.maxBackfillDays
+      ? 'Nachtragen geht nur bis ' + e.body.maxBackfillDays + ' Tage zurück.'
+      : LOCKED[reason];
+  }
+  return 'Nicht gespeichert: ' + e.message;
+}
+
+function formBody() {
+  const num = id => ($(id).value === '' ? null : Number($(id).value));
+  return {
+    spotId: $('f-spot').value,
+    sessionDate: $('f-date').value || undefined,
+    wingM2: num('f-wing'),
+    rating: num('f-rating'),
+    planed: num('f-planed'),
+    notes: $('f-notes').value.trim() || null,
+  };
+}
+
+$('f-spot').addEventListener('change', loadDates);
+
+$('btn-save').addEventListener('click', async () => {
+  const body = formBody();
+  if (!body.spotId) return setNote('Bitte einen Spot wählen.', 'warn');
+  $('btn-save').disabled = true;
+  setNote('Wird gespeichert…');
+  try {
+    await api('/api/feedback', { method: 'POST', body: JSON.stringify(body) });
+    $('f-notes').value = '';
+    setNote('Eingetragen.', 'ok');
+    await reload();
+  } catch (e) {
+    setNote(failText(e), 'err');
+  }
+  $('btn-save').disabled = false;
+});
+
+// ── Liste ───────────────────────────────────────────────────
+
+const VERDICT_CLASS = { 'getroffen': 'hit', 'zu optimistisch': 'over', 'zu pessimistisch': 'under' };
+
+const scoreBox = (title, rated, fallback) => '<div><h3>' + title + '</h3>'
+  + (rated
+    ? '<b>' + rated.score + '</b>'
+      + '<small>' + (rated.windKn != null ? rated.windKn + ' kn · ' : '')
+      + (rated.startHour != null ? rated.startHour + '–' + rated.endHour + ' Uhr' : '') + '</small>'
+    : '<b>—</b><small>' + fallback + '</small>')
+  + '</div>';
+
+function metaLine(s) {
+  const bits = [];
+  if (s.wing_m2 != null) bits.push(s.wing_m2 + ' m² Wing');
+  if (s.range_low_kt != null) bits.push(s.range_low_kt + '–' + s.range_high_kt + ' kn gemessen');
+  if (s.planed != null) bits.push(s.planed ? 'angefoilt' : 'nicht angefoilt');
+  if (s.rating != null) bits.push('★'.repeat(s.rating));
+  return bits.length ? '<div class="meta">' + esc(bits.join(' · ')) + '</div>' : '';
+}
+
+function entryHtml(e) {
+  const s = e.session;
+  const v = e.match && VERDICT_CLASS[e.match.verdict];
+  return '<div class="entry" data-id="' + esc(s.id) + '">'
+    + '<div class="entry-head">'
+      + '<span class="entry-date">' + labelDate(e.date) + '</span>'
+      + '<span class="entry-spot">' + esc(s.spot_name || s.spot_id) + '</span>'
+      + (s.backfilled ? '<span class="tag">nachgetragen</span>' : '')
+      + (e.match ? '<span class="tag ' + v + '">' + esc(e.match.verdict) + '</span>' : '')
+      + '<button class="del" aria-label="Eintrag löschen">✕</button>'
+    + '</div>'
+    + '<div class="cmp">'
+      + scoreBox('Vorhergesagt', e.predicted, 'keine Vorhersage gespeichert')
+      + scoreBox('Tatsächlich', e.actual, 'Archiv noch nicht verfügbar')
+    + '</div>'
+    + metaLine(s)
+    + (s.notes ? '<div class="meta"><em>' + esc(s.notes) + '</em></div>' : '')
+    + '</div>';
+}
+
+function renderEntries() {
+  $('entries').innerHTML = state.entries.length
+    ? state.entries.map(entryHtml).join('')
+    : '<div class="card"><p class="note">Noch keine Session eingetragen. '
+      + 'Oben anfangen — rückwirkend bis ' + state.maxBackfillDays + ' Tage.</p></div>';
+  $('btn-more').classList.toggle('hide', !state.before);
+}
+
+function renderStats(st) {
+  const cells = [
+    [st.total, 'Sessions'],
+    [st.spots, 'Spots'],
+    [st.avgRating == null ? '—' : st.avgRating, 'Ø Bewertung'],
+    [st.backfilled, 'nachgetragen'],
+  ];
+  $('stats').innerHTML = cells.map(([v, k]) =>
+    '<div class="stat"><b>' + esc(v) + '</b><span>' + k + '</span></div>').join('');
+  $('lead').textContent = st.total
+    ? st.total + ' Session(en) seit ' + labelDate(st.firstDate)
+      + ' · Soll und Ist stehen bei jedem Eintrag nebeneinander.'
+    : 'Trage deine Sessions ein — das Logbuch vergleicht sie anschließend mit der Vorhersage.';
+}
+
+$('entries').addEventListener('click', async e => {
+  const btn = e.target.closest('.del');
+  if (!btn) return;
+  const id = btn.closest('.entry').dataset.id;
+  btn.disabled = true;
+  try {
+    await api('/api/sessions/' + encodeURIComponent(id), { method: 'DELETE' });
+    await reload();
+  } catch (err) { setNote('Nicht gelöscht: ' + err.message, 'err'); btn.disabled = false; }
+});
+
+$('btn-more').addEventListener('click', async () => {
+  $('btn-more').disabled = true;
+  try {
+    const j = await api('/api/sessions?before=' + encodeURIComponent(state.before));
+    state.entries = state.entries.concat(j.sessions);
+    state.before = j.nextBefore;
+    renderEntries();
+  } catch (e) { setNote('Konnte nicht nachladen: ' + e.message, 'err'); }
+  $('btn-more').disabled = false;
+});
+
+async function reload() {
+  const j = await api('/api/sessions');
+  state.data = j;
+  state.entries = j.sessions;
+  state.before = j.nextBefore;
+  state.maxBackfillDays = j.maxBackfillDays;
+  renderStats(j.stats);
+  renderEntries();
+}
+
+async function init() {
+  try { await reload(); } catch { return; }
+  state.spots = await loadSpots();
+  renderSpotSelect();
+  await loadDates();
+}
+
+init();
+</script>
+</body>
+</html>

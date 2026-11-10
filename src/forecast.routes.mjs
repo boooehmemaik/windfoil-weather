@@ -271,6 +271,20 @@ export async function getRegionForecast(regionKey, days) {
   return JSON.parse(body);
 }
 
+/** Dasselbe fürs ERA5-Archiv. Das Logbuch holt den Ist-Wert hierüber und teilt
+ *  den Eintrag mit /api/forecast/history — der Rückblick der Vergleichsseite
+ *  hat ihn meist schon gefüllt.
+ *  Achtung: buildHistory endet GESTERN. Für den heutigen Tag gibt es deshalb
+ *  kein Ist — der Abgleich bleibt dann leer, statt den Forecast zu spiegeln. */
+export async function getRegionHistory(regionKey) {
+  const region = resolveRegion(regionKey);
+  if (!region) throw new Error(`unbekannte Region: ${regionKey}`);
+  const { body } = await withCache(`hist|${region.key}`, () => buildHistory(region), HISTORY_TTL_MS);
+  return JSON.parse(body);
+}
+
+export { HISTORY_DAYS };
+
 /** Spot-Metadaten (Name, Emoji, offshoreDir) nach ID — für Alarmtexte. */
 export function spotsById() {
   const out = {};

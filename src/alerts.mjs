@@ -54,8 +54,9 @@ function startsLater(date, startHour, offsetSeconds, now) {
 const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
 
 /** Mittlerer Wind der Session in Knoten — der Score allein sagt nicht, ob es
- *  12 oder 25 kn werden. */
-function sessionWindKn(winds, start, from, to) {
+ *  12 oder 25 kn werden. Exportiert, weil das Logbuch (src/sessions.mjs) exakt
+ *  dieselbe Mittelung braucht, um Soll und Ist vergleichbar zu halten. */
+export function sessionWindKn(winds, start, from, to) {
   const vals = [];
   for (let h = from; h < to; h++) {
     const v = winds[start + h];

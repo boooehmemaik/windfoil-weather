@@ -44,6 +44,7 @@ async function mountWindfoil(app) {
     { initPush, sendPush },
     { startAlertScheduler },
     { LOOKAHEAD_DAYS },
+    { sessionsRouter },
   ] = await Promise.all([
     import('./auth.mjs'),
     import('better-auth/node'),
@@ -61,6 +62,7 @@ async function mountWindfoil(app) {
     import('./push.mjs'),
     import('./alerts.scheduler.mjs'),
     import('./alerts.mjs'),
+    import('./sessions.routes.mjs'),
   ]);
 
   // Domain migrations on boot (Better Auth tables are created by the CLI/deploy).
@@ -105,6 +107,9 @@ async function mountWindfoil(app) {
 
   // Windalarm braucht ein Konto — anonyme Abos sind nicht zustellbar.
   app.use('/api/alerts', requireAuth, alertsRouter);
+
+  // Logbuch: fremde Sessions dürfen nie sichtbar werden.
+  app.use('/api/sessions', requireAuth, sessionsRouter);
 
   const push = await initPush();
   if (!push.enabled) {
