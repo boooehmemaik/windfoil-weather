@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import WF from './js/wf-scoring.js';
 import {
-  evaluateAlerts, formatAlert, splitDays, spotDayScores, weekday,
+  evaluateAlerts, formatAlert, splitDays, spotDayScores, weekday, dayLabel,
   DEFAULT_MIN_SCORE, LOOKAHEAD_DAYS,
 } from './src/alerts.mjs';
 
@@ -75,6 +75,32 @@ test('spotDayScores: Score, Sessionfenster und Wind in Knoten', () => {
   assert.strictEqual(day.startHour, WF.FIRST_START);
   assert.strictEqual(day.endHour, WF.FIRST_START + WF.SESSION_H);
   assert.strictEqual(day.windKn, Math.round(WF.msToKn(HIGH)));
+  assert.strictEqual(day.dayOffset, 0, 'der erste Tag der Reihe ist der heutige');
+});
+
+test('dayLabel(): die ersten drei Tage haben einen Namen, danach Wochentag und Datum', () => {
+  assert.strictEqual(dayLabel(0, DAY0), 'heute');
+  assert.strictEqual(dayLabel(1, '2026-11-11'), 'morgen');
+  assert.strictEqual(dayLabel(2, '2026-11-12'), 'übermorgen');
+  assert.strictEqual(dayLabel(3, '2026-11-13'), 'Fr 13.11.');
+  // Ohne bekannten Abstand lieber Wochentag und Datum als ein falsches „heute".
+  assert.strictEqual(dayLabel(undefined, '2026-11-13'), 'Fr 13.11.');
+});
+
+test('spotDayScores: dayOffset zählt vom Tag am Spot, nicht vom Serverkalender', () => {
+  // 23:00 UTC — am Spot (UTC+2) ist bereits der Folgetag. Genau hier gehen
+  // Serverkalender und Ortskalender auseinander.
+  const lateNight = new Date(`${DAY0}T23:00:00Z`);
+  const [east] = spotDayScores(entry([LOW, HIGH], { offset: 7200 }),
+    WF.guestWindow(), SPOTS.a, lateNight);
+  assert.strictEqual(east.date, '2026-11-11', 'der heutige Tag am Spot wurde verworfen');
+  assert.strictEqual(east.dayOffset, 0, 'am Spot ist der 11. schon „heute"');
+  assert.strictEqual(dayLabel(east.dayOffset, east.date), 'heute');
+
+  // Gegenprobe mit demselben Forecast auf UTC: dort ist der 11. erst morgen.
+  const [utc] = spotDayScores(entry([LOW, HIGH]), WF.guestWindow(), SPOTS.a, lateNight);
+  assert.strictEqual(utc.date, '2026-11-11');
+  assert.strictEqual(utc.dayOffset, 1, 'auf UTC darf der 11. nicht „heute" sein');
 });
 
 test('evaluateAlerts: über der Schwelle wird gemeldet, darunter nicht', () => {
@@ -196,19 +222,32 @@ test('weekday(): UTC-fest, unabhängig von der Serverzeitzone', () => {
 test('formatAlert: ein Treffer nennt den Spot, mehrere werden gebündelt', () => {
   const [{ hits }] = run();
   const one = formatAlert(hits);
-  assert.match(one.title, /Porto Pollo: Score 100/);
-  assert.match(one.body, /Porto Pollo Di 9–13 Uhr · Score 100 · 19 kn/);
+  assert.match(one.title, /Porto Pollo heute: Score 100/);
+  assert.match(one.body, /Porto Pollo heute 9–13 Uhr · Score 100 · 19 kn/);
   assert.strictEqual(one.url, '/vergleich.html#a');
   assert.strictEqual(one.tag, `wf-alert-${DAY0}`);
 
   const many = formatAlert([
     { ...hits[0] },
-    { ...hits[0], spotId: 'b', name: 'Stintino', score: 80, date: '2026-11-11' },
-    { ...hits[0], spotId: 'c', name: 'Putzu Idu', score: 75, date: '2026-11-12' },
-    { ...hits[0], spotId: 'd', name: 'Avola', score: 71, date: '2026-11-13' },
+    { ...hits[0], spotId: 'b', name: 'Stintino', score: 80, date: '2026-11-11', dayOffset: 1 },
+    { ...hits[0], spotId: 'c', name: 'Putzu Idu', score: 75, date: '2026-11-12', dayOffset: 2 },
+    { ...hits[0], spotId: 'd', name: 'Avola', score: 71, date: '2026-11-13', dayOffset: 3 },
   ]);
-  assert.match(many.title, /4 Alarme — top Porto Pollo \(100\)/);
+  assert.match(many.title, /4 Alarme — top Porto Pollo heute \(100\)/);
   // Höchstens drei Zeilen: die Benachrichtigung wird sonst abgeschnitten.
   assert.strictEqual(many.body.split('\n').length, 3);
   assert.ok(!many.body.includes('Avola'));
+  // Jede Zeile sagt ihren eigenen Tag — sonst erbten alle Treffer den des ersten.
+  assert.deepStrictEqual(many.body.split('\n'), [
+    'Porto Pollo heute 9–13 Uhr · Score 100 · 19 kn',
+    'Stintino morgen 9–13 Uhr · Score 80 · 19 kn',
+    'Putzu Idu übermorgen 9–13 Uhr · Score 75 · 19 kn',
+  ]);
+});
+
+test('formatAlert: ein ferner Treffer nennt Wochentag und Datum statt „heute"', () => {
+  const [{ hits }] = run();
+  const far = formatAlert([{ ...hits[0], date: '2026-11-14', dayOffset: 4 }]);
+  assert.match(far.title, /Porto Pollo Sa 14\.11\.: Score 100/);
+  assert.ok(!far.title.includes('heute'), 'ein Tag in vier Tagen ist nicht heute');
 });

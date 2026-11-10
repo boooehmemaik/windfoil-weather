@@ -745,7 +745,7 @@
           </thead>
           <tbody>
             <tr><td>Spots</td><td>Bis zu <strong>20 Spots</strong> gleichzeitig überwachen — jeder Spot hat seinen eigenen Schwellenwert</td></tr>
-            <tr><td>Score-Schwelle</td><td>Standard <span class="chip chip-orange">70</span>, einstellbar von 1 bis 100 — ein Alarm wird ausgelöst, sobald die beste 4-Stunden-Session eines Tages diesen Wert erreicht</td></tr>
+            <tr><td>Score-Schwelle</td><td>Standard <span class="chip chip-orange">40</span>, einstellbar von 1 bis 100 — ein Alarm wird ausgelöst, sobald die beste 4-Stunden-Session eines Tages diesen Wert erreicht. Den Wert kannst du pro Spot direkt im Eingabefeld auf der Alarmseite anpassen (jede ganze Zahl von 1 bis 100).</td></tr>
             <tr><td>Vorhersagefenster</td><td>Die App prüft die nächsten <strong>5 Tage</strong></td></tr>
           </tbody>
         </table>
@@ -756,6 +756,7 @@
 
       <h3>Wann kommt ein Alarm?</h3>
       <ul>
+        <li>Die Nachricht nennt immer den <strong>Tag des Fensters</strong>: die nächsten drei Tage heißen <span class="chip chip-gray">heute</span>, <span class="chip chip-gray">morgen</span> und <span class="chip chip-gray">übermorgen</span>, danach steht Wochentag und Datum (z. B. <span class="chip chip-gray">Sa 14.11.</span>). Der Tagesbezug wird aus der <strong>Zeitzone des Spots</strong> berechnet, nicht aus der des Geräts. Beispiele: <em>„🏄 Porto Pollo heute: Score 100"</em> · bei mehreren Treffern <em>„🏄 4 Alarme — top Porto Pollo heute (100)"</em>.</li>
         <li>Pro Spot und Tag wird <strong>höchstens eine</strong> Benachrichtigung verschickt.</li>
         <li>Treffen mehrere Spots an einem Tag die Schwelle, werden sie zu <strong>einer einzigen Nachricht</strong> zusammengefasst.</li>
         <li>Bei <strong>ablandigem Wind</strong> (offshore) wird kein Alarm ausgelöst.</li>

@@ -54,6 +54,32 @@ function startsLater(date, startHour, offsetSeconds, now) {
   return localAsUtc - (offsetSeconds || 0) * 1000 > now.getTime();
 }
 
+/** Welcher Tag ist am Spot gerade? Nicht der Serverkalender: in Sardinien ist
+ *  um 00:30 Ortszeit schon der nächste Tag, auf einem UTC-Server noch nicht —
+ *  „heute" würde sonst den falschen Tag meinen. */
+function localToday(offsetSeconds, now) {
+  return new Date(now.getTime() + (offsetSeconds || 0) * 1000).toISOString().slice(0, 10);
+}
+
+/** Abstand in Tagen zwischen zwei 'YYYY-MM-DD'. 12:00 als Bezug, damit keine
+ *  Sommerzeitgrenze ein Ergebnis um einen halben Tag verschiebt. */
+function dayDiff(date, from) {
+  return Math.round((Date.parse(`${date}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000);
+}
+
+/** Tagesbezeichnung für die Benachrichtigung.
+ *  „Di" allein verrät nicht, ob das heute oder in vier Tagen ist — und genau
+ *  das ist die Information, nach der man beim Lesen sucht. Ab dem dritten Tag
+ *  gibt es keine gängige Vokabel mehr, dann Wochentag plus Datum. Ein
+ *  unbekannter Abstand fällt auf dieselbe Form zurück: lieber Wochentag und
+ *  Datum als ein falsches „heute". */
+export function dayLabel(offset, date) {
+  if (offset === 0) return 'heute';
+  if (offset === 1) return 'morgen';
+  if (offset === 2) return 'übermorgen';
+  return `${weekday(date)} ${Number(date.slice(8, 10))}.${Number(date.slice(5, 7))}.`;
+}
+
 const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
 
 /** Mittlerer Wind der Session in Knoten — der Score allein sagt nicht, ob es
@@ -68,11 +94,14 @@ export function sessionWindKn(winds, start, from, to) {
   return vals.length ? Math.round(WF.msToKn(mean(vals))) : null;
 }
 
-/** Tageswertung eines Spots → [{ date, score, startHour, endHour, windKn }].
- *  Vergangene Sessions fallen raus, nicht erst beim Versand. */
+/** Tageswertung eines Spots → [{ date, dayOffset, score, startHour, endHour, windKn }].
+ *  Vergangene Sessions fallen raus, nicht erst beim Versand.
+ *  dayOffset entsteht hier und nicht erst beim Formatieren: nur an dieser Stelle
+ *  ist der Zeitzonen-Offset des Spots bekannt. */
 export function spotDayScores(entry, win, spot, now, lookaheadDays = LOOKAHEAD_DAYS) {
   const hourly = entry?.hourly;
   if (!hourly?.windspeed_10m) return [];
+  const today = localToday(entry.utcOffsetSeconds, now);
   const out = [];
   for (const { date, start } of splitDays(hourly).slice(0, lookaheadDays)) {
     const best = WF.bestSession(hourly.windspeed_10m, win, {
@@ -83,7 +112,7 @@ export function spotDayScores(entry, win, spot, now, lookaheadDays = LOOKAHEAD_D
     if (!best.score || best.startHour === null) continue;
     if (!startsLater(date, best.startHour, entry.utcOffsetSeconds, now)) continue;
     out.push({
-      date, score: best.score,
+      date, dayOffset: dayDiff(date, today), score: best.score,
       startHour: best.startHour, endHour: best.endHour,
       windKn: sessionWindKn(hourly.windspeed_10m, start, best.startHour, best.endHour),
     });
@@ -140,16 +169,19 @@ export function evaluateAlerts({ forecast, spots = {}, subscriptions = [],
 }
 
 const hitLine = h =>
-  `${h.name} ${weekday(h.date)} ${h.startHour}–${h.endHour} Uhr · Score ${h.score}`
+  `${h.name} ${dayLabel(h.dayOffset, h.date)} ${h.startHour}–${h.endHour} Uhr · Score ${h.score}`
   + (h.windKn ? ` · ${h.windKn} kn` : '');
 
 /** Push-Nutzlast für einen Nutzer. Mehrere Treffer werden zusammengefasst —
- *  40 Spots dürfen nicht 40 Benachrichtigungen ergeben. */
+ *  40 Spots dürfen nicht 40 Benachrichtigungen ergeben.
+ *  Der Tagesbezug steht schon im Titel: auf dem Sperrbildschirm ist der Rumpf
+ *  oft zugeklappt, und „wann" ist die erste Frage. */
 export function formatAlert(hits) {
   const top = hits[0];
+  const when = dayLabel(top.dayOffset, top.date);
   const title = hits.length === 1
-    ? `${top.emoji} ${top.name}: Score ${top.score}`
-    : `${top.emoji} ${hits.length} Alarme — top ${top.name} (${top.score})`;
+    ? `${top.emoji} ${top.name} ${when}: Score ${top.score}`
+    : `${top.emoji} ${hits.length} Alarme — top ${top.name} ${when} (${top.score})`;
   return {
     title,
     body: hits.slice(0, 3).map(hitLine).join('\n'),
