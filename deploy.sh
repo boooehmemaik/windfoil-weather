@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # WindFoil — deploy script
-# File version: 1.0.6  |  App target: v2.5.0
+# File version: 1.0.7  |  App target: v3.31.0
 # ----------------------------------------------------------------------------
 # Run on the LXC from the repo root:   ./deploy.sh [branch]
 # Idempotent & safe to re-run. Requires a sudoers whitelist entry for:
@@ -44,9 +44,21 @@ if [ -f package-lock.json ]; then npm ci; else npm install; fi
 NPM_PREFIX="$(npm config get prefix 2>/dev/null || true)"
 [ -n "$NPM_PREFIX" ] && mkdir -p "$NPM_PREFIX/lib" "$NPM_PREFIX/bin" || true
 
-# 2b) Build/CLI tools as LOCAL deps (fast, offline-resilient, no @latest fetch).
-log "Ensuring WindFoil deps (better-auth, better-sqlite3, express, esbuild)"
-NODE_OPTIONS="--max-old-space-size=2048" npm install --no-audit --no-fund --maxsockets=1 --prefer-offline better-auth better-sqlite3 express esbuild
+# 2b) Verify instead of re-install. `npm install <pkg>` without a version resolves
+#     to the newest match and REWRITES the range in package.json — beim v3.31.0-
+#     Deploy hat das nodemailer still von ^9.0.5 auf ^10.4.0 gehoben. Schritt 2
+#     installiert bereits lockfile-genau; hier wird nur noch geprüft.
+log "Verifying critical deps"
+MISSING=""
+for m in better-auth better-sqlite3 express esbuild nodemailer web-push; do
+  [ -d "node_modules/$m" ] || MISSING="$MISSING $m"
+done
+if [ -n "$MISSING" ]; then
+  echo "REFUSING: Module fehlen im node_modules:$MISSING"
+  echo "  Ursache ist meist ein package-lock.json, das die Dependency nicht kennt."
+  echo "  Lokal 'npm install <paket> --save' laufen lassen und Lockfile mit committen."
+  exit 1
+fi
 
 # 3) Database — ORDER MATTERS: auth tables, then domain tables, then seed.
 log "Applying Better Auth schema (programmatic)"
