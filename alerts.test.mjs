@@ -47,6 +47,15 @@ const SPOTS = {
 /** now vor jedem Sessionbeginn des ersten Tages. */
 const BEFORE = new Date(`${DAY0}T00:00:00Z`);
 
+// Mäßiger Wind: über der Standardschwelle, aber unter 100 — damit lässt sich
+// prüfen, dass eine Schwelle greift. Der Score wird AUS DEM CODE gelesen, nicht
+// hineingeschrieben: er hängt am Fenster und verschob sich in v3.36.0 von 64 auf
+// 79, als der Harlem-Blend kanonisch wurde. Die Aussage der Tests ist „darüber
+// greift nicht, darunter greift" — nicht die Zahl.
+const MILD = 7;
+const mildScoreFor = win => spotDayScores(entry([MILD, LOW, LOW]), win, SPOTS.a, BEFORE)[0].score;
+const MILD_SCORE = mildScoreFor(WF.guestWindow());
+
 function run(over) {
   return evaluateAlerts({
     spots: SPOTS, windows: {}, now: BEFORE,
@@ -115,28 +124,30 @@ test('evaluateAlerts: über der Schwelle wird gemeldet, darunter nicht', () => {
 });
 
 test('evaluateAlerts: die Schwelle gilt pro Abo', () => {
-  // 7 m/s liegt zwischen minWind (6.6) und optMin (7.9) → Score 64.
-  const fc = { spots: { a: entry([7, LOW, LOW]) } };
-  const win = WF.guestWindow();
-  assert.strictEqual(spotDayScores(fc.spots.a, win, SPOTS.a, BEFORE)[0].score, 64,
-    'Testannahme über den Score stimmt nicht mehr');
+  const fc = { spots: { a: entry([MILD, LOW, LOW]) } };
+  assert.ok(MILD_SCORE > 0 && MILD_SCORE < 100,
+    `Fixture muss zwischen den Extremen liegen, ist ${MILD_SCORE}`);
+  const sub = minScore => [{ userId: 'u1', spotId: 'a', minScore }];
 
-  assert.deepStrictEqual(run({ forecast: fc }), [], '64 lag über der Schwelle 70');
-  const low = run({ forecast: fc, subscriptions: [{ userId: 'u1', spotId: 'a', minScore: 50 }] });
-  assert.strictEqual(low.length, 1, 'Schwelle 50 hätte greifen müssen');
+  assert.deepStrictEqual(run({ forecast: fc, subscriptions: sub(MILD_SCORE + 1) }), [],
+    `Schwelle ${MILD_SCORE + 1} hat bei Score ${MILD_SCORE} gemeldet`);
+  assert.strictEqual(run({ forecast: fc, subscriptions: sub(MILD_SCORE) }).length, 1,
+    `Schwelle ${MILD_SCORE} hätte bei Score ${MILD_SCORE} greifen müssen`);
 });
 
 test('evaluateAlerts: ohne minScore gilt der Standardwert', () => {
-  const fc = { spots: { a: entry([7, LOW, LOW]) } };   // Score 64
+  const fc = { spots: { a: entry([MILD, LOW, LOW]) } };
   // Nicht gegen die Zahl 70 oder 40 geprüft, sondern gegen die Konstante: ihr
   // Wert darf sich ändern, ihre Wirkung nicht. Vorher stand hier das Literal —
   // beim Absenken auf 40 war dieser Test das einzige, was rot wurde, und das
   // sagte nichts über einen Fehler aus.
-  assert.ok(DEFAULT_MIN_SCORE < 64, `Fixture-Score 64 muss über dem Standard ${DEFAULT_MIN_SCORE} liegen`);
+  assert.ok(DEFAULT_MIN_SCORE < MILD_SCORE,
+    `Fixture-Score ${MILD_SCORE} muss über dem Standard ${DEFAULT_MIN_SCORE} liegen`);
   assert.strictEqual(run({ forecast: fc, subscriptions: [{ userId: 'u1', spotId: 'a' }] }).length, 1,
     'ohne minScore muss der Standardwert greifen');
   // Gegenprobe: eine ausdrücklich höhere Schwelle greift beim selben Forecast nicht.
-  assert.deepStrictEqual(run({ forecast: fc, subscriptions: [{ userId: 'u1', spotId: 'a', minScore: 90 }] }), []);
+  assert.deepStrictEqual(
+    run({ forecast: fc, subscriptions: [{ userId: 'u1', spotId: 'a', minScore: MILD_SCORE + 1 }] }), []);
 });
 
 test('evaluateAlerts: schon verschickte Tage werden entprellt', () => {
@@ -172,14 +183,21 @@ test('evaluateAlerts: Offshore-Wind erzeugt keinen Alarm', () => {
 });
 
 test('evaluateAlerts: jeder Nutzer wird mit seinem eigenen Fenster bewertet', () => {
-  // 7 m/s: für den Referenzfahrer (6 m²) nur 64, mit 9 m² dagegen 83.
-  const fc = { spots: { a: entry([7, LOW, LOW]) } };
+  // 9 m² liegt außerhalb der Harlem-Tabelle (3–6 m²) → reines Physikmodell,
+  // das bei mäßigem Wind mehr hergibt als das geblendete 6-m²-Fenster.
+  const bigWin = WF.windowFromRider({ weight: 75, wingSize: 9, skill: 'intermediate' });
+  const bigScore = mildScoreFor(bigWin);
+  assert.ok(bigScore > MILD_SCORE,
+    `Fixture nutzlos: beide Fenster liefern denselben Score (${MILD_SCORE})`);
+
+  const fc = { spots: { a: entry([MILD, LOW, LOW]) } };
   const out = evaluateAlerts({
     forecast: fc, spots: SPOTS, now: BEFORE,
-    windows: { big: WF.windowFromRider({ weight: 75, wingSize: 9, skill: 'intermediate' }) },
+    windows: { big: bigWin },
+    // Schwelle genau zwischen den beiden Scores: nur das größere Wing kommt drüber.
     subscriptions: [
-      { userId: 'guest', spotId: 'a', minScore: 70 },
-      { userId: 'big', spotId: 'a', minScore: 70 },
+      { userId: 'guest', spotId: 'a', minScore: MILD_SCORE + 1 },
+      { userId: 'big', spotId: 'a', minScore: MILD_SCORE + 1 },
     ],
   });
   assert.deepStrictEqual(out.map(u => u.userId), ['big'],
@@ -189,14 +207,17 @@ test('evaluateAlerts: jeder Nutzer wird mit seinem eigenen Fenster bewertet', ()
 test('evaluateAlerts: mehrere Spots landen in einem Nutzereintrag, bester zuerst', () => {
   const out = evaluateAlerts({
     now: BEFORE, spots: SPOTS,
-    // 7.5 m/s → 76, HIGH → 100: der schwächere Spot muss hinten landen.
-    forecast: { spots: { a: entry([7.5, LOW, LOW]), b: entry([HIGH, LOW, LOW]) } },
+    // Spot a liegt im mäßigen Band, b im Optimum — der schwächere muss hinten
+    // landen. 7.5 m/s war hier nicht mehr brauchbar: mit dem Harlem-Blend
+    // erreicht auch das schon 100, und zwei gleiche Scores prüfen keine Ordnung.
+    forecast: { spots: { a: entry([MILD, LOW, LOW]), b: entry([HIGH, LOW, LOW]) } },
     subscriptions: [
-      { userId: 'u1', spotId: 'a', minScore: 70 },
-      { userId: 'u1', spotId: 'b', minScore: 70 },
+      { userId: 'u1', spotId: 'a', minScore: MILD_SCORE },
+      { userId: 'u1', spotId: 'b', minScore: MILD_SCORE },
     ],
   });
   assert.strictEqual(out.length, 1, 'ein Eintrag je Nutzer');
+  assert.ok(MILD_SCORE < 100, 'Fixture prüft keine Ordnung, wenn beide Spots 100 haben');
   assert.deepStrictEqual(out[0].hits.map(h => h.spotId), ['b', 'a']);
 });
 

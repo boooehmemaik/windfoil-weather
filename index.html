@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de" id="htmlRoot"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.35.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.36.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="/icon-192.png"/>
 <link rel="manifest" href="/manifest.json"/>
@@ -61,7 +61,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.35.0",
+    version_label: "Weather Intelligence · v3.36.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -176,6 +176,7 @@ const TRANSLATIONS = {
     rec_window: "<br>📐 <b>Dein Fenster:</b> Abheben {min} · Optimal {optMin}–{optMax} · Max {max}",
     rec_setup: "🎒 <b>Empfohlenes Setup aus deinem Material:</b> {name} — Wing {wing} m²{plane}",
     rec_setup_plane: " · ab {kn} kn",
+    rec_wing_plan: "🔄 <b>Größenwechsel über die Session:</b> {plan}",
     // Kite rec
     kite_rec_too_little: "⚠️ <b>Zu wenig Wind</b> — {w}, Kite braucht ≥{min}",
     kite_rec_too_little_tip: "💡 Größeren Kite wählen oder auf Wind-Zunahme warten.",
@@ -374,7 +375,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.35.0",
+    version_label: "Weather Intelligence · v3.36.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -489,6 +490,7 @@ const TRANSLATIONS = {
     rec_window: "<br>📐 <b>Your window:</b> Takeoff {min} · Optimal {optMin}–{optMax} · Max {max}",
     rec_setup: "🎒 <b>Recommended setup from your gear:</b> {name} — Wing {wing} m²{plane}",
     rec_setup_plane: " · from {kn} kn",
+    rec_wing_plan: "🔄 <b>Size change over the session:</b> {plan}",
     // Kite rec
     kite_rec_too_little: "⚠️ <b>Too little wind</b> — {w}, kite needs ≥{min}",
     kite_rec_too_little_tip: "💡 Choose a larger kite or wait for more wind.",
@@ -690,7 +692,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.35.0
+// WindFoil Weather Intelligence v3.36.0
+// Changelog v3.36.0: feat(gear): Gear-Empfehlung aus dem ganzen Quiver — Windfenster je Größe zuerst, Score als Maximum über alle fahrbaren Wings, dann die passende Größe; Harlem-Satz als Default ohne eigenes Material, Gewicht immer aus dem Profil; Größenwechsel-Hinweis über die Session; vergleich.html, Regionsseiten und reise.html rechnen mit demselben Quiver
 // Changelog v3.35.0: feat(alerts): Push-Alarm nennt den Tag — heute/morgen/übermorgen, danach Wochentag + Datum; dayOffset aus der Zeitzone des Spots statt aus dem Serverkalender · docs(help): Standardschwelle 40 korrigiert
 // Changelog v3.34.0: feat(reise): Reiseplaner reise.html — bester Spot im Radius über 7 Tage, Standort bleibt im Browser · fix(alerts): Abo-Abgleich gegen die Sackgasse nach einem verworfenen Endpunkt, Zustellfehler werden geloggt, Standardschwelle 40 und frei editierbar · fix(ux): Scrollen auf dem iPhone in admin.html und im Admin-Dialog
 // Changelog v3.33.0: feat(ux): Windrichtungspfeil in Kartenmarkern und Ø-Wind-Spalte — Regionsseiten + vergleich.html, meanDirection() als kanonisches Kreismittel in js/wf-scoring.js
@@ -1570,105 +1573,36 @@ function seaBreeze(windDir, hour, month, regime) {
 // ── FoilScore — Aliase auf WF (wf-scoring.js ist die kanonische Quelle) ───────
 // var statt const: der wing-scoring.test.mjs-Sandbox liest diese via vm-Context,
 // und vm-Sandbox exportiert nur var-Deklarationen an den Context, keine const.
-var calcWindow = WF.calcWindow;
-// ── Wing manufacturer windrange tables (extensible) ──────────────────────────
-// Per Marke/Modell: Hersteller-Windrange (kn) + Wing-Masse (kg) je Größe (m²).
-// Die Ranges gelten für ein Referenzgewicht; das echte Gewicht skaliert sie
-// (√-Gesetz). Aktuell wird die Default-Tabelle global angewandt (noch kein
-// Per-User-Marken-Matching — Datenstruktur ist dafür vorbereitet).
-const WING_BRANDS = {
-  "Harlem Pace": {
-    refWeightKg: 78,
-    sizes: {
-      3: { rangeKn: [20, 32], wingKg: 1.76 },
-      4: { rangeKn: [16, 28], wingKg: 2.12 },
-      5: { rangeKn: [14, 26], wingKg: 2.32 },
-      6: { rangeKn: [10, 22], wingKg: 2.77 },
-    },
-  },
-};
-const DEFAULT_WING_BRAND = "Harlem Pace";
-const TABLE_BLEND = 0.5;        // Gewicht der Tabelle vs. Physikmodell im Blend
-const FEEDBACK_BLEND = 0.5;     // Gewicht der Spot/Wing-Range-Kalibrierung
-const FEEDBACK_MIN_SAMPLES = 1; // ab so vielen Samples greift die Kalibrierung
-// Hersteller-Windfenster für eine Wing-Größe: linear zwischen den Tabellenstufen
-// interpoliert und aufs Fahrergewicht reskaliert (√-Gesetz: wind ∝ √(gewicht/ref)).
-// Gibt {outOfRange:true, reason} zurück, wenn die Größe außerhalb der Tabelle
-// liegt — KEINE stille Extrapolation über 3–6 m² hinaus.
-function wingTableWindow(weight, wingM2, brandKey = DEFAULT_WING_BRAND) {
-  const brand = WING_BRANDS[brandKey];
-  if (!brand) return null;
-  const stops = Object.keys(brand.sizes).map(Number).sort((a,b)=>a-b);
-  const lo = stops[0], hi = stops[stops.length-1];
-  if (wingM2 < lo || wingM2 > hi) {
-    return { outOfRange: true,
-             reason: `Wing ${wingM2} m² außerhalb Herstellerangabe (${lo}–${hi} m²)` };
-  }
-  let a = lo, b = hi;
-  for (let i = 0; i < stops.length - 1; i++) {
-    if (wingM2 >= stops[i] && wingM2 <= stops[i+1]) { a = stops[i]; b = stops[i+1]; break; }
-  }
-  const ra = brand.sizes[a].rangeKn, rb = brand.sizes[b].rangeKn;
-  const t = (a === b) ? 0 : (wingM2 - a) / (b - a);
-  const minKn = ra[0] + (rb[0] - ra[0]) * t;
-  const maxKn = ra[1] + (rb[1] - ra[1]) * t;
-  const f = Math.sqrt(weight / brand.refWeightKg);
-  const minMs = knToMs(minKn * f), maxMs = knToMs(maxKn * f);
-  // Hersteller nennt nur die Außenränge; das Optimalband wird in die obere Mitte
-  // gelegt (Foil-Wings tragen mittig-oben am besten). Heuristik, dokumentiert.
-  return {
-    minWind: Math.round(minMs * 10) / 10,
-    optMin:  Math.round((minMs + 0.25 * (maxMs - minMs)) * 10) / 10,
-    optMax:  Math.round((minMs + 0.75 * (maxMs - minMs)) * 10) / 10,
-    maxWind: Math.round(maxMs * 10) / 10,
-    outOfRange: false,
-  };
-}
-var rangeToWindow = WF.rangeToWindow;
-var blendWindows  = WF.blendWindows;
-// EINZIGE kanonische Scoring-Quelle: Physikmodell, geblendet mit der
-// Herstellertabelle, wenn die Wing-Größe abgedeckt ist. Überall konsumiert
-// (Chart, Tages-Scores, pickBestSetup).
-function wingWindow(weight, wingM2, skill, knownPlaneMs,
-                    brandKey = DEFAULT_WING_BRAND, spotWingRange = null) {
-  const phys = calcWindow(weight, wingM2, skill, knownPlaneMs);   // kein foil mehr
-  // Fahrer-kalibrierte Planing-Schwelle = Ground Truth → nie verwässern.
-  if (knownPlaneMs && knownPlaneMs > 0) return phys;
-  const tab = wingTableWindow(weight, wingM2, brandKey);
-  let base = (!tab || tab.outOfRange) ? phys : blendWindows(phys, tab, TABLE_BLEND);
-  // NEU: Feedback-Layer — nur wenn genug Samples UND beide Range-Enden vorhanden.
-  if (spotWingRange && spotWingRange.samples >= FEEDBACK_MIN_SAMPLES
-      && spotWingRange.minKn != null && spotWingRange.maxKn != null) {
-    const fb = rangeToWindow(spotWingRange.minKn, spotWingRange.maxKn);
-    return blendWindows(base, fb, FEEDBACK_BLEND);
-  }
-  return base;
-}
-var scoreHour   = WF.scoreHour;
+var calcWindow         = WF.calcWindow;
+var WING_BRANDS        = WF.WING_BRANDS;
+var DEFAULT_WING_BRAND = WF.DEFAULT_WING_BRAND;
+var TABLE_BLEND        = WF.TABLE_BLEND;
+var FEEDBACK_BLEND     = WF.FEEDBACK_BLEND;
+var FEEDBACK_MIN_SAMPLES = WF.FEEDBACK_MIN_SAMPLES;
+var wingTableWindow    = WF.wingTableWindow;
+var wingWindow         = WF.wingWindow;
+var rangeToWindow      = WF.rangeToWindow;
+var blendWindows       = WF.blendWindows;
+var scoreHour          = WF.scoreHour;
+var riderQuiver        = WF.riderQuiver;
+var bestWingForWind    = WF.bestWingForWind;
+var scorerFor          = WF.scorerFor;
+var carries            = WF.carries;
+var sessionWings       = WF.sessionWings;
+var wingAdvice         = WF.wingAdvice;
 var scoreDay    = (winds, win, start=0) => WF.scoreDay(winds, win, { start });
 var bestSession = (winds, win, start=0) => WF.bestSession(winds, win, { start });
 
-// ── Equipment selection v2.2.0 ────────────────────────────────────────────────
-// Given the rider's gear list and the day's representative wind (m/s),
-// pick the BEST setup: the one whose window scores highest for that wind.
-// Tie-break: prefer the setup whose optimal range is most centered on the wind.
+/** Welcher Eintrag der Materialliste trägt diesen Wind? → {gear, win, score} | null
+ *  Reihenfolge bewusst: Quiver → Fenster je Größe → Score → Größe. Die
+ *  Gleichstandsregel (Mittigkeit im Optimalband) steckt in WF.bestWingForWind. */
 function pickBestSetup(gearList, weight, skill, windMs, wingRanges=null) {
   if(!gearList || !gearList.length) return null;
-  let best = null;
-  for(const g of gearList){
-    const plane = g.planeKn ? (parseFloat(g.planeKn)/1.94384) : null;
-    const swr = wingRanges ? wingRanges[String(parseFloat(g.wing))] : null;
-    const win = wingWindow(weight, parseFloat(g.wing), skill, plane, DEFAULT_WING_BRAND, swr); // foil raus
-    const sc = scoreHour(windMs, win);
-    // centeredness: how close wind is to the middle of the optimal band
-    const mid = (win.optMin + win.optMax) / 2;
-    const center = 1 - Math.min(1, Math.abs(windMs - mid) / (win.optMax - win.optMin + 0.01));
-    const rank = sc * 100 + center * 10;
-    if(!best || rank > best.rank){
-      best = { gear:g, win, score:sc, rank };
-    }
-  }
-  return best;
+  const q = riderQuiver({weight, skill}, gearList, {wingRanges});
+  const best = bestWingForWind(q, windMs);
+  if(!best) return null;
+  return { gear: gearList.find(g=>parseFloat(g.wing)===best.wing) || null,
+           win: best.win, score: best.score };
 }
 // <</wing-scoring>>
 
@@ -2911,6 +2845,13 @@ function App() {
     return wingWindow(ri.weight,ri.wingSize,ri.skill, effPlaneMsRi, DEFAULT_WING_BRAND, spotWingMap?.[String(ri.wingSize)]);
   }
 
+  // Alle fahrbaren Wings, nicht nur eins: ohne eingetragenes Material gilt der
+  // volle Harlem-Satz, mit Material die eigene Tasche. Das Gewicht kommt immer
+  // aus dem Profil, die Tabelle skaliert damit.
+  const quiver = sport==="foil"
+    ? riderQuiver(ri, (useGear && gear.length) ? gear : null, { wingRanges: spotWingMap })
+    : null;
+
   // ── Derived day data ────────────────────────────────────────────────────────
   const dayData = (() => {
     if(!forecast) return null;
@@ -2958,27 +2899,40 @@ function App() {
     const tcPeak=thermalCorrection(regime?.peakHour??14,midDir,month_n,regime,mos,activeDay);
     const sb=tcPeak.sb;
     const effW=midW;
-    // Per-hour boosted winds for scoring (Eric/Meltemi thermik applied each hour)
-    let win, pickedGear=null;
-    if(sport==="foil" && useGear && gear.length){
-      const best = pickBestSetup(gear, rider.weight, rider.skill, midW, spotWingMap);
-      if(best){ win = best.win; pickedGear = best.gear; }
+    // win = angezeigtes Fenster (Chart-Bänder), pickedWing = empfohlene Größe,
+    // pickedGear = der zugehörige Eintrag der Materialliste, falls es einen gibt.
+    // Alle drei kommen aus DEMSELBEN Quiver wie der Score. Käme das Band aus einer
+    // einzelnen Größe, während die Stundenwerte die ganze Tasche bewerten, lägen
+    // grüne Stunden sichtbar über dem Band — und rec_window nennte ein zu enges Fenster.
+    let win, pickedGear=null, pickedWing=null;
+    if(quiver){
+      const best = bestWingForWind(quiver, midW);
+      if(best){
+        win = best.win;
+        pickedWing = best.wing;
+        if(useGear && gear.length) pickedGear = gear.find(g=>parseFloat(g.wing)===best.wing) || null;
+      }
     }
-    if(!win){
-      win=getActiveWin();
-    }
+    if(!win) win=getActiveWin();
     // winsEff enthält die Thermik bereits (siehe winsTh oben). Ein zweiter
     // Durchgang wäre genau die Doppelzählung, gegen die thermalCorrection baut.
     const winsEffBoosted=winsEff;
-    const scores=winsEffBoosted.map(w=>scoreHour(w,win));
+    const scoreSrc = quiver || win;
+    const scores=winsEffBoosted.map(scorerFor(scoreSrc));
     const avgW=winsEffBoosted.reduce((a,b)=>a+b,0)/winsEffBoosted.length;
     const maxG=Math.max(...gustEff);
     const maxT=Math.max(...temp);
     const maxTh=Math.max(...thermik);
-    const dayScore=scoreDay(winsEffBoosted,win);
-    const session=bestSession(winsEffBoosted,win); // {score,startHour,endHour}
+    const dayScore=scoreDay(winsEffBoosted,scoreSrc);
+    const session=bestSession(winsEffBoosted,scoreSrc); // {score,startHour,endHour}
+    const sessWings = quiver && session.startHour!=null
+      ? sessionWings(winsEffBoosted, quiver, session.startHour, session.endHour, 0) : [];
+    const wingPlan = wingAdvice(sessWings);
+    // Ob gewechselt wird, entscheidet die Anzahl der Größen — nicht ein Zeichen im
+    // formatierten String: der Separator gehört wingAdvice, nicht dem Aufrufer.
+    const wingPlanChanges = new Set(sessWings.map(w=>w.wing)).size > 1;
     const thInfo=classifyThermik(maxTh);
-    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,winsEffBoosted,dayScore,thInfo,pickedGear,session,liveBoost:lb,measuredCorr:mc,ens:ensD,carrierWins,thermal:tcPeak,thermalHours:tcs};
+    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,winsEffBoosted,dayScore,thInfo,pickedGear,pickedWing,session,wingPlan,wingPlanChanges,liveBoost:lb,measuredCorr:mc,ens:ensD,carrierWins,thermal:tcPeak,thermalHours:tcs};
   })();
 
   const dayScores = forecast ? Array.from({length:7},(_,d)=>{
@@ -2989,15 +2943,6 @@ function App() {
     const srcW = forecast.__ens
       ? forecast.__ens.wind.map((w,i)=> w==null ? forecast.hourly.windspeed_10m[i] : w)
       : forecast.hourly.windspeed_10m;
-    // representative wind for the day (midday avg) to pick gear
-    const dw = srcW.slice(start+12,start+16).filter(Boolean);
-    const dayMidW = dw.length ? dw.reduce((a,b)=>a+b,0)/dw.length : (srcW[start+13]||0);
-    let win;
-    if(sport==="foil" && useGear && gear.length){
-      const best = pickBestSetup(gear, rider.weight, rider.skill, dayMidW, spotWingMap);
-      if(best) win = best.win;
-    }
-    if(!win) win=getActiveWin();
     const dstr = forecast.hourly.time[start] ? forecast.hourly.time[start].slice(0,10) : null;
     let slice = srcW.slice(start, start+24);
     let gslice= forecast.__ens
@@ -3010,7 +2955,9 @@ function App() {
     slice=slice.map((w,i)=> w==null ? w : Math.round((w + thermalCorrection(i, dirs_d[i]??180, month_d, regime_d, mos, d).addMs)*100)/100);
     if (d === 0) { const lb=applyLiveStationBoost(slice,gslice,live,true); slice=lb.wins; gslice=lb.gust; }
     if (d === activeDay) { const mc=applyMeasuredStationCorrection(slice,gslice,measured,dstr); slice=mc.wins; gslice=mc.gust; }
-    return scoreDay(slice, win, 0);
+    // Quiver bewertet den ganzen Tag — kein Einzelfenster aus dem Mittagswind.
+    const scoreSrcD = quiver || getActiveWin();
+    return scoreDay(slice, scoreSrcD, 0);
   }) : [];
 
   const dayNames = forecast ? (() => {
@@ -3050,7 +2997,7 @@ function App() {
   // ── Recommendation ──────────────────────────────────────────────────────────
   const rec = (() => {
     if(!dayData) return "";
-    const{effW,midG,win,pickedGear}=dayData;
+    const{effW,midG,win,pickedGear,wingPlan,wingPlanChanges}=dayData;
     if(sport==="kite") return kiteRec(effW,midG,win,kiteRider.kiteModel,kiteRider.kiteSize,kiteRider.skill,windUnit);
     const{weight,wingSize,skill}=rider;
     const lines=[];
@@ -3073,6 +3020,8 @@ function App() {
       lines.push(t('rec_too_much_tip'));
     }
     if(midG-effW>4) lines.push(t('rec_gust_delta',{dw:fmtW(midG-effW,windUnit)}));
+    // Größenwechsel-Hinweis: nur wenn der Quiver mehr als eine Größe empfiehlt.
+    if(wingPlanChanges) lines.push(t('rec_wing_plan',{plan:wingPlan}));
     lines.push(t('rec_window',{min:fmtW(win.minWind,windUnit),optMin:fmtW(win.optMin,windUnit),optMax:fmtW(win.optMax,windUnit),max:fmtW(win.maxWind,windUnit)}));
     return lines.join("<br>");
   })();
@@ -3113,24 +3062,12 @@ function App() {
         }
         return best && best.pri > 0 ? { label: `${best.m}m`, score: best.pri === 2 ? 88 : 50 } : null;
       }
-      if (useGear && gear.length) {
-        const b = pickBestSetup(gear, rider.weight, rider.skill, w, spotWingMap);
-        // Only show when wind is actually within this gear's window
-        if (!b || w < b.win.minWind || w > b.win.maxWind) return null;
-        return { label: `${parseFloat(b.gear.wing)}m`, score: b.score };
+      if (quiver) {
+        const b = bestWingForWind(quiver, w);
+        if (!b || !carries(b.win, w)) return null;
+        return { label: `${b.wing}m`, score: b.score };
       }
-      // No personal gear — recommend from manufacturer table, only when in range
-      const brand = WING_BRANDS[DEFAULT_WING_BRAND];
-      if (!brand) return null;
-      const sizes = Object.keys(brand.sizes).map(Number).sort((a, b) => a - b);
-      let best2 = null, bestSc = -1;
-      for (const s of sizes) {
-        const win = wingWindow(rider.weight, s, rider.skill, null);
-        if (w < win.minWind || w > win.maxWind) continue;
-        const sc = scoreHour(w, win);
-        if (sc > bestSc) { bestSc = sc; best2 = { m: s }; }
-      }
-      return best2 ? { label: `${best2.m}m`, score: bestSc } : null;
+      return null;
     });
   })();
   // Custom XAxis tick: 3h time labels top row; wing/kite size shown as text on first
@@ -3763,7 +3700,9 @@ function App() {
                       </div>
                       {Object.entries(brand.sizes).map(([sz,data])=>{
                         const size=Number(sz);
-                        const activeSize = (useGear && dayData?.pickedGear) ? parseFloat(dayData.pickedGear.wing) : parseFloat(ri.wingSize);
+                        // Die empfohlene Größe kommt aus dem Quiver — auch ohne eigenes
+                        // Material, wo früher stur die Profilgröße hervorgehoben wurde.
+                        const activeSize = dayData?.pickedWing ?? parseFloat(ri.wingSize);
                         const isActive = size === activeSize;
                         const adj=wingTableWindow(ri.weight,size,brandName);
                         const adjOk=adj&&!adj.outOfRange;
@@ -4185,7 +4124,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.35.0</span>
+        <span>WindFoil Weather Intelligence v3.36.0</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>

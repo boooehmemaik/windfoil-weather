@@ -1,16 +1,21 @@
 /**
- * system-test-foil-removal.mjs
- * v3.14.0 Systemtest — vollständige Integrationsprüfung der Foil-Entfernung
+ * gear-scoring.test.mjs
+ * Systemtest der Material-Logik — Fenster, Quiver, Empfehlung.
  *
  * Auftrag: 3 Fahrer (60/75/95 kg), Skill "intermediate", Gear [6,5,4 m²]
- * Tests: Fenster-Matrix, Monotonie, Foil-Freiheit, Skill-Effekt, pickBestSetup-Sweep,
- *        Randfälle, Feedback-Layer-Smoke, Talamone-6.0-Verdict heute
+ * Tests: Fenster-Matrix, Monotonie, Foil-Freiheit, Skill-Effekt, Empfehlungs-Sweep,
+ *        Randfälle, Feedback-Layer-Smoke, Quiver aus der Herstellertabelle
+ *
+ * Hieß bis v3.36.0 system-test-foil-removal.mjs und lief damit NIE mit:
+ * `npm test` ist `node --test *.test.mjs`. In der Zeit war er außerdem defekt
+ * (WF fehlte im vm-Context) — ein Test, den niemand startet, verfällt.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
+import WF from './js/wf-scoring.js';
 
 // ── Sandbox Setup ─────────────────────────────────────────────────────────────
 const html = fs.readFileSync('/var/www/windfoil/index.html', 'utf8');
@@ -28,8 +33,10 @@ const knToMs = kn => kn / 1.94384;
 const msToKn = ms => ms * 1.94384;
 
 // wing-scoring sandbox
+// WF gehört in den Context: der Block besteht inzwischen überwiegend aus Aliasen
+// auf js/wf-scoring.js. Ohne diese Zeile scheitert er mit „WF is not defined".
 const scoringBlock = extractBlock('// <<wing-scoring>>', '// <</wing-scoring>>');
-const ctx = vm.createContext({ knToMs, msToKn, Math, console, Date });
+const ctx = vm.createContext({ knToMs, msToKn, Math, console, Date, WF });
 vm.runInContext(scoringBlock, ctx);
 
 const {
@@ -66,15 +73,27 @@ function fmtKn(ms) { return msToKn(ms).toFixed(1); }
 test('S0-1 — Sentinel <<wing-scoring>> präsent und calcWindow foil-frei (4 Parameter)', () => {
   // Signatur: calcWindow(weight, wingM2, skill, knownPlaneMs) — kein foil
   assert.equal(calcWindow.length, 4, `calcWindow.length muss 4 sein, got ${calcWindow.length}`);
-  assert.equal(wingWindow.length, 4, `wingWindow Pflicht-Params muss 4 sein, got ${wingWindow.length}`);
-  // REF_FOIL_TERM muss in Block enthalten sein (konstante Fixierung)
-  assert(scoringBlock.includes('REF_FOIL_TERM'), 'REF_FOIL_TERM muss im scoring-Block deklariert sein');
-  // foilCm2 darf nicht als aktiver Parameter in der Funktionssignatur stehen.
-  // Ein Kommentar "// foilCm2 ENTFERNT" ist akzeptabel (Migrations-Annotation).
-  // Harter Check: calcWindow darf kein foilCm2 als Parameter enthalten.
-  const calcWindowSig = scoringBlock.match(/function calcWindow\([^)]*\)/)?.[0] ?? '';
-  assert(!calcWindowSig.includes('foilCm2'),
-    `foilCm2 darf nicht in der calcWindow-Signatur stehen: ${calcWindowSig}`);
+  // wingWindow ist jetzt ein direkter WF-Alias. Die Parameteranzahl taugt hier
+  // nicht mehr als Probe: die kanonische Version zählt 6, weil brandKey und
+  // spotWingRange ohne JS-Default stehen. Ein „>= 4" wäre aber keine Zusicherung
+  // mehr — geprüft wird deshalb die Signatur selbst.
+  const wwSig = Function.prototype.toString.call(wingWindow).match(/\([^)]*\)/)?.[0] ?? '';
+  assert.deepStrictEqual(
+    wwSig.replace(/[()\s]/g, '').split(','),
+    ['weight', 'wingM2', 'skill', 'knownPlaneMs', 'brandKey', 'spotWingRange'],
+    `wingWindow-Signatur unerwartet: ${wwSig}`);
+  assert.strictEqual(wingWindow, WF.wingWindow,
+    'index.html muss WF.wingWindow nutzen, nicht eine eigene Kopie');
+  // Gegen das Modul, nicht gegen den Text von index.html: REF_FOIL_TERM wohnt
+  // seit der Konsolidierung in wf-scoring.js. Die alte Textprobe suchte im
+  // falschen Block und war der einzige rote Test nach der Reanimation.
+  assert.equal(typeof WF.REF_FOIL_TERM, 'number', 'REF_FOIL_TERM muss aus WF kommen');
+  // Die Signaturprobe muss die echte Funktionsquelle lesen. Vorher wurde ein
+  // Regex über index.html gelegt, der nach dem Umzug nie mehr traf — und eine
+  // Zusicherung über einen leeren String ist keine Zusicherung.
+  const sig = Function.prototype.toString.call(WF.calcWindow).match(/\([^)]*\)/)?.[0] ?? '';
+  assert(sig.includes('knownPlaneMs'), `calcWindow-Signatur unerwartet: ${sig}`);
+  assert(!sig.includes('foilCm2'), `foilCm2 darf nicht in der calcWindow-Signatur stehen: ${sig}`);
 });
 
 test('S0-2 — Alle Blöcke (live-boost, measured-correction) laden ohne Exception', () => {

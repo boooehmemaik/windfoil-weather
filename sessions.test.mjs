@@ -1,8 +1,10 @@
 // ============================================================================
 // WindFoil — Session-Logbuch: Schreibfenster und Forecast-Abgleich
 // ----------------------------------------------------------------------------
-// Alle Erwartungen sind gegen die echte Scoring-Implementierung ermittelt, nicht
-// geschätzt. Gästefenster: minWind 6.6 · optMin 7.9 · optMax 13.1 · maxWind 17.1
+// Alle Erwartungen werden gegen die echte Scoring-Implementierung ermittelt,
+// nicht geschätzt — und möglichst aus WF.scoreHour abgeleitet statt abgeschrieben.
+// Das Gästefenster hat sich mit dem Harlem-Blend verschoben; abgeschriebene
+// Zahlen waren danach rot, ohne dass an src/sessions.mjs etwas falsch war.
 // ============================================================================
 import { test } from 'node:test';
 import assert from 'node:assert';
@@ -99,12 +101,17 @@ test('Forecast-Volltag und ERA5-Tagesausschnitt ergeben dasselbe Ergebnis', () =
 
 test('rateDay trifft die Score-Bänder', () => {
   const score = v => rateDay(fullDay(flat(v)), WIN, null, DATE).score;
-  assert.strictEqual(score(4), 27);    // unter minWind
-  assert.strictEqual(score(7), 64);    // zwischen minWind und optMin
-  assert.strictEqual(score(7.5), 76);
-  assert.strictEqual(score(9), 100);   // im Optimum
-  assert.strictEqual(score(14), 89);   // über optMax
-  assert.strictEqual(score(18), 41);   // über maxWind
+  // Erwartung aus WF.scoreHour, nicht aus einer abgeschriebenen Tabelle: rateDay
+  // soll das kanonische Scoring anwenden und keine zweite Kurve haben. Hier
+  // standen feste Zahlen, bis der Harlem-Blend das Gastfenster verschob — dann
+  // war der Test rot, obwohl an rateDay nichts falsch war.
+  for (const v of [4, 7, 7.5, 9, 14, 18]) {
+    assert.strictEqual(score(v), WF.scoreHour(v, WIN), `${v} m/s`);
+  }
+  // Ohne diese Proben liefe die Schleife auch gegen ein konstantes Scoring grün.
+  assert.ok(score(4) < score(7), 'unter minWind muss schwächer sein als dazwischen');
+  assert.strictEqual(score(9), 100, '9 m/s muss im Optimum liegen');
+  assert.ok(score(18) < score(14), 'über maxWind muss der Score abfallen');
 });
 
 test('rateDay findet das beste Fenster, nicht das erste', () => {
@@ -195,11 +202,17 @@ test('der gespeicherte Snapshot schlägt den laufenden Forecast', () => {
 });
 
 test('ohne Snapshot dient der laufende Forecast als Rückfall', () => {
-  const e = entryFor({ spot_id: 's_stintino', session_date: DATE, predicted_score: null });
+  // Der Forecast muss deutlich unter dem Ist liegen, sonst prüft das Urteil
+  // nichts. Die 7.5 m/s der Standard-Fixture taugen dafür nicht mehr: mit dem
+  // Harlem-Blend sind das bereits 100, also identisch zum Ist.
+  const forecastWind = 6.5, historyWind = 10;
+  const e = entryFor({ spot_id: 's_stintino', session_date: DATE, predicted_score: null },
+                     { forecastWind, historyWind });
   assert.strictEqual(e.predicted.source, 'forecast');
-  assert.strictEqual(e.predicted.score, 76, '7.5 m/s');
-  assert.strictEqual(e.actual.score, 100, '10 m/s');
-  assert.strictEqual(e.match.deltaScore, 24);
+  assert.strictEqual(e.predicted.score, WF.scoreHour(forecastWind, WIN), `${forecastWind} m/s`);
+  assert.strictEqual(e.actual.score, WF.scoreHour(historyWind, WIN), `${historyWind} m/s`);
+  assert.strictEqual(e.match.deltaScore, e.actual.score - e.predicted.score);
+  assert.ok(e.match.deltaScore > MATCH_TOLERANCE, 'Fixture erzwingt kein Urteil');
   assert.strictEqual(e.match.verdict, 'zu pessimistisch');
 });
 

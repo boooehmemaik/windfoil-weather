@@ -113,6 +113,7 @@
     /* ── Map ── */
     #spots-map{width:100%;height:380px;background:#111820}
     .dir-sub{font-size:9px;font-weight:600;color:#5a7a96;letter-spacing:.3px}
+    .wing-sub{font-size:9px;font-weight:600;color:#5a7a96;letter-spacing:.2px;white-space:nowrap}
     .lm-score{position:absolute;top:0;right:0;background:rgba(10,14,20,.9);border-radius:6px;
       padding:2px 6px;font-size:11px;font-weight:700;white-space:nowrap;border-width:1px;border-style:solid;line-height:1.6}
     .leaflet-popup-content-wrapper{background:#151d28;border:1px solid #243040;color:#d8e4f0;
@@ -303,7 +304,7 @@ const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW
 const compass = deg => deg==null?"?":COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
 // Spitze zeigt dorthin, WOHER der Wind kommt — gleiche Konvention wie in
-// js/wf-region.js. pages-integrity.test.mjs vergleicht beide Ausgaben.
+// js/wf-region.js. vergleich-render.test.mjs vergleicht beide Ausgaben.
 function windArrowSvg(deg, color='#3a9ad9', size=20){
   if(deg==null) return '';
   return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 20 20" style="display:inline-block;vertical-align:middle;transform:rotate('+deg+'deg)">'+
@@ -311,8 +312,11 @@ function windArrowSvg(deg, color='#3a9ad9', size=20){
   '</svg>';
 }
 
-// Wird nach dem Profil-Fetch durch das echte Fahrerfenster ersetzt.
-let RIDER_WIN = WF.calcWindow(WF.GUEST_RIDER.weight, WF.GUEST_RIDER.wingM2, WF.GUEST_RIDER.skill);
+// Werden nach dem Profil-Fetch durch die echten Fahrerwerte ersetzt. Bewertet
+// wird mit dem Quiver (alle Größen), angezeigt die Größe, die zur Stunde passt;
+// RIDER_WIN bleibt als Rückfall für den Fall, dass der Quiver leer ist.
+let RIDER_WIN = WF.guestWindow();
+let RIDER_QUIVER = WF.guestQuiver();
 
 function scoreColor(s){return s>=70?'#3ddc84':s>=40?'#f5b942':'#e84040';}
 function tempColor(t){
@@ -322,10 +326,11 @@ function tempColor(t){
 }
 
 function dayStats5(fc, dayIdx, spot) {
-  if(!fc?.hourly?.windspeed_10m) return{score:0,avgWindKn:0,avgTemp:null,avgDir:null,session:null};
+  if(!fc?.hourly?.windspeed_10m) return{score:0,avgWindKn:0,avgTemp:null,avgDir:null,session:null,wingPlan:null};
   const h=fc.hourly, start=dayIdx*24;
   const opts={start,dirs:h.winddirection_10m||null,offshoreDir:spot?.offshoreDir??null};
-  const session=WF.bestSession(h.windspeed_10m,RIDER_WIN,opts);
+  const quiver=RIDER_QUIVER?.length?RIDER_QUIVER:null;
+  const session=WF.bestSession(h.windspeed_10m,quiver||RIDER_WIN,opts);
   const validW=h.windspeed_10m.slice(start+9,start+19).filter(v=>v!=null);
   const st=h.temperature_2m?h.temperature_2m.slice(start+9,start+19).filter(v=>v!=null):[];
   const sd=h.winddirection_10m?h.winddirection_10m.slice(start+9,start+19):[];
@@ -335,6 +340,11 @@ function dayStats5(fc, dayIdx, spot) {
     avgTemp:st.length?st.reduce((a,b)=>a+b,0)/st.length:null,
     avgDir:WF.meanDirection(sd),
     session,
+    // Die Größe für die beste Session, nicht für den ganzen Tag: die Stunden
+    // davor und danach fährt niemand, ihre Größe wäre eine Falschauskunft.
+    wingPlan:(quiver&&session.startHour!=null)
+      ? WF.wingAdvice(WF.sessionWings(h.windspeed_10m,quiver,session.startHour,session.endHour,start))
+      : null,
   };
 }
 
@@ -449,9 +459,13 @@ function renderTable() {
   document.getElementById('compare-body').innerHTML = rows.map((r,ri)=>{
     const rank = ri+1;
     const rankClass = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'';
-    const dayScores = [r.d0,r.d1,r.d2,r.d3,r.d4].map(s=>{
+    const dayScores = [r.d0,r.d1,r.d2,r.d3,r.d4].map((s,di)=>{
       if(s==null)return'<td class="score-cell" style="color:#5a7a96">–</td>';
-      return '<td class="score-cell" style="color:'+scoreColor(s)+';background:'+scoreColor(s)+'18">'+s+'</td>';
+      // Ein Plan existiert genau dann, wenn es eine Session gibt: bestSession
+      // setzt startHour nur bei Score > 0. Ein Tag ohne Wind nennt also keine
+      // Größe, ohne dass es dafür eine zweite Bedingung braucht.
+      const wing=r.wings?.[di]?'<div class="wing-sub">'+r.wings[di]+'</div>':'';
+      return '<td class="score-cell" style="color:'+scoreColor(s)+';background:'+scoreColor(s)+'18">'+s+wing+'</td>';
     }).join('');
     const avgDisp = r.avg!=null?'<b style="color:'+scoreColor(r.avg)+'">'+r.avg+'</b>':'–';
     const windDisp = r.wind!=null
@@ -620,10 +634,11 @@ async function loadMarine() {
 
 // ── Rider-Profil ───────────────────────────────────────────
 async function loadRiderProfile(){
-  const { rider, win } = await WF.loadRider();
+  const { rider, win, quiver } = await WF.loadRider();
   RIDER_WIN = win;
+  if(quiver?.length) RIDER_QUIVER = quiver;
   const el = document.getElementById('rider-note');
-  if(el) el.textContent = WF.describeRider(rider);
+  if(el) el.textContent = WF.describeRider(rider, RIDER_QUIVER);
 }
 
 // ── Main load ──────────────────────────────────────────────
@@ -645,7 +660,7 @@ async function loadAll() {
   tableData = results.map((r,i)=>{
     const spot=ALL_SPOTS[i];
     const sst=marineResults[i]?.status==='fulfilled'?marineResults[i].value:null;
-    if(r.status!=='fulfilled') return{spot,avg:null,d0:null,d1:null,d2:null,d3:null,d4:null,wind:null,temp:null,sst,dir0:null,dirAvg:null};
+    if(r.status!=='fulfilled') return{spot,avg:null,d0:null,d1:null,d2:null,d3:null,d4:null,wind:null,temp:null,sst,dir0:null,dirAvg:null,wings:[null,null,null,null,null]};
     const fc=r.value.fc;
     const days=[0,1,2,3,4].map(d=>dayStats5(fc,d,spot));
     const scores=days.map(d=>d.score);
@@ -656,7 +671,8 @@ async function loadAll() {
     // dir0 für den Kartenmarker (zeigt den Heute-Score), dirAvg für die
     // Ø-Wind-Spalte — beide mitteln denselben Zeitraum wie ihr Zahlenwert.
     return{spot,avg,d0:scores[0],d1:scores[1],d2:scores[2],d3:scores[3],d4:scores[4],wind,temp,sst,
-      dir0:days[0].avgDir, dirAvg:WF.meanDirection(days.map(d=>d.avgDir))};
+      dir0:days[0].avgDir, dirAvg:WF.meanDirection(days.map(d=>d.avgDir)),
+      wings:days.map(d=>d.wingPlan)};
   });
 
   // Sort by avg score (default)

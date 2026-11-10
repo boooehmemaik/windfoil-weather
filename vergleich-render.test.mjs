@@ -75,10 +75,14 @@ function stubEnv(net) {
 const miss = { ok: false, status: 404, json: async () => ({}) };
 
 function batchNet(opts = {}) {
+  const make = opts.fc || (id => forecast(id.length, 120));
   return (tag, calls) => {
+    // /api/prefs — ohne opts.prefs bleibt die Seite Gast und rechnet mit Harlem.
+    if (tag === 'api') return opts.prefs
+      ? { ok: true, status: 200, json: async () => opts.prefs } : miss;
     if (tag === 'batch') {
       if (opts.batchFails) return { ok: false, status: 502, json: async () => ({ error: 'upstream_unavailable' }) };
-      return { ok: true, status: 200, json: async () => ({ spots: body(opts.omit, id => forecast(id.length, 120)) }) };
+      return { ok: true, status: 200, json: async () => ({ spots: body(opts.omit, make) }) };
     }
     if (tag === 'sstBatch') return { ok: true, status: 200, json: async () => ({ sst: body(opts.omit, () => 15.2) }) };
     if (tag === 'wind') return { ok: true, status: 200, json: async () => forecast(calls.wind, 120) };
@@ -192,4 +196,118 @@ test('loadAll(): ein im Batch fehlender Spot löst den Direktabruf aus', async (
 
   assert.strictEqual(calls.batch, 1);
   assert.strictEqual(calls.wind, api.ALL_SPOTS.length, 'Teilantwort hätte nicht genügen dürfen');
+});
+
+test('loadAll(): jede Tageszelle nennt die Wing-Größe aus dem Quiver', async () => {
+  // Ohne angemeldetes Profil gilt der Harlem-Satz — der Quiver ist also nie
+  // leer, und jeder fahrbare Tag muss eine Größe nennen. Vorher stand in der
+  // Zelle nur der Score: „lohnt sich der Tag" ohne „womit".
+  const { nodes, api } = stubEnv(batchNet());
+  await api.loadAll();
+  const rows = api.getTableData();
+
+  const plans = rows.flatMap(r => r.wings).filter(Boolean);
+  assert.ok(plans.length > 0, 'kein einziger Tag nennt eine Größe');
+  for (const p of plans) {
+    assert.match(p, /^\d+(\.\d+)?( → \d+(\.\d+)?)* m²$/, `Plan unlesbar: ${p}`);
+  }
+
+  // Die Zelle selbst lesen, nicht nur das Datenobjekt: zwischen beiden liegt
+  // das Markup, und genau da ging die Größe vorher verloren.
+  const html = nodes['compare-body'].innerHTML;
+  const cells = [...html.matchAll(
+    /<td class="score-cell"[^>]*>(\d+)(?:<div class="wing-sub">([^<]+)<\/div>)?<\/td>/g)];
+  assert.strictEqual(cells.length, rows.length * 5, 'nicht alle Tageszellen erkannt');
+
+  rows.forEach((r, ri) => {
+    [r.d0, r.d1, r.d2, r.d3, r.d4].forEach((s, di) => {
+      const [, score, wing] = cells[ri * 5 + di];
+      assert.strictEqual(Number(score), s, `${r.spot.id} Tag ${di}: Score im Markup weicht ab`);
+      const expected = (s > 0 && r.wings[di]) ? r.wings[di] : undefined;
+      assert.strictEqual(wing, expected, `${r.spot.id} Tag ${di}: Größe im Markup weicht ab`);
+    });
+  });
+
+  // Ein Tag ohne Score darf keine Größe tragen — sonst wäre es ein Packhinweis
+  // für eine Session, die es nicht gibt.
+  const zeroWithWing = cells.filter(c => Number(c[1]) === 0 && c[2] != null);
+  assert.deepStrictEqual(zeroWithWing, [], 'Score 0 mit Größenempfehlung');
+});
+
+/** Tagesprofil nach Stunden: nachts hart, Session moderat — damit sich die
+ *  Größe für die Session von der für den ganzen Tag unterscheidet. */
+function craftedForecast() {
+  const h = { time: [], windspeed_10m: [], windgusts_10m: [], winddirection_10m: [], temperature_2m: [] };
+  for (let i = 0; i < 120; i++) {
+    const day = Math.floor(i / 24), hr = i % 24;
+    let ms;
+    // Tag 0: nachts 16 m/s (das kleinste Wing trägt das), tagsüber 7 m/s. Der
+    // Nachtwind ist bewusst fahrbar — wäre er es nicht, filterte ihn carries()
+    // heraus und der Unterschied zwischen Session und Kalendertag verschwände.
+    if (day === 0) ms = hr < 9 ? 16 : 7;
+    else if (day === 1) ms = 0.5;                  // windstill: keine Größe
+    // Aufbautag: der Wind steigt STUNDENWEISE, damit der Wechsel in die beste
+    // 4h-Session fällt. Ein Sprung um 14 Uhr täte das nicht — dann liegt die
+    // Session komplett im Starkwind und nennt völlig korrekt nur eine Größe.
+    else ms = hr < 9 ? 5 : Math.min(17, 7 + (hr - 9) * 1.2);
+    h.time.push(new Date(Date.UTC(2026, 10, 9, i)).toISOString().slice(0, 16));
+    h.windspeed_10m.push(ms);
+    h.windgusts_10m.push(ms + 2);
+    h.winddirection_10m.push(180);
+    h.temperature_2m.push(18);
+  }
+  return { hourly: h };
+}
+
+test('loadAll(): die Größe gilt der Session, nicht dem Kalendertag', async () => {
+  // Tag 0 hat nachts 22 m/s und tagsüber 7 m/s. Wer den ganzen Tag auswertet,
+  // empfiehlt das kleinste Wing für Stunden, die niemand fährt.
+  const { api } = stubEnv(batchNet({ fc: () => craftedForecast() }));
+  await api.loadAll();
+  const r = api.getTableData()[0];
+
+  assert.ok(r.d0 > 0, 'Tag 0 muss fahrbar sein, sonst prüft der Test nichts');
+  assert.strictEqual(r.wings[0], '6 m²',
+    `Tag 0 fährt 7 m/s — erwartet das größte Wing, war ${r.wings[0]}`);
+
+  // 0,5 m/s ergeben trotzdem einen Score: scoreHour fällt unterhalb der
+  // Angleitschwelle nur linear ab. Eine Größe darf daneben aber nicht stehen —
+  // kein Wing der Tasche trägt diesen Wind.
+  assert.ok(r.d1 > 0 && r.d1 < 40, `Tag 1 sollte einen kleinen Score haben, war ${r.d1}`);
+  assert.strictEqual(r.wings[1], null, 'windstiller Tag nennt eine Größe');
+
+  assert.match(r.wings[2], /→/, 'der Aufbautag muss einen Größenwechsel nennen');
+});
+
+test('loadAll(): das eigene Profil bestimmt den Quiver, nicht der Harlem-Default', async () => {
+  // Der Kern des Nutzerwunsches: 95 kg und die eigene Tasche. Derselbe Wind,
+  // zwei Profile — unterscheiden sich Score und Größe nicht, wird das Profil
+  // irgendwo auf dem Weg verworfen.
+  const net = o => batchNet({ fc: () => craftedForecast(), ...o });
+  const guest = stubEnv(net({}));
+  await guest.api.loadAll();
+
+  const mine = stubEnv(net({ prefs: {
+    wf_rider: { weight: 95, wingSize: 5, skill: 'intermediate' },
+    wf_gear: [{ wing: '3' }, { wing: '5' }],
+    wf_usegear: true,
+  } }));
+  await mine.api.loadAll();
+
+  const g = guest.api.getTableData()[0], m = mine.api.getTableData()[0];
+  assert.strictEqual(g.spot.id, m.spot.id, 'verschiedene Spots verglichen');
+
+  // Nur 3 und 5 m² sind eingetragen — eine 6 im Plan heißt, der Default gewann.
+  const plans = m.wings.filter(Boolean).join(' ');
+  assert.ok(plans.length > 0, 'kein Plan für das eigene Material');
+  assert.ok(!/\b[46]\b/.test(plans), `fremde Größen im Plan: ${plans}`);
+  assert.notStrictEqual(m.wings[0], g.wings[0],
+    `eigenes Material ändert die Empfehlung nicht: beide ${g.wings[0]}`);
+
+  // 95 kg brauchen mehr Wind: der windschwache Tag 0 darf nicht besser werden.
+  assert.ok(m.d0 <= g.d0, `95 kg bewerten 7 m/s besser als 75 kg: ${m.d0} vs ${g.d0}`);
+  assert.ok(m.avg !== g.avg, 'das Profil hat den Fünf-Tage-Schnitt nicht verändert');
+
+  assert.match(mine.nodes['rider-note'].textContent, /95 kg/, 'Profilhinweis ohne Gewicht');
+  assert.match(mine.nodes['rider-note'].textContent, /Quiver 3\/5 m²/, 'Profilhinweis ohne Quiver');
 });

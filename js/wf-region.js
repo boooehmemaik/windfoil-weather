@@ -207,7 +207,9 @@
     return Object.entries(dayMap).map(([date, d]) => {
       const avgWind = d.winds.length ? d.winds.reduce((a, b) => a + b, 0) / d.winds.length : 0;
       const maxGust = d.gusts.length ? Math.max(...d.gusts) : 0;
-      const scores = d.winds.map(w => WFS.scoreHour(w, win));
+      // scorerFor, nicht scoreHour: win ist seit dem Quiver entweder ein Fenster
+      // oder die ganze Tasche, und scoreHour nimmt kein Array.
+      const scores = d.winds.map(WFS.scorerFor(win));
       const score = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
       const avgTemp = d.temps.length ? d.temps.reduce((a, b) => a + b, 0) / d.temps.length : null;
       return { date, avgWind, maxGust, score, avgWindKn: msToKn(avgWind), avgTemp };
@@ -530,9 +532,11 @@
     SPOTS.forEach(s => { markers[s.id] = placeholderMarker(s, map); });
 
     const prof = await WFS.loadRider();
-    const win = prof.win;
+    // Bewertet wird mit der ganzen Tasche, nicht mit einer Größe. win trägt
+    // darum ein Fenster ODER einen Quiver — jede Auswertung geht über scorerFor.
+    const win = prof.quiver?.length ? prof.quiver : prof.win;
     const rn = document.getElementById('rider-note');
-    if (rn) rn.textContent = WFS.describeRider(prof.rider);
+    if (rn) rn.textContent = WFS.describeRider(prof.rider, prof.quiver);
 
     const grid = document.getElementById('spots-grid');
     grid.innerHTML = SPOTS.map(() => '<div class="loading"><span class="spin">⟳</span></div>').join('');

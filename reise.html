@@ -465,10 +465,12 @@ $('btn-reload').addEventListener('click', reloadForecast);
 async function init() {
   initMap();
   const r = await WF.loadRider();
-  state.win = r.win;
+  // Die ganze Tasche bewertet, nicht eine Größe: state.win trägt darum ein
+  // Fenster ODER einen Quiver — bestSession nimmt über scorerFor beides.
+  state.win = r.quiver?.length ? r.quiver : r.win;
   state.rider = r.rider;
   $('lead').textContent = 'Wohin lohnt sich die Fahrt? Die besten zusammenhängenden Tage im Umkreis — '
-    + WF.describeRider(r.rider) + '.';
+    + WF.describeRider(r.rider, r.quiver) + '.';
   try {
     state.spots = await loadSpots();
   } catch (e) {

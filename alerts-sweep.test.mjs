@@ -134,13 +134,22 @@ test('bereits gemeldete Tage werden übersprungen', async () => {
 });
 
 test('das Fahrerprofil entscheidet mit', async () => {
-  // 7 m/s: Referenzfahrer 64 (unter der Schwelle), mit 9 m² 83.
-  const fc = forecast(7);
-  assert.strictEqual((await harness({ forecast: fc }).run()).pushed, 0);
-
+  // Dieselben 7 m/s, zwei Fahrer: der Referenzfahrer (6 m², Harlem-Blend) bleibt
+  // unter der Schwelle, 9 m² (außerhalb der Tabelle → reines Physikmodell) kommt
+  // darüber. Die Schwelle wird aus beiden Fenstern berechnet statt geraten — als
+  // hier noch die 70 der Standard-Fixture griff, war der Test nach dem
+  // Harlem-Blend rot, obwohl am Scheduler nichts falsch war.
+  const MS = 7;
   const big = { weight: 75, wingSize: 9, skill: 'intermediate' };
-  assert.ok(WF.windowFromRider(big).minWind < 7, 'Testannahme über das Fenster');
-  const r = await harness({ forecast: fc, riders: { u1: big } }).run();
+  const guestScore = WF.scoreHour(MS, WF.guestWindow());
+  const bigScore = WF.scoreHour(MS, WF.windowFromRider(big));
+  assert.ok(bigScore > guestScore, `Fixture nutzlos: 9 m² ${bigScore} vs 6 m² ${guestScore}`);
+  const subs = [{ userId: 'u1', spotId: 'a', minScore: guestScore + 1 }];
+
+  const fc = forecast(MS);
+  assert.strictEqual((await harness({ forecast: fc, subs }).run()).pushed, 0,
+    'der Referenzfahrer kam über die Schwelle');
+  const r = await harness({ forecast: fc, subs, riders: { u1: big } }).run();
   assert.strictEqual(r.pushed, 1, 'das Profil wurde nicht angewandt');
 });
 
