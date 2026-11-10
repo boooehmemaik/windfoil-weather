@@ -102,8 +102,15 @@ test('evaluateAlerts: die Schwelle gilt pro Abo', () => {
 
 test('evaluateAlerts: ohne minScore gilt der Standardwert', () => {
   const fc = { spots: { a: entry([7, LOW, LOW]) } };   // Score 64
-  assert.strictEqual(DEFAULT_MIN_SCORE, 70);
-  assert.deepStrictEqual(run({ forecast: fc, subscriptions: [{ userId: 'u1', spotId: 'a' }] }), []);
+  // Nicht gegen die Zahl 70 oder 40 geprüft, sondern gegen die Konstante: ihr
+  // Wert darf sich ändern, ihre Wirkung nicht. Vorher stand hier das Literal —
+  // beim Absenken auf 40 war dieser Test das einzige, was rot wurde, und das
+  // sagte nichts über einen Fehler aus.
+  assert.ok(DEFAULT_MIN_SCORE < 64, `Fixture-Score 64 muss über dem Standard ${DEFAULT_MIN_SCORE} liegen`);
+  assert.strictEqual(run({ forecast: fc, subscriptions: [{ userId: 'u1', spotId: 'a' }] }).length, 1,
+    'ohne minScore muss der Standardwert greifen');
+  // Gegenprobe: eine ausdrücklich höhere Schwelle greift beim selben Forecast nicht.
+  assert.deepStrictEqual(run({ forecast: fc, subscriptions: [{ userId: 'u1', spotId: 'a', minScore: 90 }] }), []);
 });
 
 test('evaluateAlerts: schon verschickte Tage werden entprellt', () => {

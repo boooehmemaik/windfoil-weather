@@ -138,6 +138,31 @@ test('wf-region.js: buildCard rendert die Wassertemperatur nur mit sstData', () 
   assert.ok(!html.includes('undefined'));
 });
 
+// ── Querverlinkung ──────────────────────────────────────────────────────────
+// Die Fußzeilen sind der einzige Weg, die Nebenseiten zu finden. Eine Seite,
+// die nirgends verlinkt ist, ist unsichtbar deployt — kein Testlauf und kein
+// Health-Check würde das melden.
+const SIBLINGS = ['vergleich.html', 'alarm.html', 'watcher.html', 'logbuch.html',
+  'sardinia.html', 'sizilien.html', 'spanien.html', 'skandinavien.html'];
+
+for (const page of SIBLINGS) {
+  test(`${page}: verlinkt den Reiseplaner`, () => {
+    assert.match(read(page), /href="\/reise\.html"/, 'Link auf /reise.html fehlt');
+  });
+}
+
+test('reise.html: führt zurück in die App, statt eine Einbahnstraße zu sein', () => {
+  const html = read('reise.html');
+  for (const target of ['/vergleich.html', '/logbuch.html', '/alarm.html', '/help.html', '/']) {
+    assert.ok(html.includes(`href="${target}"`), `Rücklink ${target} fehlt`);
+  }
+});
+
+test('manifest.json: der Reiseplaner ist als Shortcut erreichbar', () => {
+  const m = JSON.parse(read('manifest.json'));
+  assert.ok(m.shortcuts.some(s => s.url === '/reise.html'), 'Shortcut fehlt');
+});
+
 function synthForecast(seed) {
   const h = { time: [], windspeed_10m: [], windgusts_10m: [], winddirection_10m: [], temperature_2m: [], weathercode: [] };
   for (let i = 0; i < 72; i++) {

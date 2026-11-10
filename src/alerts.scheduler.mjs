@@ -86,7 +86,9 @@ export function startAlertScheduler(deps) {
       // gelesen, ein beim Boot eingefrorenes Objekt würde veralten.
       const spots = typeof deps.spots === 'function' ? deps.spots() : deps.spots;
       const r = await runAlertSweep({ ...deps, spots, now: new Date() });
-      if (r.pushed) console.log('[alerts]', JSON.stringify(r));
+      // Nicht nur Erfolge: ein Durchlauf, der ausschließlich scheitert, war
+      // vorher unsichtbar — genau der Fall, den man im Log sucht.
+      if (r.pushed || r.dropped || r.failed) console.log('[alerts]', JSON.stringify(r));
     } catch (e) {
       console.error('[alerts] Durchlauf fehlgeschlagen:', e.message);
     }

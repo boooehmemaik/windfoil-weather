@@ -6,7 +6,10 @@
 <title>WindFoil — Admin</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","Segoe UI",system-ui,sans-serif;background:#0a1520;color:#c8dce8;min-height:100vh;padding:20px}
+  html{-webkit-text-size-adjust:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","Segoe UI",system-ui,sans-serif;background:#0a1520;color:#c8dce8;min-height:100vh;padding:20px;
+    padding-bottom:max(20px,env(safe-area-inset-bottom))}
+  @media(max-width:600px){body{padding:14px;padding-bottom:max(14px,env(safe-area-inset-bottom))}}
   h1{font-size:19px;color:#3a9ad9;letter-spacing:.03em;margin-bottom:20px;font-weight:700}
   h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:#5a7a96;margin-bottom:12px;font-weight:600}
 
@@ -50,7 +53,12 @@
   .flash{font-size:12px;margin-top:10px;padding:8px 12px;border-radius:10px;display:none}
   .flash.ok{background:#0d2e18;color:#4cde80;border:1px solid #1a5c2a}
   .flash.err{background:#2e0d0d;color:#e05555;border:1px solid #5c1a1a}
-  table{width:100%;border-collapse:collapse;font-size:12px}
+  /* Ohne eigenen Scroll-Container schiebt die 5-spaltige Benutzertabelle den
+     ganzen body breiter als den Viewport — auf dem iPhone kippt die Seite dann
+     ins horizontale Panning und das vertikale Scrollen hakt. */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  table{width:100%;min-width:560px;border-collapse:collapse;font-size:12px}
+  td.actions{white-space:nowrap}
   th{text-align:left;color:#5a7a96;font-weight:600;padding:6px 8px;border-bottom:1px solid #1e3045;text-transform:uppercase;font-size:10px;letter-spacing:.06em}
   td{padding:6px 8px;border-bottom:1px solid #0f1e2d;vertical-align:middle}
   tr:last-child td{border-bottom:none}
@@ -126,10 +134,12 @@
   <!-- Users -->
   <div class="card full">
     <h2>👥 Benutzer</h2>
-    <table id="users-table">
-      <thead><tr><th>Name</th><th>E-Mail</th><th>Registriert</th><th>Status</th><th>Aktionen</th></tr></thead>
-      <tbody id="users-body"><tr><td colspan="5" style="color:#3a4a5a;text-align:center;padding:16px">Lade…</td></tr></tbody>
-    </table>
+    <div class="tbl-wrap">
+      <table id="users-table">
+        <thead><tr><th>Name</th><th>E-Mail</th><th>Registriert</th><th>Status</th><th>Aktionen</th></tr></thead>
+        <tbody id="users-body"><tr><td colspan="5" style="color:#3a4a5a;text-align:center;padding:16px">Lade…</td></tr></tbody>
+      </table>
+    </div>
     <div class="flash" id="users-flash"></div>
   </div>
 </div>
@@ -284,9 +294,9 @@ async function loadUsers() {
         <td style="font-family:monospace;font-size:11px">${u.email}</td>
         <td style="color:#5a7a96;font-size:11px">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('de-DE') : '—'}</td>
         <td><span class="badge ${u.disabled ? 'badge-disabled' : 'badge-ok'}">${u.disabled ? 'Gesperrt' : 'Aktiv'}</span></td>
-        <td>
-          <button class="btn btn-neutral" style="padding:4px 10px;font-size:11px" onclick="toggleUser('${u.id}',${u.disabled ? 0 : 1})">${u.disabled ? 'Freischalten' : 'Sperren'}</button>
-          <button class="btn btn-neutral" style="padding:4px 10px;font-size:11px;margin-left:4px" onclick="resetPw('${u.id}','${u.email}')">PW reset</button>
+        <td class="actions">
+          <button class="btn btn-neutral" style="padding:6px 10px;font-size:11px;min-height:32px" onclick="toggleUser('${u.id}',${u.disabled ? 0 : 1})">${u.disabled ? 'Freischalten' : 'Sperren'}</button>
+          <button class="btn btn-neutral" style="padding:6px 10px;font-size:11px;min-height:32px;margin-left:4px" onclick="resetPw('${u.id}','${u.email}')">PW reset</button>
         </td>
       </tr>`).join('');
   } catch(e) {

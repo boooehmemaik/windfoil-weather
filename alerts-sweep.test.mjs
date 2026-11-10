@@ -183,6 +183,34 @@ test('startAlertScheduler: ein Upstream-Ausfall beendet den Timer nicht', async 
   try { await sched.tick(); } finally { sched.stop(); }
 });
 
+test('startAlertScheduler: ein Durchlauf ohne einen einzigen Erfolg landet trotzdem im Log', async () => {
+  // Geloggt wurde vorher nur bei pushed > 0. Ein Durchlauf, in dem jedes Gerät
+  // abgelehnt wird, war damit unsichtbar — genau der Zustand, der den
+  // Pixel-7-Fehlschlag am 10.11.2026 nicht nachvollziehbar machte.
+  const lines = [], orig = console.log;
+  console.log = (...a) => lines.push(a.join(' '));
+  const sched = startAlertScheduler({
+    store: {
+      deliverableAlerts: () => [{ userId: 'u1', spotId: 'a', minScore: 70 }],
+      riderPrefs: () => ({}), sentKeys: () => new Set(), markSent() {}, pruneSent() {},
+      devicesOf: () => [DEV('u1')], markDeviceOk() {}, markDeviceFail() {}, deleteDevice() {},
+    },
+    send: async () => ({ gone: true, status: 410 }),
+    loadForecast: async () => forecast(),
+    spots: SPOTS,
+  });
+  try { await sched.tick(); } finally { sched.stop(); console.log = orig; }
+
+  const alerts = lines.filter(l => l.startsWith('[alerts]'));
+  if (inQuietHours()) {
+    assert.deepStrictEqual(alerts, [], 'in der Nachtruhe läuft kein Durchlauf');
+  } else {
+    assert.strictEqual(alerts.length, 1, 'genau eine Zeile');
+    assert.match(alerts[0], /"pushed":0/);
+    assert.match(alerts[0], /"dropped":1/);
+  }
+});
+
 test('Nachtruhe: zwischen 21 und 7 Uhr wird nicht geweckt', () => {
   const at = h => new Date(2026, 10, 10, h, 30);
   assert.strictEqual(inQuietHours(at(QUIET_BEFORE_HOUR - 1)), true);

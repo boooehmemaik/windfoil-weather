@@ -96,6 +96,7 @@
 <footer class="ftr">
   <a href="/vergleich.html">Spot-Vergleich</a>
   <a href="/logbuch.html">🛶 Logbuch</a>
+  <a href="/reise.html">🧭 Reiseplaner</a>
   <a href="/help.html">Hilfe</a>
   <a href="/">← Hauptseite</a>
 </footer>
@@ -146,12 +147,17 @@ async function loadSpots() {
   return groups;
 }
 
+// step="1", nicht step="5": ab min="1" wären mit Fünferschritten nur 1, 6, 11 …
+// gültig, und der Browser wies runde Werte wie 40 ab, die der Server (1–100,
+// ganzzahlig) längst annimmt. Die Vorbelegung kommt aus der API, damit die
+// Standardschwelle nur an einer Stelle steht.
 function spotRow(spot, alert) {
   const on = !!alert;
   return '<div class="spot" data-id="' + spot.id + '">'
     + '<div class="spot-name">' + (spot.emoji || '') + ' ' + spot.name
     + '<small>' + (spot.desc || '') + '</small></div>'
-    + '<input class="thr" type="number" min="1" max="100" step="5" value="' + (alert?.minScore ?? 70)
+    + '<input class="thr" type="number" min="1" max="100" step="1" value="'
+    + (alert?.minScore ?? state.cfg.defaultMinScore)
     + '" aria-label="Score-Schwelle" ' + (on ? '' : 'disabled') + ' />'
     + '<button class="bell" aria-pressed="' + on + '" aria-label="Alarm umschalten">'
     + (on ? '🔔' : '🔕') + '</button></div>';
@@ -174,7 +180,7 @@ $('spots').addEventListener('click', async e => {
   bell.disabled = true;
   try {
     if (turnOn) await api('/' + encodeURIComponent(id), {
-      method: 'PUT', body: JSON.stringify({ minScore: Number(thr.value) || 70 }),
+      method: 'PUT', body: JSON.stringify({ minScore: Number(thr.value) || state.cfg.defaultMinScore }),
     });
     else await api('/' + encodeURIComponent(id), { method: 'DELETE' });
     bell.setAttribute('aria-pressed', String(turnOn));
@@ -250,13 +256,51 @@ $('btn-disable').addEventListener('click', async () => {
   paintPush();
 });
 
+/** Das Browser-Abo erneut beim Server anmelden.
+ *  Nötig in zwei Fällen: der Server hat die Zeile verworfen, weil der
+ *  Push-Dienst den Endpunkt als „weg" meldete, oder man ist mit einem anderen
+ *  Konto angemeldet als beim Einrichten. Beide Male kennt der Browser ein
+ *  gültiges Abo, der Server aber kein Gerät. */
+async function resyncDevice() {
+  if (!state.sub) return false;
+  const j = state.sub.toJSON();
+  if (!j.keys?.p256dh || !j.keys?.auth) return false;
+  try {
+    await api('/devices', { method: 'POST', body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys }) });
+    state.cfg = await api('/');
+    return state.cfg.devices > 0;
+  } catch { return false; }
+}
+
+/** Ein Abo aufgeben, das der Push-Dienst nicht mehr kennt.
+ *  Ohne unsubscribe() bleibt der Browser bei seinem toten Endpunkt, der
+ *  Aktivieren-Knopf bleibt verborgen und der Nutzer sitzt fest. */
+async function dropStaleSubscription() {
+  try { await state.sub?.unsubscribe(); } catch { /* schon weg */ }
+  state.sub = null;
+  try { state.cfg = await api('/'); } catch { /* Anzeige bleibt wie sie ist */ }
+}
+
 $('btn-test').addEventListener('click', async () => {
   setNote('Probe unterwegs…');
   try {
-    const r = await api('/test', { method: 'POST' });
-    setNote(r.ok ? 'Probe verschickt — sie sollte gleich erscheinen.'
-                 : 'Kein Gerät erreichbar. Nochmal aktivieren?', r.ok ? 'ok' : 'warn');
+    let r = await api('/test', { method: 'POST' }).catch(e => {
+      if (e.message === 'no_devices') return { ok: false };
+      throw e;
+    });
+    // Ein Fehlschlag kann daran liegen, dass der Server das Abo nicht (mehr)
+    // kennt — einmal neu anmelden und erneut probieren, bevor wir aufgeben.
+    if (!r.ok && await resyncDevice()) {
+      r = await api('/test', { method: 'POST' }).catch(() => ({ ok: false }));
+    }
+    if (r.ok) { setNote('Probe verschickt — sie sollte gleich erscheinen.', 'ok'); }
+    else {
+      await dropStaleSubscription();
+      setNote('Dieses Gerät wird vom Push-Dienst nicht mehr akzeptiert. '
+            + 'Das alte Abo ist aufgeräumt — bitte einmal neu aktivieren.', 'warn');
+    }
   } catch (e) { setNote('Probe fehlgeschlagen: ' + e.message, 'err'); }
+  paintPush();
 });
 
 function paintPush() {
@@ -285,6 +329,10 @@ async function init() {
     state.sub = await currentSubscription();
     if (Notification.permission === 'denied') {
       setNote('Benachrichtigungen sind für maik.surf blockiert — in den Browser-Einstellungen freigeben.', 'warn');
+    } else if (state.sub && !state.cfg.devices) {
+      setNote(await resyncDevice()
+        ? 'Dieses Gerät war serverseitig nicht mehr angemeldet und wurde neu verbunden.'
+        : 'Dieses Gerät ist serverseitig nicht angemeldet — bitte einmal neu aktivieren.', 'warn');
     }
   }
 

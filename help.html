@@ -368,6 +368,7 @@
     <a class="back-link" href="/index.html">← Zurück zur App</a>
     <a class="back-link" href="/alarm.html">🔔 Windalarm</a>
     <a class="back-link" href="/logbuch.html">🛶 Logbuch</a>
+    <a class="back-link" href="/reise.html">🧭 Reiseplaner</a>
   </div>
 </header>
 
@@ -388,6 +389,7 @@
         <li><a href="#tipps">Tipps &amp; Hinweise</a></li>
         <li><a href="#windalarm">Windalarm</a></li>
         <li><a href="#logbuch">Session-Logbuch</a></li>
+        <li><a href="#reiseplaner">Reiseplaner</a></li>
       </ol>
     </nav>
   </aside>
@@ -885,6 +887,66 @@
       <p>Jeder Eintrag lässt sich einzeln aus dem Logbuch löschen. Die Löschung kann nicht rückgängig gemacht werden.</p>
     </section>
 
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="reiseplaner">
+      <h2><span class="section-num">10</span> Reiseplaner 🧭</h2>
+
+      <p>Der Reiseplaner auf <a href="/reise.html" style="color:var(--blue);">/reise.html</a> beantwortet die Frage: <strong>Wo lohnt sich in den nächsten 7 Tagen eine Reise?</strong> Aus allen bekannten Spots innerhalb eines wählbaren Radius wird derjenige gesucht, dessen zusammenhängendes Zeitfenster den besten Durchschnitts-Score erzielt — abgestimmt auf dein gespeichertes Rider-Profil und dein Equipment.</p>
+
+      <div class="tip blue">
+        <strong>Datenschutz</strong>
+        Wenn du deinen eigenen Standort als Startpunkt verwendest, verlässt er deinen Browser nicht. Die gesamte Berechnung — Radius, Ranking, Kartenanzeige — läuft lokal. Der Server liefert nur die Wetterdaten über den gemeinsamen Forecast-Proxy <code>/api/forecast/batch</code>.
+      </div>
+
+      <h3>Startpunkt wählen</h3>
+      <div class="panel">
+        <div class="panel-title">Zwei Möglichkeiten</div>
+        <table>
+          <thead>
+            <tr><th>Option</th><th>Beschreibung</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Spot aus der Liste</strong></td><td>Wähle einen der bekannten Spots als Ausgangspunkt. Alle Entfernungen werden von diesem Spot aus berechnet.</td></tr>
+            <tr><td><strong>📍 Mein Standort</strong></td><td>Der Browser fragt einmalig nach deiner GPS-Position. Die Koordinaten werden nur lokal verwendet und nicht übertragen.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Suchparameter</h3>
+      <div class="panel">
+        <div class="panel-title">Einstellbare Filter</div>
+        <table>
+          <thead>
+            <tr><th>Feld</th><th>Details</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Radius</strong></td><td>Suchkreis um den Startpunkt: 100, 200, 300, 500, 1000 km oder ohne Grenze. Standard: 300 km.</td></tr>
+            <tr><td><strong>Reisedauer</strong></td><td>Mindestanzahl zusammenhängender guter Tage: 1–4 Tage. Spots, die dieses Fenster nicht erfüllen, erscheinen nicht in der Ergebnisliste.</td></tr>
+            <tr><td><strong>Mindest-Score</strong></td><td>Spots, deren bestes Zeitfenster diesen Durchschnitts-Score nicht erreicht, werden gefiltert. Standard: ab 70.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Ergebnis-Rangliste</h3>
+      <p>Die Ergebnisliste sortiert alle Treffer nach dem <strong>Durchschnitts-Score des besten zusammenhängenden Zeitfensters</strong>. Bei gleich gutem Score entscheidet die kürzere Anreise. Jeder Eintrag zeigt:</p>
+      <ul>
+        <li>Rang, Spotname und Durchschnitts-Score des Reisefensters</li>
+        <li>Reisedatum (z. B. „Di, 10.11. – Do, 12.11.") und schwächster Einzel-Tag im Fenster</li>
+        <li>Entfernung vom Startpunkt, Himmelsrichtung und durchschnittlicher Windstärke</li>
+        <li>Windrichtungspfeil — zeigt wie überall in der App <strong>woher</strong> der Wind kommt</li>
+        <li>Einzel-Chips für jeden Tag des Reisefensters mit Score, Datum und optimaler Sessionzeit</li>
+        <li>Direktlink zur zugehörigen Spot-Seite</li>
+      </ul>
+
+      <h3>Karte</h3>
+      <p>Unter dem Suchformular zeigt eine interaktive Karte den Startpunkt als orangefarbenen Punkt, den gewählten Radiuskreis und einen Marker für jeden Spot in der Ergebnisliste. Jeder Marker trägt den Score und einen kleinen Windrichtungspfeil. Per Klick öffnet sich ein Popup mit Kurzinfos zum jeweiligen Spot.</p>
+
+      <div class="tip">
+        <strong>Forecast neu laden</strong>
+        Der Button <span class="chip chip-gray">↺ Forecast neu laden</span> fragt die aktuellen 7-Tage-Vorhersagen für alle Spots im Radius neu ab. Das ist sinnvoll, wenn du den Reiseplaner längere Zeit geöffnet gelassen hast und sichergehen möchtest, dass die Daten noch frisch sind.
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -898,6 +960,8 @@
     <a href="/alarm.html">🔔 Windalarm</a>
     &nbsp;·&nbsp;
     <a href="/logbuch.html">🛶 Logbuch</a>
+    &nbsp;·&nbsp;
+    <a href="/reise.html">🧭 Reiseplaner</a>
     &nbsp;·&nbsp;
     Wetterdaten: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>
     &nbsp;·&nbsp;

@@ -107,6 +107,53 @@ test('meanDirection: Kreismittel, nicht arithmetisches Mittel', () => {
   }
 });
 
+test('bestBlock: findet den besten zusammenhängenden Reiseblock', () => {
+  // Der Block muss zusammenhängen. Würde die Funktion einfach die besten n
+  // Tage picken, käme hier 100/100 heraus — eine Reise über Tag 2 hinweg.
+  assert.deepStrictEqual(WF.bestBlock([100, 0, 100, 0, 0], 2),
+    { startIdx: 0, endIdx: 1, mean: 50, min: 0 });
+
+  assert.deepStrictEqual(WF.bestBlock([10, 20, 90, 80, 30], 2),
+    { startIdx: 2, endIdx: 3, mean: 85, min: 80 });
+  // 90/80/30 (Ø 66,7) schlägt 20/90/80 (Ø 63,3) — ein starker Randtag kann
+  // einen schwachen Schlusstag aufwiegen.
+  assert.deepStrictEqual(WF.bestBlock([10, 20, 90, 80, 30], 3),
+    { startIdx: 2, endIdx: 4, mean: 67, min: 30 });
+
+  // len=1 ist der beste Einzeltag.
+  assert.deepStrictEqual(WF.bestBlock([10, 95, 30], 1),
+    { startIdx: 1, endIdx: 1, mean: 95, min: 95 });
+
+  // Bei gleichem Mittel gewinnt der gleichmäßigere Block: 70/70 schlägt 100/40,
+  // weil bei letzterem ein Reisetag ausfällt.
+  assert.deepStrictEqual(WF.bestBlock([100, 40, 70, 70], 2),
+    { startIdx: 2, endIdx: 3, mean: 70, min: 70 });
+
+  // Gleichstand auch im Minimum → der frühere Block, damit die Empfehlung
+  // zwischen zwei Seitenaufrufen nicht springt.
+  assert.deepStrictEqual(WF.bestBlock([80, 80, 80, 80], 2),
+    { startIdx: 0, endIdx: 1, mean: 80, min: 80 });
+});
+
+test('bestBlock: zu kurze oder löchrige Reihen liefern null statt 0', () => {
+  // Ein Block von 0 wäre „Reise lohnt nicht"; fehlende Daten sind etwas anderes.
+  assert.strictEqual(WF.bestBlock([50, 60], 3), null, 'Reihe kürzer als der Block');
+  assert.strictEqual(WF.bestBlock([], 1), null);
+  assert.strictEqual(WF.bestBlock(null, 1), null);
+  assert.strictEqual(WF.bestBlock([null, undefined, NaN], 1), null, 'nur Lücken');
+
+  // Lücken werden übersprungen, nicht als 0 gewertet — sonst zöge ein fehlender
+  // Tag den Blockdurchschnitt nach unten und der Spot verschwände aus dem Ranking.
+  assert.deepStrictEqual(WF.bestBlock([90, null, 90], 2),
+    { startIdx: 0, endIdx: 1, mean: 90, min: 90 });
+
+  // Unsinnige Blocklänge fällt auf einen Tag zurück, statt null zu liefern.
+  for (const len of [0, -2, 1.5, null, undefined, 'x']) {
+    assert.deepStrictEqual(WF.bestBlock([10, 95, 30], len),
+      { startIdx: 1, endIdx: 1, mean: 95, min: 95 }, `len=${len}`);
+  }
+});
+
 const day = h => { const d = []; for (let i = 0; i < 24; i++) d.push(h[i] ?? 0); return d; };
 
 test('scoreDay: beste 4h-Session zählt, nicht der Tagesmittelwert', () => {

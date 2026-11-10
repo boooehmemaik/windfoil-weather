@@ -8,7 +8,10 @@
 // ============================================================================
 import WF from '../js/wf-scoring.js';
 
-export const DEFAULT_MIN_SCORE = 70;
+// 40 statt 70: bei 70 schlug der Alarm an mitteleuropäischen Spots über Wochen
+// nicht an, und ein Alarm, der nie kommt, ist von einem defekten Alarm nicht
+// zu unterscheiden. Jede Regel lässt sich einzeln nachschärfen.
+export const DEFAULT_MIN_SCORE = 40;
 
 // Fest auf 5 Tage, nicht aus Bequemlichkeit: genau diesen Cache-Eintrag
 // (region=all&days=5) füllt die Vergleichsseite ohnehin. Der Alarm kostet

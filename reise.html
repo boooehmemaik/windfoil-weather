@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reiseplaner · WindFoil</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0a0e14" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:#0a0e14;color:#d8e4f0;min-height:100vh;overflow-x:clip;
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif}
+    a{color:#3a9ad9;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    .hdr{background:rgba(10,14,20,.92);border-bottom:1px solid #1e2d3d;padding:12px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+      position:sticky;top:0;z-index:400;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+    .hdr-title{font-weight:900;font-size:15px;letter-spacing:.12em}
+    .hdr-sub{font-size:10px;color:#5a7a96;letter-spacing:.05em;margin-top:1px}
+    .hdr-btn{font-size:12px;color:#8fa8c0;border:1px solid #1e2d3d;border-radius:10px;
+      padding:7px 11px;display:inline-block}
+
+    .wrap{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+    h1{font-size:22px;font-weight:800;margin-bottom:6px}
+    .lead{color:#8fa8c0;font-size:14px;line-height:1.55;margin-bottom:20px}
+
+    .card{background:#101822;border:1px solid #1e2d3d;border-radius:14px;padding:16px;margin-bottom:16px}
+    .card h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#5a7a96;margin-bottom:10px}
+
+    .btn{background:#f07820;color:#0a0e14;border:0;border-radius:12px;font-weight:700;
+      font-size:15px;padding:13px 20px;min-height:44px;cursor:pointer}
+    .btn:disabled{opacity:.45;cursor:default}
+    .btn.ghost{background:transparent;color:#8fa8c0;border:1px solid #1e2d3d;font-weight:500}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+    .note{font-size:13px;line-height:1.5;color:#8fa8c0;margin-top:10px}
+    .note.warn{color:#e0b050}
+    .note.err{color:#e06060}
+    .note.ok{color:#60c080}
+
+    .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+    label{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+      color:#5a7a96;margin-bottom:5px}
+    select,input{width:100%;background:#0a0e14;color:#d8e4f0;border:1px solid #1e2d3d;
+      border-radius:10px;padding:11px;font-size:15px;min-height:44px;font-family:inherit}
+
+    #reise-map{width:100%;height:320px;background:#111820;border:1px solid #1e2d3d;
+      border-radius:14px;margin-bottom:16px}
+    .lm-score{position:absolute;top:0;right:0;background:rgba(10,14,20,.9);border-radius:6px;
+      padding:2px 6px;font-size:11px;font-weight:700;white-space:nowrap;border-width:1px;border-style:solid;line-height:1.6}
+    .leaflet-popup-content-wrapper{background:#151d28;border:1px solid #243040;color:#d8e4f0;
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;border-radius:12px}
+    .leaflet-popup-tip{background:#243040}
+    .leaflet-popup-content{font-size:12px;line-height:1.6;margin:10px 14px}
+
+    .hit{background:#101822;border:1px solid #1e2d3d;border-radius:14px;padding:14px;margin-bottom:12px}
+    .hit-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+    .hit-rank{font-size:13px;font-weight:800;color:#5a7a96;min-width:22px}
+    .hit-spot{font-size:16px;font-weight:700;flex:1;min-width:0}
+    .hit-score{font-size:19px;font-weight:800;border-radius:9px;padding:2px 9px;
+      border:1px solid currentColor;white-space:nowrap}
+    .tag{font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-radius:7px;
+      padding:3px 7px;border:1px solid #1e2d3d;color:#5a7a96}
+    .meta{font-size:12px;color:#8fa8c0;line-height:1.7}
+    .meta em{color:#5a7a96;font-style:normal}
+    .days{display:flex;gap:6px;flex-wrap:wrap;margin:9px 0 2px}
+    .day{background:#0a0e14;border:1px solid #1e2d3d;border-radius:10px;padding:7px 9px;
+      text-align:center;min-width:62px}
+    .day b{display:block;font-size:15px;font-weight:800}
+    .day span{font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#5a7a96}
+    .day.off{opacity:.45}
+
+    .ftr{border-top:1px solid #1e2d3d;padding:18px 16px;display:flex;gap:14px;flex-wrap:wrap;
+      justify-content:center;font-size:12px;color:#5a7a96}
+    .hide{display:none}
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <div>
+    <div class="hdr-title">WINDFOIL</div>
+    <div class="hdr-sub">Reiseplaner</div>
+  </div>
+  <div class="row">
+    <a href="/vergleich.html" class="hdr-btn">Vergleich</a>
+    <a href="/" class="hdr-btn">← Hauptseite</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <h1>🧭 Reiseplaner</h1>
+  <p class="lead" id="lead">Wird geladen…</p>
+
+  <div class="card">
+    <h2>Suche</h2>
+    <div class="fields">
+      <div>
+        <label for="f-start">Startpunkt</label>
+        <select id="f-start"></select>
+      </div>
+      <div>
+        <label for="f-radius">Radius</label>
+        <select id="f-radius">
+          <option value="100">100 km</option>
+          <option value="200">200 km</option>
+          <option value="300" selected>300 km</option>
+          <option value="500">500 km</option>
+          <option value="1000">1000 km</option>
+          <option value="">ohne Grenze</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-trip">Reisedauer</label>
+        <select id="f-trip">
+          <option value="1">1 Tag</option>
+          <option value="2" selected>2 Tage</option>
+          <option value="3">3 Tage</option>
+          <option value="4">4 Tage</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-min">Mindest-Score</label>
+        <select id="f-min">
+          <option value="">egal</option>
+          <option value="40">ab 40</option>
+          <option value="60">ab 60</option>
+          <option value="70" selected>ab 70</option>
+          <option value="85">ab 85</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="btn-geo">📍 Mein Standort</button>
+      <button class="btn ghost" id="btn-reload">↺ Forecast neu laden</button>
+    </div>
+    <p class="note" id="search-note"></p>
+  </div>
+
+  <div id="reise-map"></div>
+
+  <div id="results"></div>
+</div>
+
+<footer class="ftr">
+  <a href="/vergleich.html">Spot-Vergleich</a>
+  <a href="/alarm.html">Windalarm</a>
+  <a href="/logbuch.html">Logbuch</a>
+  <a href="/help.html">Hilfe</a>
+  <a href="/">← Hauptseite</a>
+</footer>
+
+<script src="/js/wf-scoring.js"></script>
+<script src="/js/wf-geo.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════
+// WindFoil Reiseplaner — „bester Spot in X km in den nächsten
+// 7 Tagen". Alles im Browser: der Startpunkt kann die eigene
+// Position sein, und die darf den Rechner nicht verlassen.
+// Forecast kommt ausschließlich über /api/forecast/batch —
+// 40 Direktabrufe bei Open-Meteo sind genau das, was der Proxy
+// verhindern soll.
+// ═══════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const state = { spots: [], fc: null, win: null, rider: null, center: null, centerLabel: '', results: [] };
+
+const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+const COMPASS16 = ['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+const compass = deg => deg == null ? '?' : COMPASS16[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const setNote = (txt, cls) => { const n = $('search-note'); n.textContent = txt; n.className = 'note ' + (cls || ''); };
+const scoreColor = s => s >= 70 ? '#3ddc84' : s >= 40 ? '#f5b942' : '#e84040';
+
+/** Spitze zeigt dorthin, WOHER der Wind kommt — gleiche Konvention wie in
+ *  js/wf-region.js und vergleich.html. reise-render.test.mjs pinnt das fest. */
+function windArrowSvg(deg, color = '#3a9ad9', size = 20) {
+  if (deg == null) return '';
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 20 20" style="display:inline-block;vertical-align:middle;transform:rotate(' + deg + 'deg)">'
+    + '<polygon points="10,2 14,16 10,13 6,16" fill="' + color + '" opacity=".85"/>'
+    + '</svg>';
+}
+
+/** '2026-11-10' → 'Di, 10.11.' — UTC-fest, damit die Browserzeitzone den
+ *  Wochentag nicht um einen Tag verschiebt. */
+function labelDate(iso) {
+  if (!iso) return '–';
+  const d = new Date(iso + 'T12:00:00Z');
+  return WEEKDAYS[d.getUTCDay()] + ', ' + iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.';
+}
+
+const fmtKm = km => km < 10 ? km.toFixed(1) + ' km' : Math.round(km) + ' km';
+const mean = xs => { const v = xs.filter(Number.isFinite); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+
+// ── Daten ──────────────────────────────────────────────────
+
+/** spots.json → flache Liste. Keine vierte Kopie der Spot-Tabelle: Label und
+ *  Regionsseite werden aus derselben Datei abgeleitet, die auch der Server liest. */
+function flattenSpots(j) {
+  const out = [];
+  for (const r of Object.values(j.regions || {})) {
+    for (const s of r.spots) {
+      out.push({ ...s, region: s.vergleichRegion || r.title, regionUrl: r.page || '/', group: r.title });
+    }
+  }
+  for (const s of (j.unpagedSpots || [])) {
+    out.push({ ...s, region: s.region || 'Weitere', regionUrl: s.regionUrl || '/', group: 'Weitere Spots' });
+  }
+  return out;
+}
+
+async function loadSpots() {
+  const r = await fetch('/spots.json');
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return flattenSpots(await r.json());
+}
+
+async function loadForecast() {
+  const r = await fetch('/api/forecast/batch?region=all&days=7', { signal: AbortSignal.timeout(20000) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if (!j.spots) throw new Error('Antwort ohne Spots');
+  return j;
+}
+
+// ── Scoring ────────────────────────────────────────────────
+
+/** Tagesreihe eines Spots über den gesamten Horizont der Antwort.
+ *  Score, Datum, Ø-Wind und Ø-Richtung beziehen sich alle auf 9–18 Uhr. */
+function spotDays(fc, spot, win) {
+  const h = fc && fc.hourly;
+  if (!h || !h.windspeed_10m) return null;
+  const dirs = h.winddirection_10m || null;
+  const out = [];
+  for (let start = 0; start + 24 <= h.windspeed_10m.length; start += 24) {
+    const s = WF.bestSession(h.windspeed_10m, win, { start, dirs, offshoreDir: spot.offshoreDir ?? null });
+    const w = mean(h.windspeed_10m.slice(start + 9, start + 19).filter(v => v != null));
+    out.push({
+      score: s.score,
+      session: s,
+      date: String(h.time?.[start] || '').slice(0, 10),
+      dir: WF.meanDirection(dirs ? dirs.slice(start + 9, start + 19) : []),
+      windKn: w == null ? null : WF.msToKn(w),
+    });
+  }
+  return out.length ? out : null;
+}
+
+/** Radiussuche + bester zusammenhängender Reiseblock je Spot.
+ *  opts: { center, spots, forecasts, win, radiusKm, tripLen, minScore } */
+function rankSpots(opts) {
+  const o = opts || {};
+  const out = [];
+  for (const near of WFGeo.withinRadius(o.center, o.spots, o.radiusKm)) {
+    const days = spotDays(o.forecasts?.[near.spot.id], near.spot, o.win);
+    if (!days) continue;
+    const block = WF.bestBlock(days.map(d => d.score), o.tripLen);
+    if (!block) continue;
+    if (o.minScore != null && block.mean < o.minScore) continue;
+    const slice = days.slice(block.startIdx, block.endIdx + 1);
+    out.push({
+      spot: near.spot, distanceKm: near.distanceKm, bearing: near.bearing,
+      block, days: slice,
+      dir: WF.meanDirection(slice.map(d => d.dir)),
+      windKn: mean(slice.map(d => d.windKn)),
+    });
+  }
+  // Der Blockmittelwert entscheidet; bei Gleichstand die kürzere Anreise —
+  // zwei gleich gute Wochenenden unterscheiden sich nur noch in der Fahrzeit.
+  out.sort((a, b) => b.block.mean - a.block.mean || a.distanceKm - b.distanceKm);
+  return out;
+}
+
+// ── Eingaben ───────────────────────────────────────────────
+
+function renderStartSelect() {
+  const groups = [...new Set(state.spots.map(s => s.group))];
+  $('f-start').innerHTML = groups.map(g =>
+    '<optgroup label="' + esc(g) + '">'
+    + state.spots.filter(s => s.group === g)
+        .map(s => '<option value="' + esc(s.id) + '">' + esc((s.emoji || '') + ' ' + s.name) + '</option>').join('')
+    + '</optgroup>').join('');
+}
+
+function readOptions() {
+  const radius = $('f-radius').value;
+  const min = $('f-min').value;
+  return {
+    radiusKm: radius === '' ? null : Number(radius),
+    tripLen: Number($('f-trip').value),
+    minScore: min === '' ? null : Number(min),
+  };
+}
+
+/** Startpunkt ist entweder der gewählte Spot oder die Geoposition.
+ *  Ein eigener Standort überlebt das Umstellen der anderen Felder. */
+function setCenterFromSelect() {
+  const s = state.spots.find(x => x.id === $('f-start').value);
+  if (!s) return;
+  state.center = { lat: s.lat, lon: s.lon };
+  state.centerLabel = (s.emoji || '') + ' ' + s.name;
+}
+
+// ── Darstellung ────────────────────────────────────────────
+
+function dayChip(d) {
+  const col = scoreColor(d.score);
+  const t = d.session?.startHour != null ? d.session.startHour + '–' + d.session.endHour + ' h' : '–';
+  return '<div class="day' + (d.score ? '' : ' off') + '">'
+    + '<b style="color:' + col + '">' + d.score + '</b>'
+    + '<span>' + esc(labelDate(d.date).replace(', ', ' ')) + '</span>'
+    + '<span>' + esc(t) + '</span>'
+    + '</div>';
+}
+
+function renderResults() {
+  const box = $('results');
+  if (!state.results.length) {
+    box.innerHTML = '<div class="card"><p class="note warn">Kein Spot erfüllt diese Kombination. '
+      + 'Mehr Radius, kürzere Reise oder ein niedrigerer Mindest-Score helfen.</p></div>';
+    return;
+  }
+  box.innerHTML = state.results.map((r, i) => {
+    const col = scoreColor(r.block.mean);
+    const wind = r.windKn != null ? r.windKn.toFixed(1) + ' kn' : '–';
+    const arrow = windArrowSvg(r.dir, '#3a9ad9', 13);
+    const from = r.days[0].date, to = r.days[r.days.length - 1].date;
+    const span = from === to ? labelDate(from) : labelDate(from) + ' – ' + labelDate(to);
+    return '<div class="hit">'
+      + '<div class="hit-head">'
+        + '<span class="hit-rank">' + (i + 1) + '.</span>'
+        + '<span class="hit-spot">' + esc((r.spot.emoji || '') + ' ' + r.spot.name) + '</span>'
+        + '<span class="hit-score" style="color:' + col + '">Ø ' + r.block.mean + '</span>'
+      + '</div>'
+      + '<div class="meta">'
+        + '<em>Reisefenster</em> <b>' + esc(span) + '</b> · schwächster Tag ' + r.block.min + '<br>'
+        + '<em>Entfernung</em> ' + fmtKm(r.distanceKm) + ' · Kurs ' + compass(r.bearing)
+        + ' · <em>Ø Wind</em> ' + arrow + ' ' + wind + ' aus <b>' + compass(r.dir) + '</b>'
+      + '</div>'
+      + '<div class="days">' + r.days.map(dayChip).join('') + '</div>'
+      + '<div class="row" style="margin-top:9px">'
+        + '<span class="tag">' + esc(r.spot.region) + '</span>'
+        + '<a href="' + esc(r.spot.regionUrl) + '" class="tag">Spot-Seite →</a>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
+// ── Karte ──────────────────────────────────────────────────
+
+let map = null, radiusRing = null, centerDot = null;
+const markers = {};
+
+function initMap() {
+  map = L.map('reise-map', { center: [45, 10], zoom: 4, zoomControl: true, attributionControl: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 18,
+  }).addTo(map);
+}
+
+function markerIcon(r) {
+  const col = scoreColor(r.block.mean);
+  return L.divIcon({
+    className: '',
+    html: '<div style="position:relative;width:66px;height:30px;pointer-events:none">'
+      + '<div style="position:absolute;top:16px;left:0;width:10px;height:10px;border-radius:50%;background:'
+        + col + ';border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(0,0,0,.7)"></div>'
+      + '<div class="lm-score" style="color:' + col + ';border-color:' + col + '">'
+        + windArrowSvg(r.dir, '#3a9ad9', 11) + r.block.mean + '</div>'
+    + '</div>',
+    iconSize: [66, 30], iconAnchor: [5, 26],
+  });
+}
+
+function renderMap() {
+  if (!map) return;
+  for (const id of Object.keys(markers)) { map.removeLayer(markers[id]); delete markers[id]; }
+  if (radiusRing) { map.removeLayer(radiusRing); radiusRing = null; }
+  if (centerDot) { map.removeLayer(centerDot); centerDot = null; }
+  if (!state.center) return;
+
+  const { radiusKm } = readOptions();
+  if (radiusKm != null) {
+    radiusRing = L.circle([state.center.lat, state.center.lon], {
+      radius: radiusKm * 1000, color: '#f07820', weight: 1, opacity: .6, fillColor: '#f07820', fillOpacity: .06,
+    }).addTo(map);
+  }
+  centerDot = L.circleMarker([state.center.lat, state.center.lon], {
+    radius: 6, color: '#f07820', weight: 2, fillColor: '#f07820', fillOpacity: .9,
+  }).addTo(map);
+  centerDot.bindPopup('<b>Startpunkt</b><br>' + esc(state.centerLabel));
+
+  state.results.forEach(r => {
+    const m = L.marker([r.spot.lat, r.spot.lon], { icon: markerIcon(r) }).addTo(map);
+    const wind = r.windKn != null ? r.windKn.toFixed(1) + ' kn' : '–';
+    const from = r.days[0].date, to = r.days[r.days.length - 1].date;
+    m.bindPopup('<b>' + esc((r.spot.emoji || '') + ' ' + r.spot.name) + '</b><br>'
+      + '<span style="color:' + scoreColor(r.block.mean) + ';font-size:13px;font-weight:700">Ø ' + r.block.mean + '</span>'
+      + ' <span style="color:#5a7a96;font-size:10px">(' + r.days.length + ' Tage)</span><br>'
+      + '<span style="font-size:11px">' + esc(labelDate(from)) + (from === to ? '' : ' – ' + esc(labelDate(to))) + '</span><br>'
+      + '<span style="font-size:11px">' + windArrowSvg(r.dir, '#3a9ad9', 12) + ' ' + wind + ' aus <b>' + compass(r.dir) + '</b></span><br>'
+      + '<span style="font-size:11px;color:#5a7a96">' + fmtKm(r.distanceKm) + ' entfernt</span>');
+    markers[r.spot.id] = m;
+  });
+
+  const pts = [[state.center.lat, state.center.lon], ...state.results.map(r => [r.spot.lat, r.spot.lon])];
+  if (pts.length > 1) map.fitBounds(pts, { padding: [30, 30], maxZoom: 8 });
+  else map.setView(pts[0], 7);
+}
+
+// ── Suche ──────────────────────────────────────────────────
+
+function search() {
+  if (!state.fc || !state.center) return;
+  const o = readOptions();
+  state.results = rankSpots({
+    center: state.center, spots: state.spots, forecasts: state.fc.spots,
+    win: state.win, radiusKm: o.radiusKm, tripLen: o.tripLen, minScore: o.minScore,
+  });
+  const scope = o.radiusKm == null ? 'ohne Radiusgrenze' : 'im Radius von ' + o.radiusKm + ' km';
+  setNote(state.results.length + ' Spot(s) ' + scope + ' mit ' + o.tripLen + ' passenden Tagen in Folge.',
+    state.results.length ? 'ok' : 'warn');
+  renderResults();
+  renderMap();
+}
+
+function useGeolocation() {
+  if (!navigator.geolocation) { setNote('Dieser Browser kennt keine Standortabfrage.', 'err'); return; }
+  setNote('Standort wird abgefragt…');
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      state.center = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      state.centerLabel = 'Mein Standort';
+      search();
+    },
+    err => setNote('Standort nicht verfügbar: ' + (err?.message || 'abgelehnt') + ' — Startspot bleibt gewählt.', 'warn'),
+    { timeout: 10000, maximumAge: 300000 },
+  );
+}
+
+async function reloadForecast() {
+  $('btn-reload').disabled = true;
+  setNote('Forecast wird geladen…');
+  try {
+    state.fc = await loadForecast();
+    search();
+  } catch (e) {
+    setNote('Forecast nicht verfügbar: ' + e.message + ' — bitte erneut versuchen.', 'err');
+  }
+  $('btn-reload').disabled = false;
+}
+
+['f-radius', 'f-trip', 'f-min'].forEach(id => $(id).addEventListener('change', search));
+$('f-start').addEventListener('change', () => { setCenterFromSelect(); search(); });
+$('btn-geo').addEventListener('click', useGeolocation);
+$('btn-reload').addEventListener('click', reloadForecast);
+
+async function init() {
+  initMap();
+  const r = await WF.loadRider();
+  state.win = r.win;
+  state.rider = r.rider;
+  $('lead').textContent = 'Wohin lohnt sich die Fahrt? Die besten zusammenhängenden Tage im Umkreis — '
+    + WF.describeRider(r.rider) + '.';
+  try {
+    state.spots = await loadSpots();
+  } catch (e) {
+    setNote('Spotliste nicht ladbar: ' + e.message, 'err');
+    return;
+  }
+  renderStartSelect();
+  setCenterFromSelect();
+  await reloadForecast();
+}
+
+init();
+</script>
+</body>
+</html>

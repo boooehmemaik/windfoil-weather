@@ -18,6 +18,7 @@
   "shortcuts": [
     { "name": "Spot-Vergleich", "url": "/vergleich.html" },
     { "name": "Windalarm", "url": "/alarm.html" },
-    { "name": "Logbuch", "url": "/logbuch.html" }
+    { "name": "Logbuch", "url": "/logbuch.html" },
+    { "name": "Reiseplaner", "url": "/reise.html" }
   ]
 }

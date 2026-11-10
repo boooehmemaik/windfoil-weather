@@ -47,6 +47,13 @@ export function _setPushState(next) {
 // 404 (Endpunkt unbekannt) und 410 (abgemeldet). Alles andere ist vorübergehend.
 const GONE = new Set([404, 410]);
 
+/** Endpunkt fürs Log kürzen. Der vollständige Endpunkt ist ein Zustell-Token —
+ *  er gehört nicht in eine Logdatei, der Host für die Diagnose aber schon. */
+function logRef(endpoint) {
+  const s = String(endpoint || '');
+  try { return new URL(s).host + '…' + s.slice(-8); } catch { return '…' + s.slice(-8); }
+}
+
 /** Ein Abo beliefern. Wirft nie — der Scheduler darf an einem toten Endpunkt
  *  nicht abbrechen.
  *  → { ok } | { gone: true, status } | { error, status } */
@@ -62,6 +69,9 @@ export async function sendPush(sub, payload) {
     return { ok: true };
   } catch (e) {
     const status = e.statusCode || 0;
+    // Ohne diese Zeile ist ein Zustellfehler forensisch nicht mehr auffindbar:
+    // der Aufrufer wirft das Ergebnis weg, und der Status steht nirgends.
+    console.warn(`[push] ${logRef(sub.endpoint)} status=${status || '—'} ${String(e.message || e).slice(0, 160)}`);
     if (GONE.has(status)) return { gone: true, status };
     return { error: String(e.message || e), status };
   }

@@ -136,6 +136,29 @@
     return out;
   }
 
+  /** Bester zusammenhängender Block aus len Tagen in einer Tages-Score-Reihe.
+   *  → { startIdx, endIdx, mean, min } oder null, wenn die Reihe zu kurz ist.
+   *
+   *  Das Mittel entscheidet, bei Gleichstand der schlechteste Tag: zwei Blöcke
+   *  mit Ø 70 sind nicht gleichwertig, wenn einer 70/70 und der andere 100/40
+   *  ist — für eine Reise zählt, dass kein Tag ausfällt. */
+  function bestBlock(dayScores, len) {
+    const s = (dayScores || []).filter(v => Number.isFinite(v));
+    const n = Number.isInteger(len) && len > 0 ? len : 1;
+    if (s.length < n) return null;
+
+    let best = null;
+    for (let i = 0; i + n <= s.length; i++) {
+      const part = s.slice(i, i + n);
+      const mean = part.reduce((a, b) => a + b, 0) / n;
+      const min = Math.min(...part);
+      if (!best || mean > best.mean || (mean === best.mean && min > best.min)) {
+        best = { startIdx: i, endIdx: i + n - 1, mean: Math.round(mean), min };
+      }
+    }
+    return best;
+  }
+
   // Referenzfahrer für nicht eingeloggte Besucher der Spot-/Vergleichsseiten.
   const GUEST_RIDER = { weight: 75, wingM2: 6, skill: 'intermediate' };
 
@@ -183,6 +206,6 @@
 
   return { msToKn, knToMs, REF_FOIL_TERM, SESSION_H, FIRST_START, LAST_END, GUEST_RIDER,
            calcWindow, rangeToWindow, blendWindows, scoreHour, offshoreMultiplier,
-           meanDirection, bestSession, scoreDay, hourlyScores,
+           meanDirection, bestSession, scoreDay, hourlyScores, bestBlock,
            guestWindow, windowFromRider, loadRider, describeRider };
 });
