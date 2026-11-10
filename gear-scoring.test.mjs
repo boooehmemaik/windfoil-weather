@@ -41,9 +41,28 @@ vm.runInContext(scoringBlock, ctx);
 
 const {
   calcWindow, wingTableWindow, wingWindow, rangeToWindow, blendWindows,
-  scoreHour, scoreDay, bestSession, pickBestSetup,
+  scoreHour, scoreDay, bestSession, riderQuiver, bestWingForWind, carries, scorerFor,
   WING_BRANDS, DEFAULT_WING_BRAND, TABLE_BLEND, FEEDBACK_BLEND, FEEDBACK_MIN_SAMPLES
 } = ctx;
+
+/** Die Empfehlungskette, wie index.html sie geht → {wing, win, score, gear} | null
+ *
+ *  Reihenfolge: Quiver → Fenster je Größe → Score → danach die Größe benennen.
+ *  Ohne eigenes Material fällt riderQuiver auf den Harlem-Satz zurück; das
+ *  anschließende find() ist der Schritt, mit dem die App vom empfohlenen Maß
+ *  zurück auf den Eintrag der Materialliste kommt — ohne Eintrag bleibt gear null.
+ *
+ *  Vorher liefen diese Tests über den Wrapper pickBestSetup, den die App nach
+ *  dem Quiver-Umbau nicht mehr aufruft. Ein Test auf toten Code sichert nichts ab. */
+function recommend(gearList, weight, skill, windMs) {
+  const q = riderQuiver({ weight, skill }, (gearList && gearList.length) ? gearList : null);
+  const best = bestWingForWind(q, windMs);
+  if (!best) return null;
+  return {
+    wing: best.wing, win: best.win, score: best.score,
+    gear: (gearList || []).find(g => parseFloat(g.wing) === best.wing) || null,
+  };
+}
 
 // live-boost sandbox
 const lbBlock = extractBlock('// <<live-boost>>', '// <</live-boost>>');
@@ -99,7 +118,10 @@ test('S0-1 — Sentinel <<wing-scoring>> präsent und calcWindow foil-frei (4 Pa
 test('S0-2 — Alle Blöcke (live-boost, measured-correction) laden ohne Exception', () => {
   assert.equal(typeof applyLiveStationBoost, 'function', 'applyLiveStationBoost muss Funktion sein');
   assert.equal(typeof applyMeasuredStationCorrection, 'function', 'applyMeasuredStationCorrection muss Funktion sein');
-  assert.equal(typeof pickBestSetup, 'function', 'pickBestSetup muss Funktion sein');
+  // Die Primitiven, auf denen die Empfehlung aufsetzt — nicht mehr der Wrapper.
+  for (const [name, fn] of [['riderQuiver', riderQuiver], ['bestWingForWind', bestWingForWind], ['carries', carries]]) {
+    assert.equal(typeof fn, 'function', `${name} muss im wing-scoring-Block verfügbar sein`);
+  }
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -205,13 +227,15 @@ test('S3-B — Foil-Unabhängigkeit numerisch: calcWindow(w,wing,skill,null) == 
   }
 });
 
-test('S3-C — pickBestSetup ohne foil-Feld in Gear-Objekten: keine Exception, sinnvolles Ergebnis', () => {
+test('S3-C — Empfehlung ohne foil-Feld in Gear-Objekten: keine Exception, sinnvolles Ergebnis', () => {
   const gear = [{ wing: 6.0 }, { wing: 5.0 }, { wing: 4.0 }]; // kein .foil, kein .planeKn
-  const result = pickBestSetup(gear, 80, 'intermediate', knToMs(15));
-  assert(result !== null, 'pickBestSetup muss Ergebnis liefern');
+  const result = recommend(gear, 80, 'intermediate', knToMs(15));
+  assert(result !== null, 'Empfehlung muss Ergebnis liefern');
   assert(Number.isFinite(result.score), `score muss endlich sein, got ${result.score}`);
-  assert(result.gear !== undefined, 'gear muss gesetzt sein');
+  assert(result.gear !== null, 'der Eintrag der Materialliste muss gefunden werden');
   assert(Number.isFinite(parseFloat(result.gear.wing)), 'wing muss parseable sein');
+  // Empfohlen werden darf nur, was in der Tasche liegt.
+  assert([4, 5, 6].includes(result.wing), `Empfehlung ${result.wing} liegt nicht in der Tasche`);
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -242,7 +266,7 @@ test('S4-wingWindow — Skill-Effekt in wingWindow (blended): beginner.maxWind <
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 5. EMPFEHLUNGS-SWEEP (pickBestSetup) — alle 3 Fahrer
+// 5. EMPFEHLUNGS-SWEEP (Quiver-Kette) — alle 3 Fahrer
 // ═════════════════════════════════════════════════════════════════════════════
 
 test('S5 — Empfehlungs-Sweep: Ausgabe-Matrix + Monotonie-Check (Wing fällt mit Wind)', () => {
@@ -253,38 +277,52 @@ test('S5 — Empfehlungs-Sweep: Ausgabe-Matrix + Monotonie-Check (Wing fällt mi
     console.log('Wind [kn] | Empfehlung [m²] | Score');
     console.log('----------+-----------------+------');
 
-    let prevWing = 9999; // Start mit "sehr großem Wing" für Monotonie
-    let monotonieOk = true;
+    let prevWing = Infinity;
 
     for (const windKn of WIND_KN) {
       const windMs = knToMs(windKn);
-      const best = pickBestSetup(QUIVER, weight, 'intermediate', windMs);
-      assert(best !== null, `pickBestSetup(${weight}kg, ${windKn}kn) darf nicht null sein`);
+      const best = recommend(QUIVER, weight, 'intermediate', windMs);
+      assert(best !== null, `recommend(${weight}kg, ${windKn}kn) darf nicht null sein`);
       assert(Number.isFinite(best.score), `Score bei ${windKn}kn muss endlich sein`);
       assert(best.score >= 0, `Score muss >= 0 sein, got ${best.score}`);
+      assert(best.gear !== null, `bei ${windKn}kn muss die Empfehlung aus der Tasche kommen`);
 
       const recWing = parseFloat(best.gear.wing);
       console.log(
         `${String(windKn).padStart(9)} | ${String(recWing).padStart(15)} | ${best.score}`
       );
 
-      // Monotonie: Wing-Empfehlung darf nicht größer werden als zuvor
-      if (recWing > prevWing) {
-        console.log(`  WARNUNG: Nicht-monotoner Sprung bei ${windKn}kn: ${prevWing} → ${recWing} m²`);
-        monotonieOk = false;
-      }
+      // Hart, nicht als Log-Warnung: vorher stand hier ein console.log, und ein
+      // Lauf, der nichts durchfallen lässt, meldet den Fall nicht — er protokolliert ihn.
+      assert(recWing <= prevWing,
+        `${weight}kg: bei ${windKn}kn wurde von ${prevWing} auf ${recWing} m² hochgegriffen`);
       prevWing = recWing;
     }
 
-    if (monotonieOk) {
-      console.log('  Monotonie: OK (Wing-Empfehlung fällt oder bleibt gleich mit steigendem Wind)');
+    // Feinraster: die 2-kn-Schritte der Tabelle oben überspringen die Gleichstands-
+    // bänder größtenteils. Geprüft wird hier die Monotonie über das ganze Band —
+    // NICHT die Mittigkeitsregel selbst: der Quiver ist aufsteigend sortiert, und
+    // ohne Tiebreak gewinnt dann die kleinste gleichwertige Größe, was die Monotonie
+    // zufällig intakt lässt (nachgemessen: Mutation überlebt hier). Dass bei
+    // Gleichstand die mittigste Größe kommt, ist in quiver.test.mjs festgenagelt.
+    let prevFine = Infinity, ties = 0;
+    for (let kn = 6; kn <= 30; kn += 0.25) {
+      const ms = knToMs(kn);
+      const q = riderQuiver({ weight, skill: 'intermediate' }, QUIVER);
+      if (q.filter(x => scoreHour(ms, x.win) === 100).length > 1) ties++;
+      const wing = bestWingForWind(q, ms).wing;
+      assert(wing <= prevFine,
+        `${weight}kg: bei ${kn.toFixed(2)}kn wurde von ${prevFine} auf ${wing} m² hochgegriffen`);
+      prevFine = wing;
     }
-    // Soft-Assert: Log-Warnung, nicht hard-fail (Tie-breaking kann in Grenzfällen reordern)
-    // Harter Test: bei 8kn und 28kn muss klar unterschiedliche Wing-Größe empfohlen werden
-    const best8  = pickBestSetup(QUIVER, weight, 'intermediate', knToMs(8));
-    const best28 = pickBestSetup(QUIVER, weight, 'intermediate', knToMs(28));
-    assert(parseFloat(best8.gear.wing) >= parseFloat(best28.gear.wing),
-      `${weight}kg: bei 8kn (${best8.gear.wing}m²) sollte gleich oder größeres Wing als bei 28kn (${best28.gear.wing}m²)`);
+    assert(ties > 0, `Fixture nutzlos: bei ${weight}kg gibt es im Feinraster keinen Gleichstand auf 100`);
+
+    // Und die Spannweite muss tatsächlich genutzt werden — sonst wäre die
+    // Monotonie trivial erfüllt, indem überall dasselbe Wing empfohlen wird.
+    const best8  = recommend(QUIVER, weight, 'intermediate', knToMs(8));
+    const best28 = recommend(QUIVER, weight, 'intermediate', knToMs(28));
+    assert(best8.wing > best28.wing,
+      `${weight}kg: bei 8kn (${best8.wing}m²) muss ein größeres Wing kommen als bei 28kn (${best28.wing}m²)`);
   }
 });
 
@@ -321,11 +359,25 @@ test('S6-B — Wing 2m² und 7m²: wingTableWindow outOfRange, wingWindow fällt
   assert.deepEqual(ww7, cw7, 'wingWindow(80,7) muss identisch zu calcWindow(80,7) sein (Bypass)');
 });
 
-test('S6-C — pickBestSetup leere/null Gear-Liste → null, kein Crash', () => {
-  assert.equal(pickBestSetup([], 80, 'intermediate', knToMs(15)), null,
-    'Leere Gear-Liste muss null liefern');
-  assert.equal(pickBestSetup(null, 80, 'intermediate', knToMs(15)), null,
-    'null Gear-Liste muss null liefern');
+test('S6-C — leere/null Materialliste → Harlem-Satz als Default, nicht null', () => {
+  // Hier hat sich der Vertrag mit v3.36.0 geändert, und das ist der Kern des
+  // Features: wer kein Material einträgt, bekommt keine leere Antwort mehr,
+  // sondern den vollen Harlem-Satz als Annahme. Der alte Wrapper lieferte null.
+  for (const empty of [[], null]) {
+    const r = recommend(empty, 80, 'intermediate', knToMs(15));
+    assert(r !== null, `Materialliste ${JSON.stringify(empty)} muss auf den Default fallen`);
+    assert(Number.isFinite(r.score), 'Score muss endlich sein');
+    assert.equal(r.gear, null, 'ohne eigenes Material gibt es keinen Listeneintrag');
+    const sizes = WING_BRANDS[DEFAULT_WING_BRAND].sizes;
+    assert(r.wing in sizes || Object.keys(sizes).map(Number).includes(r.wing),
+      `Empfehlung ${r.wing} m² gehört nicht zum Default-Satz ${Object.keys(sizes).join('/')}`);
+  }
+  // Der Default muss alle Größen der Herstellertabelle umfassen — sonst wäre das
+  // „volle Tasche"-Versprechen nur eine andere Einzelgröße.
+  const q = riderQuiver({ weight: 80, skill: 'intermediate' }, null);
+  assert.deepStrictEqual(q.map(x => x.wing).sort((a, b) => a - b),
+    Object.keys(WING_BRANDS[DEFAULT_WING_BRAND].sizes).map(Number).sort((a, b) => a - b),
+    'Default-Quiver muss genau die Größen der Herstellertabelle führen');
 });
 
 test('S6-D — scoreDay mit Extremwind-Array: kein NaN, in [0,100]', () => {
@@ -476,17 +528,17 @@ test('S8 — Talamone heute (2026-08-03): 6.0-Verdikt für 95 kg', () => {
 
   console.log(`\nTages-Score (beste 4h): 6.0 m² = ${dayScore6} | 5.0 m² = ${dayScore5} | 4.0 m² = ${dayScore4}`);
 
-  // pickBestSetup mit repräsentativem Nachmittagswind (h14, Peak-Stunde)
+  // Empfehlung für den repräsentativen Nachmittagswind (h14, Peak-Stunde)
   const peakWind = finalWins[14];
-  const bestPeak = pickBestSetup(GEAR_95, WEIGHT, SKILL, peakWind);
-  console.log(`\npickBestSetup @Peak h14 (${msToKn(peakWind).toFixed(1)}kn): Empfehlung = ${bestPeak.gear.wing} m² (Score ${bestPeak.score})`);
+  const bestPeak = recommend(GEAR_95, WEIGHT, SKILL, peakWind);
+  console.log(`\nEmpfehlung @Peak h14 (${msToKn(peakWind).toFixed(1)}kn): ${bestPeak.wing} m² (Score ${bestPeak.score})`);
 
   // Mittelwind 11–17 Uhr
   const afternoonHours = [11,12,13,14,15,16,17];
   const avgWind = finalWins.filter((_,h) => afternoonHours.includes(h))
                             .reduce((a,b) => a+b, 0) / afternoonHours.length;
-  const bestAvg = pickBestSetup(GEAR_95, WEIGHT, SKILL, avgWind);
-  console.log(`pickBestSetup @Avg Nachmittag (${msToKn(avgWind).toFixed(1)}kn): Empfehlung = ${bestAvg.gear.wing} m² (Score ${bestAvg.score})`);
+  const bestAvg = recommend(GEAR_95, WEIGHT, SKILL, avgWind);
+  console.log(`Empfehlung @Avg Nachmittag (${msToKn(avgWind).toFixed(1)}kn): ${bestAvg.wing} m² (Score ${bestAvg.score})`);
 
   // Verdikt
   const verdict6 = dayScore6 >= dayScore5 && dayScore6 >= dayScore4 ? 'JA' : 'NEIN';
@@ -501,13 +553,37 @@ test('S8 — Talamone heute (2026-08-03): 6.0-Verdikt für 95 kg', () => {
   assert(!Number.isNaN(dayScore5), 'dayScore5 darf nicht NaN sein');
   assert(!Number.isNaN(dayScore4), 'dayScore4 darf nicht NaN sein');
   assert(dayScore6 >= 0 && dayScore6 <= 100, `dayScore6 muss in [0,100] liegen, got ${dayScore6}`);
+
+  // Die exakte Zusicherung des Quiver-Umbaus: der Stunden-Score der Tasche IST
+  // das Maximum der Einzelgrößen — nicht ihre Summe, nicht die erste Größe.
+  // Eine Tagesschranke „<= 100" taugt dafür nicht: an diesem schwachwindigen Tag
+  // käme auch eine Summe nur auf 81 und rutschte unter der Schranke durch.
+  const q95 = riderQuiver({ weight: WEIGHT, skill: SKILL }, GEAR_95);
+  const quiverScoreAt = scorerFor(q95);
+  let hoursWithOverlap = 0;
+  for (let h = 9; h <= 19; h++) {
+    const w = finalWins[h];
+    const singles = [scoreHour(w, win6), scoreHour(w, win5), scoreHour(w, win4)];
+    assert.strictEqual(quiverScoreAt(w), Math.max(...singles),
+      `Stunde ${h} (${msToKn(w).toFixed(1)}kn): Quiver ${quiverScoreAt(w)} != Maximum ${Math.max(...singles)} aus [${singles}]`);
+    if (singles.filter(s => s > 0).length > 1) hoursWithOverlap++;
+  }
+  // Ohne überlappende Stunden wäre „Maximum == Summe" und der Test blind.
+  assert(hoursWithOverlap > 0,
+    'Fixture nutzlos: keine Stunde, in der mehr als eine Größe punktet — Maximum und Summe wären identisch');
+
+  const quiverDay = scoreDay(finalWins, q95, 0);
+  const bestSingle = Math.max(dayScore6, dayScore5, dayScore4);
+  console.log(`Quiver-Tagesscore: ${quiverDay} (beste Einzelgröße: ${bestSingle}, ${hoursWithOverlap} Überlappungsstunden)`);
+  assert(quiverDay >= bestSingle,
+    `Quiver (${quiverDay}) darf nicht unter der besten Einzelgröße (${bestSingle}) liegen`);
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 9. PICKBESTSETUP-INVARIANTEN (foil-frei)
+// 9. EMPFEHLUNGS-INVARIANTEN (foil-frei)
 // ═════════════════════════════════════════════════════════════════════════════
 
-test('S9 — pickBestSetup: kein g.foil Zugriff nötig (Gear ohne foil-Feld)', () => {
+test('S9 — Empfehlung: kein g.foil Zugriff nötig (Gear ohne foil-Feld)', () => {
   // Gear-Objekte haben bewusst kein .foil-Feld — das ist der v3.14.0-Zustand
   const gearNoFoil = [
     { wing: 6.0 },
@@ -517,12 +593,12 @@ test('S9 — pickBestSetup: kein g.foil Zugriff nötig (Gear ohne foil-Feld)', (
   let threw = false;
   let result;
   try {
-    result = pickBestSetup(gearNoFoil, 95, 'intermediate', knToMs(14));
+    result = recommend(gearNoFoil, 95, 'intermediate', knToMs(14));
   } catch (e) {
     threw = true;
-    console.log('FEHLER in pickBestSetup ohne foil:', e.message);
+    console.log('FEHLER in der Empfehlungskette ohne foil:', e.message);
   }
-  assert(!threw, 'pickBestSetup darf ohne foil-Feld nicht crashen');
+  assert(!threw, 'die Empfehlungskette darf ohne foil-Feld nicht crashen');
   assert(result !== null, 'Ergebnis muss vorhanden sein');
   assert([4, 5, 6].includes(parseFloat(result.gear.wing)), `Empfohlenes Wing muss 4/5/6 sein, got ${result.gear.wing}`);
 });
