@@ -13,15 +13,17 @@ const nowIso = () => new Date().toISOString();
 // ── Abos (Spot + Schwelle) ──────────────────────────────────────────────────
 
 export function listAlerts(userId) {
-  return db.prepare('SELECT spot_id AS spotId, min_score AS minScore FROM wind_alerts WHERE user_id = ?')
+  return db.prepare('SELECT spot_id AS spotId, min_score AS minScore, min_kn AS minKn FROM wind_alerts WHERE user_id = ?')
     .all(userId);
 }
 
-export function upsertAlert(userId, spotId, minScore = DEFAULT_MIN_SCORE) {
-  db.prepare(`INSERT INTO wind_alerts (user_id, spot_id, min_score, created_at)
-              VALUES (?,?,?,?)
-              ON CONFLICT(user_id, spot_id) DO UPDATE SET min_score = excluded.min_score`)
-    .run(userId, spotId, minScore, nowIso());
+/** minKn=null → Score-Modus; minKn=N → Knoten-Modus (min_score bleibt als Fallback). */
+export function upsertAlert(userId, spotId, minScore = DEFAULT_MIN_SCORE, minKn = null) {
+  db.prepare(`INSERT INTO wind_alerts (user_id, spot_id, min_score, min_kn, created_at)
+              VALUES (?,?,?,?,?)
+              ON CONFLICT(user_id, spot_id) DO UPDATE SET
+                min_score = excluded.min_score, min_kn = excluded.min_kn`)
+    .run(userId, spotId, minScore, minKn, nowIso());
 }
 
 export function deleteAlert(userId, spotId) {
@@ -75,7 +77,7 @@ export function markDeviceFail(endpoint, maxFails = 10) {
  *  anderen wäre die Auswertung Rechenzeit ohne Empfänger. */
 export function deliverableAlerts() {
   return db.prepare(`
-    SELECT a.user_id AS userId, a.spot_id AS spotId, a.min_score AS minScore
+    SELECT a.user_id AS userId, a.spot_id AS spotId, a.min_score AS minScore, a.min_kn AS minKn
     FROM wind_alerts a
     WHERE EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = a.user_id)`).all();
 }

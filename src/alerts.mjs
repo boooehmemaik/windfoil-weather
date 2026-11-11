@@ -149,10 +149,16 @@ export function evaluateAlerts({ forecast, spots = {}, subscriptions = [],
   for (const sub of subscriptions) {
     if (!fc[sub.spotId]) continue;
     const win = windows[sub.userId] || WF.guestWindow();
-    const min = sub.minScore || DEFAULT_MIN_SCORE;
     const meta = spots[sub.spotId] || {};
     for (const day of scoresFor(sub.spotId, win)) {
-      if (day.score < min) continue;
+      // Knoten-Modus: Schwelle gegen den mittleren Sessionwind prüfen.
+      // Ist windKn nicht berechenbar, fällt die Prüfung auf den Score zurück.
+      if (sub.minKn && day.windKn != null) {
+        if (day.windKn < sub.minKn) continue;
+      } else {
+        const min = sub.minScore || DEFAULT_MIN_SCORE;
+        if (day.score < min) continue;
+      }
       if (sent.has(`${sub.userId}|${sub.spotId}|${day.date}`)) continue;
       if (!byUser.has(sub.userId)) byUser.set(sub.userId, []);
       byUser.get(sub.userId).push({

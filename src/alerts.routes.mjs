@@ -33,17 +33,27 @@ alertsRouter.get('/', (req, res) => {
   });
 });
 
-// PUT /api/alerts/:spotId  body: { minScore }
+// PUT /api/alerts/:spotId  body: { minScore } | { minKn }
 alertsRouter.put('/:spotId', (req, res) => {
   const spotId = String(req.params.spotId);
-  // Die ID muss aus spots.json kommen: ein Tippfehler würde sonst ein Abo
-  // erzeugen, das nie auslöst, und der Nutzer sucht den Fehler bei sich.
   if (!spotsById()[spotId]) return res.status(404).json({ error: 'unknown_spot' });
 
-  const raw = req.body?.minScore;
-  const minScore = raw === undefined ? DEFAULT_MIN_SCORE : Number(raw);
-  if (!Number.isInteger(minScore) || minScore < 1 || minScore > 100) {
-    return res.status(400).json({ error: 'min_score_out_of_range' });
+  const body = req.body || {};
+  let minScore, minKn;
+
+  if (body.minKn !== undefined) {
+    minKn = Number(body.minKn);
+    if (!Number.isInteger(minKn) || minKn < 1 || minKn > 60) {
+      return res.status(400).json({ error: 'min_kn_out_of_range' });
+    }
+    minScore = DEFAULT_MIN_SCORE;
+  } else {
+    const raw = body.minScore;
+    minScore = raw === undefined ? DEFAULT_MIN_SCORE : Number(raw);
+    if (!Number.isInteger(minScore) || minScore < 1 || minScore > 100) {
+      return res.status(400).json({ error: 'min_score_out_of_range' });
+    }
+    minKn = null;
   }
 
   const existing = listAlerts(req.user.id);
@@ -51,8 +61,8 @@ alertsRouter.put('/:spotId', (req, res) => {
     return res.status(409).json({ error: 'too_many_alerts', max: MAX_ALERTS_PER_USER });
   }
 
-  upsertAlert(req.user.id, spotId, minScore);
-  res.json({ ok: true, spotId, minScore });
+  upsertAlert(req.user.id, spotId, minScore, minKn);
+  res.json({ ok: true, spotId, minScore, minKn: minKn ?? null });
 });
 
 alertsRouter.delete('/:spotId', (req, res) => {

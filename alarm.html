@@ -49,9 +49,16 @@
     .spot-name small{display:block;color:#5a7a96;font-size:11px;margin-top:2px}
     .thr{width:72px;background:#0a0e14;color:#d8e4f0;border:1px solid #1e2d3d;
       border-radius:9px;padding:8px;font-size:13px;text-align:center}
+    .thr-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px}
+    .thr-label{font-size:10px;color:#5a7a96;letter-spacing:.04em}
     .bell{width:44px;height:44px;border-radius:12px;border:1px solid #1e2d3d;background:transparent;
       font-size:18px;cursor:pointer;flex-shrink:0;line-height:1}
     .bell[aria-pressed="true"]{background:#f07820;border-color:#f07820}
+
+    .unit-toggle{display:inline-flex;border:1px solid #1e2d3d;border-radius:10px;overflow:hidden;margin-bottom:14px}
+    .unit-toggle button{background:transparent;color:#8fa8c0;border:0;padding:7px 14px;
+      font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+    .unit-toggle button.active{background:#1e2d3d;color:#d8e4f0}
 
     .ftr{border-top:1px solid #1e2d3d;padding:18px 16px;display:flex;gap:14px;flex-wrap:wrap;
       justify-content:center;font-size:12px;color:#5a7a96}
@@ -87,8 +94,11 @@
 
   <div class="card" id="card-spots">
     <h2>Spots</h2>
-    <p class="note">Score-Schwelle je Spot. Gemeldet wird einmal pro Spot und Tag, sobald im
-       5-Tage-Forecast eine Session darüber liegt — bewertet mit deinem Fahrerprofil.</p>
+    <p class="note" id="unit-note"></p>
+    <div class="unit-toggle">
+      <button id="btn-unit-score" class="active" onclick="setUnit('score')">Score</button>
+      <button id="btn-unit-kn" onclick="setUnit('kn')">Knoten</button>
+    </div>
     <div id="spots"></div>
   </div>
 </div>
@@ -106,7 +116,7 @@
 // WindFoil Windalarm — Abos verwalten und Web Push einrichten
 // ═══════════════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
-const state = { cfg: null, spots: null, sub: null };
+const state = { cfg: null, spots: null, sub: null, unit: 'score' };
 
 const setNote = (txt, cls) => { const n = $('push-note'); n.textContent = txt; n.className = 'note ' + (cls || ''); };
 
@@ -147,18 +157,30 @@ async function loadSpots() {
   return groups;
 }
 
-// step="1", nicht step="5": ab min="1" wären mit Fünferschritten nur 1, 6, 11 …
-// gültig, und der Browser wies runde Werte wie 40 ab, die der Server (1–100,
-// ganzzahlig) längst annimmt. Die Vorbelegung kommt aus der API, damit die
-// Standardschwelle nur an einer Stelle steht.
+// Standardwerte je Einheit — damit ein neu aktivierter Alarm sinnvoll vorbelegt ist.
+const DEFAULT_KN = 15;
+
+function thrValue(alert) {
+  if (!alert) return state.unit === 'kn' ? DEFAULT_KN : state.cfg.defaultMinScore;
+  if (state.unit === 'kn') return alert.minKn ?? DEFAULT_KN;
+  return alert.minScore ?? state.cfg.defaultMinScore;
+}
+
 function spotRow(spot, alert) {
   const on = !!alert;
+  const isKn = state.unit === 'kn';
+  const val = thrValue(alert);
   return '<div class="spot" data-id="' + spot.id + '">'
     + '<div class="spot-name">' + (spot.emoji || '') + ' ' + spot.name
     + '<small>' + (spot.desc || '') + '</small></div>'
-    + '<input class="thr" type="number" min="1" max="100" step="1" value="'
-    + (alert?.minScore ?? state.cfg.defaultMinScore)
-    + '" aria-label="Score-Schwelle" ' + (on ? '' : 'disabled') + ' />'
+    + '<div class="thr-wrap">'
+    + '<input class="thr" type="number"'
+    + (isKn ? ' min="1" max="60" step="1"' : ' min="1" max="100" step="1"')
+    + ' value="' + val + '"'
+    + ' aria-label="' + (isKn ? 'Knoten-Schwelle' : 'Score-Schwelle') + '"'
+    + (on ? '' : ' disabled') + ' />'
+    + '<span class="thr-label">' + (isKn ? 'kn' : 'Score') + '</span>'
+    + '</div>'
     + '<button class="bell" aria-pressed="' + on + '" aria-label="Alarm umschalten">'
     + (on ? '🔔' : '🔕') + '</button></div>';
 }
@@ -170,6 +192,28 @@ function renderSpots() {
     + g.spots.map(s => spotRow(s, byId[s.id])).join('')).join('');
 }
 
+function paintUnitToggle() {
+  const isKn = state.unit === 'kn';
+  $('btn-unit-score').classList.toggle('active', !isKn);
+  $('btn-unit-kn').classList.toggle('active', isKn);
+  $('unit-note').textContent = isKn
+    ? 'Alarm, wenn der mittlere Wind einer Session ≥ eingestellter Wert in Knoten.'
+    : 'Alarm, wenn der Tages-Score (0–100) ≥ eingestellter Wert — berechnet mit deinem Fahrerprofil.';
+}
+
+async function setUnit(unit) {
+  state.unit = unit;
+  paintUnitToggle();
+  renderSpots();
+  // Einheit als Präferenz speichern — kein await, kein Fehler-Block nötig:
+  // scheitert der Request, verliert der Nutzer nur die Persistenz dieser Wahl.
+  fetch('/api/prefs/wf_alert_unit', {
+    method: 'PUT', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: unit }),
+  }).catch(() => {});
+}
+
 $('spots').addEventListener('click', async e => {
   const bell = e.target.closest('.bell');
   if (!bell) return;
@@ -179,9 +223,11 @@ $('spots').addEventListener('click', async e => {
   const turnOn = bell.getAttribute('aria-pressed') !== 'true';
   bell.disabled = true;
   try {
-    if (turnOn) await api('/' + encodeURIComponent(id), {
-      method: 'PUT', body: JSON.stringify({ minScore: Number(thr.value) || state.cfg.defaultMinScore }),
-    });
+    if (turnOn) {
+      const val = Number(thr.value) || (state.unit === 'kn' ? DEFAULT_KN : state.cfg.defaultMinScore);
+      const body = state.unit === 'kn' ? { minKn: val } : { minScore: val };
+      await api('/' + encodeURIComponent(id), { method: 'PUT', body: JSON.stringify(body) });
+    }
     else await api('/' + encodeURIComponent(id), { method: 'DELETE' });
     bell.setAttribute('aria-pressed', String(turnOn));
     bell.textContent = turnOn ? '🔔' : '🔕';
@@ -196,10 +242,13 @@ $('spots').addEventListener('click', async e => {
 $('spots').addEventListener('change', async e => {
   if (!e.target.classList.contains('thr')) return;
   const row = e.target.closest('.spot');
+  const val = Number(e.target.value);
+  const body = state.unit === 'kn' ? { minKn: val } : { minScore: val };
   try {
     await api('/' + encodeURIComponent(row.dataset.id), {
-      method: 'PUT', body: JSON.stringify({ minScore: Number(e.target.value) }),
+      method: 'PUT', body: JSON.stringify(body),
     });
+    state.cfg = await api('/');
     setNote('Schwelle gespeichert.', 'ok');
   } catch (err) { setNote('Schwelle nicht gespeichert: ' + err.message, 'err'); }
 });
@@ -315,6 +364,14 @@ function paintPush() {
 
 async function init() {
   try { state.cfg = await api('/'); } catch { return; }
+
+  // Gespeicherte Einheit laden — kein Fehler-Block: scheitert der Fetch,
+  // bleibt state.unit beim Standardwert 'score'.
+  try {
+    const prefs = await fetch('/api/prefs', { credentials: 'include' }).then(r => r.json());
+    if (prefs?.wf_alert_unit === 'kn') state.unit = 'kn';
+  } catch { /* Standardwert bleibt */ }
+  paintUnitToggle();
 
   if (!state.cfg.pushEnabled) {
     $('btn-enable').disabled = true;

@@ -272,3 +272,66 @@ test('formatAlert: ein ferner Treffer nennt Wochentag und Datum statt „heute"'
   assert.match(far.title, /Porto Pollo Sa 14\.11\.: Score 100/);
   assert.ok(!far.title.includes('heute'), 'ein Tag in vier Tagen ist nicht heute');
 });
+
+// ── Knoten-Modus ─────────────────────────────────────────────────────────────
+
+test('evaluateAlerts: minKn-Modus — Alarm bei ausreichend Wind, kein Alarm darunter', () => {
+  // HIGH ist 10 m/s ≈ 19 kn — das ist das einzige Windfenster im Test-Forecast.
+  // Schwelle 15 kn → Alarm; Schwelle 25 kn → kein Alarm.
+  const sub = minKn => [{ userId: 'u1', spotId: 'a', minKn, minScore: 1 }];
+
+  const hits15 = evaluateAlerts({
+    spots: SPOTS, windows: {}, now: BEFORE,
+    forecast: { spots: { a: entry([HIGH, LOW, LOW, LOW, LOW]) } },
+    subscriptions: sub(15),
+  });
+  assert.equal(hits15.length, 1, '15 kn-Schwelle muss Alarm auslösen wenn windKn ≥ 15');
+  assert.ok(hits15[0].hits[0].windKn >= 15, `windKn ${hits15[0].hits[0].windKn} muss ≥ 15`);
+
+  const hits25 = evaluateAlerts({
+    spots: SPOTS, windows: {}, now: BEFORE,
+    forecast: { spots: { a: entry([HIGH, LOW, LOW, LOW, LOW]) } },
+    subscriptions: sub(25),
+  });
+  assert.deepStrictEqual(hits25, [], '25 kn-Schwelle darf bei ~19 kn nicht auslösen');
+});
+
+test('evaluateAlerts: minKn-Modus — Fallback auf Score, wenn windKn null', () => {
+  // windKn ist null, wenn alle Stunden der Session fehlen. In diesem Fall
+  // greift der Fallback auf minScore — damit bleibt der Alarm auch ohne
+  // berechenbaren Windmittelwert erreichbar.
+  const sub = [{ userId: 'u1', spotId: 'a', minKn: 15, minScore: 1 }];
+
+  // windKn wird null, wenn der Forecast nur null-Werte enthält.
+  // sessionWindKn gibt null zurück, wenn vals leer ist.
+  const noWind = {
+    hourly: {
+      time: Array.from({ length: 120 }, (_, i) => `2026-11-10T${String(Math.floor(i/24)).padStart(2,'0')}:00`
+        .replace(/T\d\d:/, t => `T${String(i%24).padStart(2,'0')}:`)),
+      windspeed_10m: Array(120).fill(null),
+      windgusts_10m: Array(120).fill(null),
+      winddirection_10m: null,
+    },
+    utcOffsetSeconds: 0,
+  };
+  // Wenn der Wind null ist, gibt bestSession score=0 → kein Alarm, unabhängig vom Modus.
+  const result = evaluateAlerts({
+    spots: SPOTS, windows: {}, now: BEFORE,
+    forecast: { spots: { a: noWind } },
+    subscriptions: sub,
+  });
+  assert.deepStrictEqual(result, [], 'bei null-Wind darf kein Alarm kommen — weder kn noch score');
+});
+
+test('evaluateAlerts: Score-Modus ignoriert minKn, wenn minKn null', () => {
+  // Rückwärts-Kompatibilität: alle bestehenden Einträge haben minKn = null.
+  // Sie sollen weiter nach minScore gefiltert werden, nicht nach einem
+  // undefined-Vergleich, der immer false ergibt.
+  const sub = [{ userId: 'u1', spotId: 'a', minScore: 70, minKn: null }];
+  const hits = evaluateAlerts({
+    spots: SPOTS, windows: {}, now: BEFORE,
+    forecast: { spots: { a: entry([HIGH, LOW, LOW, LOW, LOW]) } },
+    subscriptions: sub,
+  });
+  assert.equal(hits.length, 1, 'minKn=null muss auf Score-Modus fallen');
+});
