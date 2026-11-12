@@ -81,7 +81,11 @@ feedbackRouter.post('/spot', (req, res) => {
 
   if (!spot) {
     const id = randomUUID();
-    const tz = (typeof b.timezone === 'string' && b.timezone) ? b.timezone : 'UTC';
+    const tzValid = (() => {
+      try { new Intl.DateTimeFormat('en-CA', { timeZone: b.timezone }); return true; }
+      catch { return false; }
+    })();
+    const tz = (typeof b.timezone === 'string' && b.timezone && tzValid) ? b.timezone : 'UTC';
     const name = (typeof b.name === 'string' && b.name.trim())
       ? b.name.trim().slice(0, 120)
       : `${rlat}°N ${rlon}°E`;

@@ -1107,6 +1107,7 @@ function getObsDb() {
   if (!obsDb) {
     obsDb = new Database(DB_PATH);
     obsDb.pragma("journal_mode = WAL");
+    obsDb.pragma("foreign_keys = ON");
     // Prepared Statements werden einmalig erstellt und wiederverwendet.
     obsDb._insertObs = obsDb.prepare(
       `INSERT OR IGNORE INTO station_obs (station_key, ts, wind_ms, gust_ms, lat, lon)
@@ -1490,4 +1491,12 @@ app.post("/api/admin/claude/restart", (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`WindFoil station proxy on :${PORT} (key ${KEY ? "set" : "MISSING"}, admin ${ADMIN_TOKEN && ADMIN_PASSWORD ? "ENABLED" : "disabled"})`));
+
+const { closeDb } = await import('./src/db.mjs');
+process.on('SIGTERM', () => {
+  try { closeDb(); } catch {}
+  if (adminDb) { try { adminDb.pragma('wal_checkpoint(TRUNCATE)'); adminDb.close(); } catch {} }
+  if (obsDb) { try { obsDb.pragma('wal_checkpoint(TRUNCATE)'); obsDb.close(); } catch {} }
+  process.exit(0);
+});
 })().catch(err => { console.error("[windfoil] startup error:", err); process.exit(1); });

@@ -19,7 +19,7 @@
       display:flex;align-items:center;justify-content:space-between;gap:8px;
       position:sticky;top:0;z-index:200;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
     .hdr-title{font-weight:900;font-size:15px;letter-spacing:.12em}
-    .hdr-sub{font-size:10px;color:#5a7a96;letter-spacing:.05em;margin-top:1px}
+    .hdr-sub{font-size:10px;color:#7fa0be;letter-spacing:.05em;margin-top:1px}
     .hdr-btn{font-size:12px;color:#8fa8c0;border:1px solid #1e2d3d;border-radius:10px;
       padding:7px 11px;display:inline-block}
 
@@ -28,7 +28,7 @@
     .lead{color:#8fa8c0;font-size:14px;line-height:1.55;margin-bottom:20px}
 
     .card{background:#101822;border:1px solid #1e2d3d;border-radius:14px;padding:16px;margin-bottom:16px}
-    .card h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#5a7a96;margin-bottom:10px}
+    .card h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#7fa0be;margin-bottom:10px}
 
     .btn{background:#f07820;color:#0a0e14;border:0;border-radius:12px;font-weight:700;
       font-size:15px;padding:13px 20px;min-height:44px;cursor:pointer}
@@ -41,16 +41,16 @@
     .note.err{color:#e06060}
     .note.ok{color:#60c080}
 
-    .region{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5a7a96;
+    .region{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#7fa0be;
       margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid #1e2d3d}
     .spot{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid #16212e}
     .spot:last-child{border-bottom:0}
     .spot-name{flex:1;min-width:0;font-size:15px}
-    .spot-name small{display:block;color:#5a7a96;font-size:11px;margin-top:2px}
+    .spot-name small{display:block;color:#7fa0be;font-size:11px;margin-top:2px}
     .thr{width:72px;background:#0a0e14;color:#d8e4f0;border:1px solid #1e2d3d;
       border-radius:9px;padding:8px;font-size:13px;text-align:center}
     .thr-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px}
-    .thr-label{font-size:10px;color:#5a7a96;letter-spacing:.04em}
+    .thr-label{font-size:10px;color:#7fa0be;letter-spacing:.04em}
     .bell{width:44px;height:44px;border-radius:12px;border:1px solid #1e2d3d;background:transparent;
       font-size:18px;cursor:pointer;flex-shrink:0;line-height:1}
     .bell[aria-pressed="true"]{background:#f07820;border-color:#f07820}
@@ -61,8 +61,9 @@
     .unit-toggle button.active{background:#1e2d3d;color:#d8e4f0}
 
     .ftr{border-top:1px solid #1e2d3d;padding:18px 16px;display:flex;gap:14px;flex-wrap:wrap;
-      justify-content:center;font-size:12px;color:#5a7a96}
+      justify-content:center;font-size:12px;color:#7fa0be}
     .hide{display:none}
+    :focus-visible{outline:2px solid #f07820;outline-offset:2px;border-radius:4px}
   </style>
 </head>
 <body>
@@ -96,8 +97,8 @@
     <h2>Spots</h2>
     <p class="note" id="unit-note"></p>
     <div class="unit-toggle">
-      <button id="btn-unit-score" class="active" onclick="setUnit('score')">Score</button>
-      <button id="btn-unit-kn" onclick="setUnit('kn')">Knoten</button>
+      <button id="btn-unit-score" class="active" aria-pressed="true" onclick="setUnit('score')">Score</button>
+      <button id="btn-unit-kn" aria-pressed="false" onclick="setUnit('kn')">Knoten</button>
     </div>
     <div id="spots"></div>
   </div>
@@ -197,7 +198,9 @@ function renderSpots() {
 function paintUnitToggle() {
   const isKn = state.unit === 'kn';
   $('btn-unit-score').classList.toggle('active', !isKn);
+  $('btn-unit-score').setAttribute('aria-pressed', String(!isKn));
   $('btn-unit-kn').classList.toggle('active', isKn);
+  $('btn-unit-kn').setAttribute('aria-pressed', String(isKn));
   $('unit-note').textContent = isKn
     ? 'Alarm, wenn der mittlere Wind einer Session ≥ eingestellter Wert in Knoten.'
     : 'Alarm, wenn der Tages-Score (0–100) ≥ eingestellter Wert — berechnet mit deinem Fahrerprofil.';

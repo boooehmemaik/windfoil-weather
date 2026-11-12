@@ -21,7 +21,7 @@
       display:flex;align-items:center;justify-content:space-between;gap:8px;
       position:sticky;top:0;z-index:400;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
     .hdr-title{font-weight:900;font-size:15px;letter-spacing:.12em}
-    .hdr-sub{font-size:10px;color:#5a7a96;letter-spacing:.05em;margin-top:1px}
+    .hdr-sub{font-size:10px;color:#7fa0be;letter-spacing:.05em;margin-top:1px}
     .hdr-btn{font-size:12px;color:#8fa8c0;border:1px solid #1e2d3d;border-radius:10px;
       padding:7px 11px;display:inline-block}
 
@@ -30,7 +30,7 @@
     .lead{color:#8fa8c0;font-size:14px;line-height:1.55;margin-bottom:20px}
 
     .card{background:#101822;border:1px solid #1e2d3d;border-radius:14px;padding:16px;margin-bottom:16px}
-    .card h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#5a7a96;margin-bottom:10px}
+    .card h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#7fa0be;margin-bottom:10px}
 
     .btn{background:#f07820;color:#0a0e14;border:0;border-radius:12px;font-weight:700;
       font-size:15px;padding:13px 20px;min-height:44px;cursor:pointer}
@@ -45,7 +45,7 @@
 
     .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
     label{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
-      color:#5a7a96;margin-bottom:5px}
+      color:#7fa0be;margin-bottom:5px}
     select,input{width:100%;background:#0a0e14;color:#d8e4f0;border:1px solid #1e2d3d;
       border-radius:10px;padding:11px;font-size:15px;min-height:44px;font-family:inherit}
 
@@ -60,24 +60,25 @@
 
     .hit{background:#101822;border:1px solid #1e2d3d;border-radius:14px;padding:14px;margin-bottom:12px}
     .hit-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-    .hit-rank{font-size:13px;font-weight:800;color:#5a7a96;min-width:22px}
+    .hit-rank{font-size:13px;font-weight:800;color:#7fa0be;min-width:22px}
     .hit-spot{font-size:16px;font-weight:700;flex:1;min-width:0}
     .hit-score{font-size:19px;font-weight:800;border-radius:9px;padding:2px 9px;
       border:1px solid currentColor;white-space:nowrap}
     .tag{font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-radius:7px;
-      padding:3px 7px;border:1px solid #1e2d3d;color:#5a7a96}
+      padding:3px 7px;border:1px solid #1e2d3d;color:#7fa0be}
     .meta{font-size:12px;color:#8fa8c0;line-height:1.7}
-    .meta em{color:#5a7a96;font-style:normal}
+    .meta em{color:#7fa0be;font-style:normal}
     .days{display:flex;gap:6px;flex-wrap:wrap;margin:9px 0 2px}
     .day{background:#0a0e14;border:1px solid #1e2d3d;border-radius:10px;padding:7px 9px;
       text-align:center;min-width:62px}
     .day b{display:block;font-size:15px;font-weight:800}
-    .day span{font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#5a7a96}
+    .day span{font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#7fa0be}
     .day.off{opacity:.45}
 
     .ftr{border-top:1px solid #1e2d3d;padding:18px 16px;display:flex;gap:14px;flex-wrap:wrap;
-      justify-content:center;font-size:12px;color:#5a7a96}
+      justify-content:center;font-size:12px;color:#7fa0be}
     .hide{display:none}
+    :focus-visible{outline:2px solid #f07820;outline-offset:2px;border-radius:4px}
   </style>
 </head>
 <body>
@@ -403,10 +404,10 @@ function renderMap() {
     const from = r.days[0].date, to = r.days[r.days.length - 1].date;
     m.bindPopup('<b>' + esc((r.spot.emoji || '') + ' ' + r.spot.name) + '</b><br>'
       + '<span style="color:' + scoreColor(r.block.mean) + ';font-size:13px;font-weight:700">Ø ' + r.block.mean + '</span>'
-      + ' <span style="color:#5a7a96;font-size:10px">(' + r.days.length + ' Tage)</span><br>'
+      + ' <span style="color:#7fa0be;font-size:10px">(' + r.days.length + ' Tage)</span><br>'
       + '<span style="font-size:11px">' + esc(labelDate(from)) + (from === to ? '' : ' – ' + esc(labelDate(to))) + '</span><br>'
       + '<span style="font-size:11px">' + windArrowSvg(r.dir, '#3a9ad9', 12) + ' ' + wind + ' aus <b>' + compass(r.dir) + '</b></span><br>'
-      + '<span style="font-size:11px;color:#5a7a96">' + fmtKm(r.distanceKm) + ' entfernt</span>');
+      + '<span style="font-size:11px;color:#7fa0be">' + fmtKm(r.distanceKm) + ' entfernt</span>');
     markers[r.spot.id] = m;
   });
 

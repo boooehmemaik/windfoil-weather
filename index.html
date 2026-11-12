@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de" id="htmlRoot"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.38.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.39.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="/icon-192.png"/>
 <link rel="manifest" href="/manifest.json"/>
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0a0e14;-webkit-text-size-adjust:100%}#root{min-height:100vh}
-#boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0e14;color:#5a7a96;font-family:monospace;gap:14px;z-index:9999}
+#boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0e14;color:#7fa0be;font-family:monospace;gap:14px;z-index:9999}
 #boot .ring{width:42px;height:42px;border:3px solid #243040;border-top-color:#f07820;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select,button,textarea{font-size:inherit}}
@@ -62,7 +62,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.38.0",
+    version_label: "Weather Intelligence · v3.39.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -376,7 +376,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.38.0",
+    version_label: "Weather Intelligence · v3.39.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -693,7 +693,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.38.0
+// WindFoil Weather Intelligence v3.39.0
+// Changelog v3.39.0: fix(db): foreign_keys + SIGTERM-Handler; fix(a11y): Kontrast #5a7a96→#7fa0be, focus-visible, aria-pressed in alarm.html + vergleich.html; IANA-Timezone-Validierung in feedback.routes.mjs
 // Changelog v3.38.0: fix(alerts): Quiver-Scoring im Scheduler; CORS-Allowlist, ADMIN_TOKEN-Query entfernt, /api/stats/active-users hinter adminGuard; XSS-Schutz esc() in alarm.html; preconnect fonts.gstatic.com
 // Changelog v3.37.0: feat(alerts): Alarm-Schwelle wahlweise Score oder Knoten — Toggle in alarm.html, gespeichert in user_prefs; DB-Migration 012_alert_unit.sql; kn-Modus prüft mittleren Sessionwind
 // Changelog v3.36.2: refactor(gear): pickBestSetup entfernt — ohne Aufrufer seit dem Quiver-Umbau; gear-scoring.test.mjs prüft jetzt riderQuiver/bestWingForWind direkt, Monotonie als harter Assert, Quiver-Stundenscore exakt gegen das Maximum der Einzelgrößen
@@ -811,7 +812,7 @@ const THEMES = {
   dark: {
     bg:"#0a0e14",surface:"#111820",panel:"#151d28",border:"#1e2d3d",border2:"#243040",
     sky:"#3a9ad9",signal:"#f07820",caution:"#f5b942",go:"#3ddc84",stop:"#e84040",
-    text:"#d8e4f0",muted:"#5a7a96",dim:"#2a3d52",
+    text:"#d8e4f0",muted:"#7fa0be",dim:"#2a3d52",
     headerBg:"rgba(10,14,20,.97)",gridStroke:"rgba(255,255,255,0.05)",
   },
   light: {
@@ -4117,7 +4118,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.38.0</span>
+        <span>WindFoil Weather Intelligence v3.39.0</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>

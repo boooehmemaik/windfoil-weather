@@ -20,6 +20,11 @@ export const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');   // better concurrent reads for the dashboard
 db.pragma('foreign_keys = ON');    // must be set per connection in SQLite
 
+export function closeDb() {
+  try { db.pragma('wal_checkpoint(TRUNCATE)'); db.close(); }
+  catch { /* already closed */ }
+}
+
 // --- Migration runner ---------------------------------------------------------
 // Applies any *.sql in db/migrations not yet recorded in schema_migrations,
 // in filename order, each inside its own transaction.
