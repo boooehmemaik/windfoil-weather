@@ -102,8 +102,7 @@ function adminGuard(req, res) {
     res.status(429).json({ ok: false, error: "Zu viele Fehlversuche. Bitte später erneut." });
     return null;
   }
-  // Token from header (preferred) or query
-  const token = req.headers["x-admin-token"] || req.query.token || "";
+  const token = req.headers["x-admin-token"] || "";
   if (!ADMIN_TOKEN) {
     res.status(403).json({ ok: false, error: "Admin-Funktionen serverseitig nicht aktiviert (ADMIN_TOKEN fehlt)." });
     return null;
@@ -276,7 +275,16 @@ if (!KEY) {
 }
 
 (async () => {
-app.use(cors());
+const ALLOWED_ORIGINS = new Set([
+  'https://maik.surf',
+  'https://ik3acymjxllpensn.myfritz.net:8505',
+  'https://192.168.99.113:8505',
+  'http://localhost:5173',
+]);
+app.use(cors({
+  origin: (origin, cb) => cb(null, !origin || ALLOWED_ORIGINS.has(origin)),
+  credentials: true,
+}));
 // mountWindfoil installs selective json() (skips /api/auth so Better Auth can
 // read the raw body), the auth handler, and all /api/* domain routes.
 await mountWindfoil(app);
@@ -896,9 +904,10 @@ app.get("/api/station/obs-history", async (req, res, next) => {
 });
 
 // Count of users with at least one unexpired Better-Auth session.
-app.get("/api/stats/active-users", (_req, res) => {
+app.get("/api/stats/active-users", (req, res) => {
+  if (!adminGuard(req, res)) return;
   try {
-    const row = adminDb.prepare(
+    const row = getAdminDb().prepare(
       "SELECT COUNT(DISTINCT userId) AS n FROM session WHERE expiresAt > ?"
     ).get(new Date().toISOString());
     res.json({ activeUsers: row?.n ?? 0 });

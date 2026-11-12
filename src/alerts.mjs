@@ -120,7 +120,9 @@ export function spotDayScores(entry, win, spot, now, lookaheadDays = LOOKAHEAD_D
   return out;
 }
 
-const winKey = w => `${w.minWind}|${w.optMin}|${w.optMax}|${w.maxWind}`;
+const winKey = w => Array.isArray(w)
+  ? w.map(q => `${q.wing}:${q.win.minWind}-${q.win.maxWind}`).join(',')
+  : `${w.minWind}|${w.optMin}|${w.optMax}|${w.maxWind}`;
 
 /** Wer bekommt wofür einen Alarm?
  *  forecast      — { spots: { [id]: { hourly, utcOffsetSeconds } | null } }
@@ -148,7 +150,7 @@ export function evaluateAlerts({ forecast, spots = {}, subscriptions = [],
   const byUser = new Map();
   for (const sub of subscriptions) {
     if (!fc[sub.spotId]) continue;
-    const win = windows[sub.userId] || WF.guestWindow();
+    const win = windows[sub.userId] || WF.guestQuiver();
     const meta = spots[sub.spotId] || {};
     for (const day of scoresFor(sub.spotId, win)) {
       // Knoten-Modus: Schwelle gegen den mittleren Sessionwind prüfen.

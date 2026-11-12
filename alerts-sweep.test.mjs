@@ -149,7 +149,7 @@ test('das Fahrerprofil entscheidet mit', async () => {
   const fc = forecast(MS);
   assert.strictEqual((await harness({ forecast: fc, subs }).run()).pushed, 0,
     'der Referenzfahrer kam über die Schwelle');
-  const r = await harness({ forecast: fc, subs, riders: { u1: big } }).run();
+  const r = await harness({ forecast: fc, subs, riders: { u1: { rider: big, gear: [{ wing: 9 }] } } }).run();
   assert.strictEqual(r.pushed, 1, 'das Profil wurde nicht angewandt');
 });
 

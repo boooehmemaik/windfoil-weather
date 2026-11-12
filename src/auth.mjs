@@ -40,7 +40,7 @@ function createTransporter() {
 async function sendPasswordResetMail(to, resetUrl) {
   const transporter = createTransporter();
   if (!transporter) {
-    console.warn('[windfoil] SMTP nicht konfiguriert — Reset-Link:', resetUrl);
+    console.warn('[windfoil] SMTP nicht konfiguriert — Reset-E-Mail nicht versandt.');
     return;
   }
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;

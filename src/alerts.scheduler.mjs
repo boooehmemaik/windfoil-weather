@@ -24,13 +24,12 @@ export const inQuietHours = (date = new Date()) =>
 
 const dayStr = d => d.toISOString().slice(0, 10);
 
-/** Fahrerfenster je Nutzer; wer kein Profil hat, fällt im Auswerter auf den
- *  Referenzfahrer zurück. */
+/** Quiver je Nutzer — bewertet mit allen fahrbaren Wings, nicht nur dem Profil-Wing.
+ *  Wer kein Profil hat, bekommt den Harlem-Referenzquiver (riderQuiver(null,null)). */
 function windowsFor(riderPrefs) {
   const out = {};
-  for (const [userId, rider] of Object.entries(riderPrefs)) {
-    const win = WF.windowFromRider(rider);
-    if (win) out[userId] = win;
+  for (const [userId, { rider, gear }] of Object.entries(riderPrefs)) {
+    out[userId] = WF.riderQuiver(rider || null, gear || null);
   }
   return out;
 }

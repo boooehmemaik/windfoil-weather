@@ -128,6 +128,8 @@ const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches
   || window.navigator.standalone === true;
 
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
 function urlB64ToUint8Array(base64) {
   const pad = '='.repeat((4 - base64.length % 4) % 4);
   const raw = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
@@ -170,9 +172,9 @@ function spotRow(spot, alert) {
   const on = !!alert;
   const isKn = state.unit === 'kn';
   const val = thrValue(alert);
-  return '<div class="spot" data-id="' + spot.id + '">'
-    + '<div class="spot-name">' + (spot.emoji || '') + ' ' + spot.name
-    + '<small>' + (spot.desc || '') + '</small></div>'
+  return '<div class="spot" data-id="' + esc(spot.id) + '">'
+    + '<div class="spot-name">' + esc(spot.emoji || '') + ' ' + esc(spot.name)
+    + '<small>' + esc(spot.desc || '') + '</small></div>'
     + '<div class="thr-wrap">'
     + '<input class="thr" type="number"'
     + (isKn ? ' min="1" max="60" step="1"' : ' min="1" max="100" step="1"')

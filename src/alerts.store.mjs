@@ -82,14 +82,19 @@ export function deliverableAlerts() {
     WHERE EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = a.user_id)`).all();
 }
 
-/** Fahrerfenster-Rohdaten: der Pref-Blob wf_rider je Nutzer mit Abo. */
+/** Fahrerfenster-Rohdaten: wf_rider + wf_gear je Nutzer mit Abo.
+ *  Gibt { [userId]: { rider?, gear? } } zurück; fehlende Prefs → Referenzfahrer. */
 export function riderPrefs() {
   const rows = db.prepare(`
-    SELECT user_id AS userId, value FROM user_prefs
-    WHERE key = 'wf_rider' AND user_id IN (SELECT DISTINCT user_id FROM wind_alerts)`).all();
+    SELECT user_id AS userId, key, value FROM user_prefs
+    WHERE key IN ('wf_rider', 'wf_gear')
+      AND user_id IN (SELECT DISTINCT user_id FROM wind_alerts)`).all();
   const out = {};
   for (const r of rows) {
-    try { out[r.userId] = JSON.parse(r.value); } catch { /* kaputter Blob → Referenzfahrer */ }
+    if (!out[r.userId]) out[r.userId] = {};
+    try {
+      out[r.userId][r.key === 'wf_rider' ? 'rider' : 'gear'] = JSON.parse(r.value);
+    } catch { /* kaputter Blob → Referenzfahrer */ }
   }
   return out;
 }
