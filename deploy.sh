@@ -24,6 +24,11 @@ log(){ printf '\n\033[1;36m==> %s\033[0m\n' "$1"; }
 
 log "Deploying '$BRANCH' to service '$SERVICE'"
 
+# 0a) Pre-deploy DB snapshot (non-fatal — backup dir may not exist yet on first run).
+if [ -f "${WINDFOIL_DB_PATH:-data/windfoil.db}" ]; then
+  bash scripts/backup-db.sh predeploy 2>/dev/null || true
+fi
+
 # 0) Safety: never deploy if the secrets file slipped into git.
 if git ls-files --error-unmatch windfoil.env >/dev/null 2>&1; then
   echo "REFUSING: windfoil.env is tracked by git. Run: git rm --cached windfoil.env"; exit 1
@@ -75,6 +80,18 @@ log "Building auth client bundle"
 npx esbuild src/AuthGate.jsx --bundle --format=esm \
   --external:react --external:react-dom \
   --outfile=vendor/auth-client.bundle.js
+
+# 4b) Pre-compile the main React app (eliminates 333 KB Babel standalone).
+if [ -f src/app.jsx ]; then
+  log "Compiling React app (esbuild)"
+  npx esbuild src/app.jsx --bundle=false --loader=jsx --outfile=js/app.js
+fi
+
+# 4c) Ensure daily backup cron exists (once-per-server, idempotent).
+CRON_JOB="0 3 * * * cd $(pwd) && bash scripts/backup-db.sh daily >> /var/log/windfoil-backup.log 2>&1"
+( crontab -l 2>/dev/null | grep -qF "backup-db.sh daily" ) || \
+  ( crontab -l 2>/dev/null; echo "$CRON_JOB" ) | crontab -
+
 # 5) Restart + health check.
 log "Restarting $SERVICE"
 sudo systemctl restart "$SERVICE"

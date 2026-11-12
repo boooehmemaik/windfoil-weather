@@ -13,13 +13,13 @@ import vm from 'node:vm';
 import fs from 'node:fs';
 
 // ── Setup: Block aus index.html extrahieren ───────────────────────────────────
-const html = fs.readFileSync('/var/www/windfoil/index.html', 'utf8');
+const html = fs.readFileSync('/var/www/windfoil/src/app.jsx', 'utf8');
 const startMarker = '// <<ensemble>>';
 const endMarker   = '// <</ensemble>>';
 const startIdx = html.indexOf(startMarker);
 const endIdx   = html.indexOf(endMarker);
-assert(startIdx !== -1, 'Sentinel <<ensemble>> nicht gefunden in index.html');
-assert(endIdx   !== -1, 'Sentinel <</ensemble>> nicht gefunden in index.html');
+assert(startIdx !== -1, 'Sentinel <<ensemble>> nicht gefunden in src/app.jsx');
+assert(endIdx   !== -1, 'Sentinel <</ensemble>> nicht gefunden in src/app.jsx');
 assert(startIdx < endIdx, 'Sentinels in falscher Reihenfolge');
 
 const block = html.slice(startIdx + startMarker.length, endIdx);

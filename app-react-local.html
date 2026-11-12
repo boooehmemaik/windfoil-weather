@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="de" id="htmlRoot"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>WindFoil Weather Intelligence</title><!-- v3.39.0 -->
+<title>WindFoil Weather Intelligence</title><!-- v3.40.0 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="apple-touch-icon" href="/icon-192.png"/>
 <link rel="manifest" href="/manifest.json"/>
@@ -15,7 +15,9 @@
 input,select,button,textarea{font-size:16px}@media(min-width:600px){input,select,button,textarea{font-size:inherit}}
 @media(max-width:600px){.wf-hdr-nav{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.wf-hdr-nav::-webkit-scrollbar{display:none}}</style>
 <script type="importmap">{"imports":{"react":"vendor/react-esm-shim.js","react-dom":"vendor/react-esm-shim.js"}}</script></head>
-<body><div id="boot"><div class="ring"></div><div id="bootMsg">WindFoil wird geladen…</div></div><div id="root"></div>
+<body><a href="#root" id="skip-link" style="position:absolute;left:-999px;top:-999px;padding:6px 14px;background:#f07820;color:#0a0e14;font-weight:700;font-size:13px;border-radius:0 0 8px 0;z-index:9999">Zum Hauptinhalt springen</a>
+<style>#skip-link:focus{left:0;top:0}</style>
+<div id="boot"><div class="ring"></div><div id="bootMsg">WindFoil wird geladen…</div></div><div id="root"></div>
   <script>
     /* Pre-paint the saved theme before React mounts, to avoid a dark flash in light mode. */
     try {
@@ -62,7 +64,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.39.0",
+    version_label: "Weather Intelligence · v3.40.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -376,7 +378,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.39.0",
+    version_label: "Weather Intelligence · v3.40.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -693,7 +695,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.39.0
+// WindFoil Weather Intelligence v3.40.0
+// Changelog v3.40.0: fix(db): busy_timeout = 5000 auf alle 4 DB-Connections (db.mjs, auth.mjs, adminDb, obsDb) — verhindert SQLite-BUSY-Crashes; resolveRegion() in /batch, /marine, /history je eigener try/catch gegen defekte spots.json
 // Changelog v3.39.0: fix(db): foreign_keys + SIGTERM-Handler; fix(a11y): Kontrast #5a7a96→#7fa0be, focus-visible, aria-pressed in alarm.html + vergleich.html; IANA-Timezone-Validierung in feedback.routes.mjs
 // Changelog v3.38.0: fix(alerts): Quiver-Scoring im Scheduler; CORS-Allowlist, ADMIN_TOKEN-Query entfernt, /api/stats/active-users hinter adminGuard; XSS-Schutz esc() in alarm.html; preconnect fonts.gstatic.com
 // Changelog v3.37.0: feat(alerts): Alarm-Schwelle wahlweise Score oder Knoten — Toggle in alarm.html, gespeichert in user_prefs; DB-Migration 012_alert_unit.sql; kn-Modus prüft mittleren Sessionwind
@@ -2227,6 +2230,17 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
 
   const tz = (()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; }catch{ return "UTC"; } })();
 
+  const dialogRef = useRef(null);
+  useEffect(()=>{
+    const el = dialogRef.current;
+    if(!el) return;
+    const focusable = el.querySelectorAll('button,input,select,textarea,[tabindex]:not([tabindex="-1"])');
+    if(focusable.length) focusable[0].focus();
+    function onKey(e){ if(e.key==='Escape') onClose(); }
+    document.addEventListener('keydown',onKey);
+    return()=>document.removeEventListener('keydown',onKey);
+  },[]);
+
   // HH:MM → ISO-8601 UTC (heute, spot-Browser-Timezone)
   function timeToIso(hhmm) {
     if(!hhmm) return null;
@@ -2293,16 +2307,16 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
   const inputStyle = {background:C.bg,color:C.text,border:`1px solid ${C.border2}`,borderRadius:10,padding:"8px 10px",fontSize:15,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"};
 
   return (
-    <div style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>
-      <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:20,width:"100%",maxWidth:480,maxHeight:"100%",overflow:"auto",color:C.text}}>
+    <div role="dialog" aria-modal="true" aria-labelledby="fb-modal-title" style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>
+      <div ref={dialogRef} style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:20,width:"100%",maxWidth:480,maxHeight:"100%",overflow:"auto",color:C.text}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
           <div>
             <div style={{fontFamily:"monospace",fontSize:10,color:C.signal,textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700}}>{t('fb_modal_label')}</div>
-            <strong style={{fontSize:14}}>{loc.name}</strong>
+            <strong id="fb-modal-title" style={{fontSize:14}}>{loc.name}</strong>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontFamily:"monospace",fontSize:11,color:C.muted}}>{dateLabel}</span>
-            <button onClick={onClose} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
+            <button onClick={onClose} aria-label={t('fb_close')} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
           </div>
         </div>
 
@@ -2347,14 +2361,14 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
             {err && <p style={{color:C.stop,fontSize:13,margin:"0 0 12px"}}>{err}</p>}
 
             <div style={{marginBottom:18}}>
-              <span style={lbl}>{t('fb_planed_q')}</span>
+              <span id="lbl-planed" style={lbl}>{t('fb_planed_q')}</span>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <button type="button" onClick={()=>setPlaned(true)}
+                <button type="button" aria-labelledby="lbl-planed" onClick={()=>setPlaned(true)}
                   style={{padding:"14px 10px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:14,
                     border:`1px solid ${planed===true?C.go:C.border2}`,
                     background:planed===true?"rgba(61,220,132,0.16)":C.bg,
                     color:planed===true?C.go:C.text}}>{t('fb_yes')}</button>
-                <button type="button" onClick={()=>setPlaned(false)}
+                <button type="button" aria-labelledby="lbl-planed" onClick={()=>setPlaned(false)}
                   style={{padding:"14px 10px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:14,
                     border:`1px solid ${planed===false?C.stop:C.border2}`,
                     background:planed===false?"rgba(232,64,64,0.14)":C.bg,
@@ -2363,9 +2377,9 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
             </div>
 
             <div style={{marginBottom:18}}>
-              <span style={lbl}>{t('fb_wing_label')}</span>
+              <label style={{...lbl,display:"block"}} htmlFor="fb-wing-select">{t('fb_wing_label')}</label>
               {wingOptions.length > 0 ? (
-                <select value={wingM2||""} onChange={e=>setWingM2(e.target.value?parseFloat(e.target.value):null)}
+                <select id="fb-wing-select" value={wingM2||""} onChange={e=>setWingM2(e.target.value?parseFloat(e.target.value):null)}
                   style={{width:"100%",...inputStyle}}>
                   <option value="">{t('fb_wing_not_set')}</option>
                   {wingOptions.map(s=><option key={s} value={s}>{s} m²</option>)}
@@ -2382,29 +2396,29 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
             </div>
 
             <div style={{marginBottom:18}}>
-              <span style={lbl}>{t('fb_session_window')}</span>
+              <span id="lbl-session-window" style={lbl}>{t('fb_session_window')}</span>
               <p style={{fontSize:11,color:C.muted,marginTop:0,marginBottom:10}}>{t('fb_session_hint')}</p>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div aria-labelledby="lbl-session-window" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div>
-                  <span style={{fontSize:11,color:C.muted,display:"block",marginBottom:4}}>{t('fb_from')}</span>
-                  <input type="time" value={startTime} onChange={e=>setStartTime(e.target.value)}
+                  <label style={{fontSize:11,color:C.muted,display:"block",marginBottom:4}} htmlFor="fb-time-from">{t('fb_from')}</label>
+                  <input id="fb-time-from" type="time" value={startTime} onChange={e=>setStartTime(e.target.value)}
                     style={{width:"100%",boxSizing:"border-box",...inputStyle}} />
                 </div>
                 <div>
-                  <span style={{fontSize:11,color:C.muted,display:"block",marginBottom:4}}>{t('fb_to')}</span>
-                  <input type="time" value={endTime} onChange={e=>setEndTime(e.target.value)}
+                  <label style={{fontSize:11,color:C.muted,display:"block",marginBottom:4}} htmlFor="fb-time-to">{t('fb_to')}</label>
+                  <input id="fb-time-to" type="time" value={endTime} onChange={e=>setEndTime(e.target.value)}
                     style={{width:"100%",boxSizing:"border-box",...inputStyle}} />
                 </div>
               </div>
             </div>
 
             <div style={{marginBottom:18}}>
-              <span style={lbl}>{t('fb_session_q')}</span>
+              <span id="lbl-rating" style={lbl}>{t('fb_session_q')}</span>
               <Meter value={rating} onChange={setRating} lo={t('fb_session_lo')} hi={t('fb_session_hi')} />
             </div>
 
             <div style={{marginBottom:18}}>
-              <span style={lbl}>{t('fb_forecast_q')}</span>
+              <span id="lbl-match" style={lbl}>{t('fb_forecast_q')}</span>
               <Meter value={match} onChange={setMatch} lo={t('fb_forecast_lo')} hi={t('fb_forecast_hi')} />
             </div>
 
@@ -3701,17 +3715,17 @@ function App() {
                         const adj=wingTableWindow(ri.weight,size,brandName);
                         const adjOk=adj&&!adj.outOfRange;
                         return(
-                          <div key={sz} title={`${size} m² auswählen`}
+                          <button key={sz} type="button" title={`${size} m² auswählen`}
                             onClick={()=>{ setRi(r=>({...r,wingSize:size})); setRider(r=>({...r,wingSize:size})); setActiveDay(0); }}
                             style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"3px 8px",
-                            fontSize:11,color:isActive?C.go:C.muted,marginBottom:3,cursor:"pointer",
+                            fontSize:11,color:isActive?C.go:C.muted,marginBottom:3,
                             borderLeft:`2px solid ${isActive?C.go:C.border}`,paddingLeft:6}}>
                             <span>{size} m²</span>
                             <span style={{fontFamily:"monospace",color:C.dim}}>{data.rangeKn[0]}–{data.rangeKn[1]} kn</span>
                             <span style={{fontFamily:"monospace",color:isActive?C.go:C.muted}}>
                               {adjOk?`${Math.round(msToKn(adj.minWind))}–${Math.round(msToKn(adj.maxWind))} kn`:"—"}
                             </span>
-                          </div>
+                          </button>
                         );
                       })}
                     </div>
@@ -4013,15 +4027,15 @@ function App() {
 
       {/* LOC MODAL */}
       {showLoc&&(
-        <div style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box"}}>
+        <div role="dialog" aria-modal="true" aria-labelledby="loc-modal-title" onKeyDown={e=>{ if(e.key==='Escape') setShowLoc(false); }} style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box"}}>
           <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:20,width:"100%",maxWidth:460,maxHeight:"100%",overflow:"auto"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
-              <strong style={{fontFamily:"monospace",fontSize:14}}>{t('loc_modal_title')}</strong>
+              <strong id="loc-modal-title" style={{fontFamily:"monospace",fontSize:14}}>{t('loc_modal_title')}</strong>
               <button onClick={()=>setShowLoc(false)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
             </div>
             <div style={{padding:16}}>
               {/* Mein Standort (GPS) */}
-              <button onClick={useMyLocation} disabled={geoStatus==="loading"}
+              <button autoFocus onClick={useMyLocation} disabled={geoStatus==="loading"}
                 style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8,
                   background:geoStatus==="loading"?C.surface:"rgba(58,154,217,0.12)",
                   border:`1px solid ${C.sky}`,color:C.sky,borderRadius:6,
@@ -4118,7 +4132,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.39.0</span>
+        <span>WindFoil Weather Intelligence v3.40.0</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
@@ -4138,10 +4152,10 @@ function App() {
 
       {/* ADMIN MODAL */}
       {adminOpen && (
-        <div style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box"}}>
+        <div role="dialog" aria-modal="true" aria-labelledby="admin-modal-title" onKeyDown={e=>{ if(e.key==='Escape') {setAdminOpen(false);setAdminAuthed(false);setAdminToken("");setAdminPw("");setAdminOut("");setAdminErr("");setAdminTab("actions");setUsers([]);setUsersMsg("");setPwInputs({});} }} style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box"}}>
           <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:20,width:"100%",maxWidth:560,maxHeight:"100%",overflow:"auto"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
-              <strong style={{fontFamily:"monospace",fontSize:14}}>⚙ Admin</strong>
+              <strong id="admin-modal-title" style={{fontFamily:"monospace",fontSize:14}}>⚙ Admin</strong>
               <button onClick={()=>{setAdminOpen(false);setAdminAuthed(false);setAdminToken("");setAdminPw("");setAdminOut("");setAdminErr("");setAdminTab("actions");setUsers([]);setUsersMsg("");setPwInputs({});}}
                 style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
             </div>

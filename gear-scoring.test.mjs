@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import WF from './js/wf-scoring.js';
 
 // ── Sandbox Setup ─────────────────────────────────────────────────────────────
-const html = fs.readFileSync('/var/www/windfoil/index.html', 'utf8');
+const html = fs.readFileSync('/var/www/windfoil/src/app.jsx', 'utf8');
 
 function extractBlock(startSentinel, endSentinel) {
   const si = html.indexOf(startSentinel);

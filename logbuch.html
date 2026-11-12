@@ -77,22 +77,25 @@
       justify-content:center;font-size:12px;color:#7fa0be}
     .hide{display:none}
     :focus-visible{outline:2px solid #f07820;outline-offset:2px;border-radius:4px}
+    .skip-link{position:absolute;left:-999px;top:-999px;padding:6px 14px;background:#f07820;color:#0a0e14;font-weight:700;font-size:13px;border-radius:0 0 8px 0;z-index:9999}
+    .skip-link:focus{left:0;top:0}
   </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
 
 <header class="hdr">
   <div>
     <div class="hdr-title">WINDFOIL</div>
     <div class="hdr-sub">Logbuch</div>
   </div>
-  <div class="row">
+  <nav class="row" aria-label="Seitennavigation">
     <a href="/vergleich.html" class="hdr-btn">Vergleich</a>
     <a href="/" class="hdr-btn">← Hauptseite</a>
-  </div>
+  </nav>
 </header>
 
-<div class="wrap">
+<main class="wrap" id="main-content">
   <h1>🛶 Logbuch</h1>
   <p class="lead" id="lead">Wird geladen…</p>
 
@@ -148,14 +151,16 @@
   <div class="row" style="justify-content:center">
     <button class="btn ghost hide" id="btn-more">Weitere laden</button>
   </div>
-</div>
+</main>
 
 <footer class="ftr">
-  <a href="/vergleich.html">Spot-Vergleich</a>
-  <a href="/alarm.html">Windalarm</a>
-  <a href="/reise.html">Reiseplaner</a>
-  <a href="/help.html">Hilfe</a>
-  <a href="/">← Hauptseite</a>
+  <nav aria-label="Seitennavigation" style="display:contents">
+    <a href="/vergleich.html">Spot-Vergleich</a>
+    <a href="/alarm.html">Windalarm</a>
+    <a href="/reise.html">Reiseplaner</a>
+    <a href="/help.html">Hilfe</a>
+    <a href="/">← Hauptseite</a>
+  </nav>
 </footer>
 
 <script>
@@ -315,7 +320,7 @@ function entryHtml(e) {
       + '<span class="entry-spot">' + esc(s.spot_name || s.spot_id) + '</span>'
       + (s.backfilled ? '<span class="tag">nachgetragen</span>' : '')
       + (e.match ? '<span class="tag ' + v + '">' + esc(e.match.verdict) + '</span>' : '')
-      + '<button class="del" aria-label="Eintrag löschen">✕</button>'
+      + '<button class="del" aria-label="Eintrag löschen ' + esc(s.spot_name || s.spot_id) + ' ' + labelDate(e.date) + '">✕</button>'
     + '</div>'
     + '<div class="cmp">'
       + scoreBox('Vorhergesagt', e.predicted, 'keine Vorhersage gespeichert')

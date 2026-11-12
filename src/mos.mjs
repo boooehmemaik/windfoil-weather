@@ -39,12 +39,12 @@ export const MOS_LOOKBACK_D  = 60;   // wie weit zurück Beobachtungen gepaart w
 // Deshalb wird derselbe Sentinel-Block ausgeführt, den auch ensemble.test.mjs
 // prüft — dieselbe Technik, gleiche Quelle, keine Kopie.
 let _ens = null;
-export function ensembleApi(indexPath = join(__dirname, '..', 'index.html')) {
+export function ensembleApi(indexPath = join(__dirname, 'app.jsx')) {
   if (_ens) return _ens;
   const html = readFileSync(indexPath, 'utf8');
   const s = '// <<ensemble>>', e = '// <</ensemble>>';
   const a = html.indexOf(s), b = html.indexOf(e);
-  if (a === -1 || b === -1 || a > b) throw new Error('ensemble sentinel block not found in index.html');
+  if (a === -1 || b === -1 || a > b) throw new Error('ensemble sentinel block not found in src/app.jsx');
   const ctx = vm.createContext({ console, pickForecastModel: () => '' });
   _ens = vm.runInContext(
     `${html.slice(a + s.length, b)}

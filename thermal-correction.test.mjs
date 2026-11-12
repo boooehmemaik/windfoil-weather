@@ -16,14 +16,14 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 
-const HTML = fs.readFileSync('/var/www/windfoil/index.html', 'utf8');
+const HTML = fs.readFileSync('/var/www/windfoil/src/app.jsx', 'utf8');
 
 /** Schneidet den Inhalt zwischen `// <<name>>` und `// <</name>>` heraus. */
 function sentinel(name) {
   const a = `// <<${name}>>`, b = `// <</${name}>>`;
   const i = HTML.indexOf(a), j = HTML.indexOf(b);
-  assert(i !== -1, `Sentinel <<${name}>> nicht gefunden in index.html`);
-  assert(j !== -1, `Sentinel <</${name}>> nicht gefunden in index.html`);
+  assert(i !== -1, `Sentinel <<${name}>> nicht gefunden in src/app.jsx`);
+  assert(j !== -1, `Sentinel <</${name}>> nicht gefunden in src/app.jsx`);
   assert(i < j, `Sentinels <<${name}>> in falscher Reihenfolge`);
   return HTML.slice(i + a.length, j);
 }

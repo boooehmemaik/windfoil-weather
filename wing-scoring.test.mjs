@@ -17,13 +17,13 @@ const require = createRequire(import.meta.url);
 const WF = require('./js/wf-scoring.js');
 
 // ── Setup: extract scoring block from index.html ──────────────────────────────
-const html = fs.readFileSync('/var/www/windfoil/index.html', 'utf8');
+const html = fs.readFileSync('/var/www/windfoil/src/app.jsx', 'utf8');
 const startMarker = '// <<wing-scoring>>';
 const endMarker   = '// <</wing-scoring>>';
 const startIdx = html.indexOf(startMarker);
 const endIdx   = html.indexOf(endMarker);
-assert(startIdx !== -1, 'Sentinel <<wing-scoring>> nicht gefunden in index.html');
-assert(endIdx   !== -1, 'Sentinel <</wing-scoring>> nicht gefunden in index.html');
+assert(startIdx !== -1, 'Sentinel <<wing-scoring>> nicht gefunden in src/app.jsx');
+assert(endIdx   !== -1, 'Sentinel <</wing-scoring>> nicht gefunden in src/app.jsx');
 assert(startIdx < endIdx, 'Sentinels in falscher Reihenfolge');
 
 const scoringBlock = html.slice(startIdx + startMarker.length, endIdx);
@@ -366,8 +366,8 @@ const lbStartMarker = '// <<live-boost>>';
 const lbEndMarker   = '// <</live-boost>>';
 const lbStartIdx = html.indexOf(lbStartMarker);
 const lbEndIdx   = html.indexOf(lbEndMarker);
-assert(lbStartIdx !== -1, 'Sentinel <<live-boost>> nicht gefunden in index.html');
-assert(lbEndIdx   !== -1, 'Sentinel <</live-boost>> nicht gefunden in index.html');
+assert(lbStartIdx !== -1, 'Sentinel <<live-boost>> nicht gefunden in src/app.jsx');
+assert(lbEndIdx   !== -1, 'Sentinel <</live-boost>> nicht gefunden in src/app.jsx');
 assert(lbStartIdx < lbEndIdx, 'live-boost Sentinels in falscher Reihenfolge');
 
 const lbBlock = html.slice(lbStartIdx + lbStartMarker.length, lbEndIdx);
@@ -791,8 +791,8 @@ const mcStartMarker = '// <<measured-correction>>';
 const mcEndMarker   = '// <</measured-correction>>';
 const mcStartIdx = html.indexOf(mcStartMarker);
 const mcEndIdx   = html.indexOf(mcEndMarker);
-assert(mcStartIdx !== -1, 'Sentinel <<measured-correction>> nicht gefunden in index.html');
-assert(mcEndIdx   !== -1, 'Sentinel <</measured-correction>> nicht gefunden in index.html');
+assert(mcStartIdx !== -1, 'Sentinel <<measured-correction>> nicht gefunden in src/app.jsx');
+assert(mcEndIdx   !== -1, 'Sentinel <</measured-correction>> nicht gefunden in src/app.jsx');
 assert(mcStartIdx < mcEndIdx, 'measured-correction Sentinels in falscher Reihenfolge');
 
 const mcBlock = html.slice(mcStartIdx + mcStartMarker.length, mcEndIdx);
