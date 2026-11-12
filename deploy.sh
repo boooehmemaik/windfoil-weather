@@ -84,7 +84,7 @@ npx esbuild src/AuthGate.jsx --bundle --format=esm \
 # 4b) Pre-compile the main React app (eliminates 333 KB Babel standalone).
 if [ -f src/app.jsx ]; then
   log "Compiling React app (esbuild)"
-  npx esbuild src/app.jsx --bundle=false --loader=jsx --outfile=js/app.js
+  npx esbuild src/app.jsx --bundle=false --loader:.jsx=jsx --outfile=js/app.js
 fi
 
 # 4c) Ensure daily backup cron exists (once-per-server, idempotent).
