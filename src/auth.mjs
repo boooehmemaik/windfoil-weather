@@ -59,6 +59,7 @@ const DB_PATH = process.env.WINDFOIL_DB_PATH || join(__dirname, '..', 'data', 'w
 // Same database file as src/db.js. WAL mode (set in db.js) keeps the two
 // connections happy. Better Auth uses Kysely under the hood here.
 const authDb = new Database(DB_PATH);
+authDb.pragma('busy_timeout = 5000');
 authDb.pragma('foreign_keys = ON');
 
 // Account enable/disable lives on a custom `disabled` flag on Better Auth's

@@ -217,7 +217,8 @@ function fail(res, e) {
 }
 
 forecastRouter.get('/batch', async (req, res) => {
-  const region = resolveRegion(String(req.query.region || ''));
+  let region;
+  try { region = resolveRegion(String(req.query.region || '')); } catch (e) { return fail(res, e); }
   if (!region) return res.status(404).json({ error: 'unknown_region' });
 
   // Fehlendes days ist der Default, ein vorhandenes aber ungültiges ein Fehler —
@@ -233,7 +234,8 @@ forecastRouter.get('/batch', async (req, res) => {
 });
 
 forecastRouter.get('/marine', async (req, res) => {
-  const region = resolveRegion(String(req.query.region || ''));
+  let region;
+  try { region = resolveRegion(String(req.query.region || '')); } catch (e) { return fail(res, e); }
   if (!region) return res.status(404).json({ error: 'unknown_region' });
 
   try {
@@ -242,7 +244,8 @@ forecastRouter.get('/marine', async (req, res) => {
 });
 
 forecastRouter.get('/history', async (req, res) => {
-  const region = resolveRegion(String(req.query.region || ''));
+  let region;
+  try { region = resolveRegion(String(req.query.region || '')); } catch (e) { return fail(res, e); }
   if (!region) return res.status(404).json({ error: 'unknown_region' });
 
   try {

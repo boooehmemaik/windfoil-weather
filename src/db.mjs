@@ -18,6 +18,7 @@ const DB_PATH = process.env.WINDFOIL_DB_PATH || join(__dirname, '..', 'data', 'w
 
 export const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');   // better concurrent reads for the dashboard
+db.pragma('busy_timeout = 5000');  // wait up to 5 s instead of crashing on BUSY
 db.pragma('foreign_keys = ON');    // must be set per connection in SQLite
 
 export function closeDb() {

@@ -81,6 +81,7 @@ function getAdminDb() {
   if (!adminDb) {
     adminDb = new Database(DB_PATH);
     adminDb.pragma("journal_mode = WAL");
+    adminDb.pragma("busy_timeout = 5000");
     adminDb.pragma("foreign_keys = ON");
     // Mirror the column auth.mjs adds, so this handle works even if it connects first.
     try { adminDb.exec("ALTER TABLE user ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0"); }
@@ -1107,6 +1108,7 @@ function getObsDb() {
   if (!obsDb) {
     obsDb = new Database(DB_PATH);
     obsDb.pragma("journal_mode = WAL");
+    obsDb.pragma("busy_timeout = 5000");
     obsDb.pragma("foreign_keys = ON");
     // Prepared Statements werden einmalig erstellt und wiederverwendet.
     obsDb._insertObs = obsDb.prepare(
