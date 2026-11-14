@@ -391,20 +391,46 @@ const ADDICTED_BASE = "https://en.addicted-sports.com";
 // still triggers the spot-specific live/measured calculation.
 const SPECIAL_RADIUS_KM = 5;
 const MEASURED_STATIONS = [
+  // ── Garda / Italien ────────────────────────────────────────────────────────
   // type "addicted": addicted-sports getWeatherData.php (knots, CSRF — see below)
   { type: "addicted", wc: "torbole", path: "gardasee/torbole", tz: "Europe/Rome", lat: 45.869, lon: 10.873, label: "Torbole (Gardasee)" },
-  // type "neverin": neverin.hr JSON API fronting the official ZHMS station
-  // (m/s, full hourly series, NO gusts). Covers the whole Ulcinj riviera (town
-  // ~3 km, Velika Plaža/Ada Bojana further SE) → wider radius.
-  { type: "neverin", station: "ulcinj", tz: "Europe/Podgorica", lat: 41.9166, lon: 19.25293, radiusKm: 12, label: "Ulcinj (ZHMS)" },
-  // type "metar": aviationweather.gov airport observation. Aktion/Preveza (LGPZ)
-  // is the nearest real feed for Vasiliki/Lefkada (~34 km N, open exposure) —
-  // a regional-gradient proxy for the "Eric" bay, not an in-bay reading. Wide
-  // radius so the whole south-Lefkada corner matches; the caption shows the km.
-  { type: "metar", icao: "LGPZ", tz: "Europe/Athens", lat: 38.9254, lon: 20.7653, radiusKm: 40, label: "Aktion/Preveza (LGPZ, ~34 km)" },
+  // ── Griechenland ──────────────────────────────────────────────────────────
+  // Aktion/Preveza (LGPZ) is the nearest real feed for Vasiliki/Lefkada (~34 km N).
+  { type: "metar", icao: "LGPZ", tz: "Europe/Athens",    lat: 38.9254, lon: 20.7653, radiusKm:  40, label: "Aktion/Preveza (LGPZ, ~34 km)" },
   // Kalamata Airport (LGKL) covers Gialova / Navarino Bay (~32 km NE).
-  // Messenian Gulf coast — afternoon sea breeze from SW, same exposure as Gialova.
-  { type: "metar", icao: "LGKL", tz: "Europe/Athens", lat: 37.0683, lon: 22.0253, radiusKm: 40, label: "Kalamata (LGKL, ~32 km)" },
+  { type: "metar", icao: "LGKL", tz: "Europe/Athens",    lat: 37.0683, lon: 22.0253, radiusKm:  40, label: "Kalamata (LGKL, ~32 km)" },
+  // ── Montenegro / Balkan ────────────────────────────────────────────────────
+  // Ersatz für Neverin-Ulcinj-Feed (ausgefallen seit 09/2026). Podgorica liegt
+  // ~54 km nördlich — regional-gradient proxy wie LGPZ/LGKL für Griechenland.
+  { type: "metar", icao: "LYPG", tz: "Europe/Podgorica", lat: 42.3594, lon: 19.2519, radiusKm:  65, label: "Podgorica (LYPG) · Montenegro / Ulcinj" },
+  // ── Sardinien ──────────────────────────────────────────────────────────────
+  { type: "metar", icao: "LIEO", tz: "Europe/Rome",      lat: 40.8987, lon:  9.5178, radiusKm:  75, label: "Olbia (LIEO) · Porto Pollo / Cala Gonone" },
+  { type: "metar", icao: "LIEA", tz: "Europe/Rome",      lat: 40.6327, lon:  8.2919, radiusKm:  80, label: "Alghero (LIEA) · Stintino / Putzu Idu" },
+  { type: "metar", icao: "LIEE", tz: "Europe/Rome",      lat: 39.2538, lon:  9.0570, radiusKm:  50, label: "Cagliari (LIEE) · Porto Botte / Villasimius" },
+  // ── Sizilien ──────────────────────────────────────────────────────────────
+  { type: "metar", icao: "LICB", tz: "Europe/Rome",      lat: 36.9955, lon: 14.6075, radiusKm:  65, label: "Comiso (LICB) · SE-Sizilien" },
+  { type: "metar", icao: "LICJ", tz: "Europe/Rome",      lat: 38.1796, lon: 13.0919, radiusKm:  85, label: "Palermo (LICJ) · W-Sizilien / Granitola" },
+  // Reggio Calabria (LICR) deckt Messina (~22 km) und Capo d'Orlando (~79 km) ab.
+  { type: "metar", icao: "LICR", tz: "Europe/Rome",      lat: 38.0714, lon: 15.6511, radiusKm: 100, label: "Reggio Calabria (LICR) · Messina / Capo d'Orlando" },
+  // ── Spanien ────────────────────────────────────────────────────────────────
+  { type: "metar", icao: "LEGE", tz: "Europe/Madrid",    lat: 41.9011, lon:  2.7600, radiusKm:  65, label: "Girona (LEGE) · Roses / Costa Brava" },
+  { type: "metar", icao: "LERR", tz: "Europe/Madrid",    lat: 41.1472, lon:  1.1672, radiusKm:  60, label: "Reus (LERR) · Delta de l'Ebre" },
+  { type: "metar", icao: "LECH", tz: "Europe/Madrid",    lat: 40.2136, lon:  0.0731, radiusKm:  50, label: "Castellón (LECH) · Peñíscola" },
+  { type: "metar", icao: "LEAL", tz: "Europe/Madrid",    lat: 38.2822, lon: -0.5581, radiusKm:  90, label: "Alicante (LEAL) · Denia / Costa Blanca" },
+  { type: "metar", icao: "LXGB", tz: "Europe/Gibraltar", lat: 36.1500, lon: -5.3466, radiusKm:  35, label: "Gibraltar (LXGB) · Tarifa" },
+  // ── Schweden ───────────────────────────────────────────────────────────────
+  { type: "metar", icao: "ESMQ", tz: "Europe/Stockholm", lat: 56.6855, lon: 16.2878, radiusKm:  50, label: "Kalmar (ESMQ) · Öland" },
+  // Malmö/Sturup r=40: Lomma (31 km) + Falsterbo/Näset (37 km)
+  { type: "metar", icao: "ESMS", tz: "Europe/Stockholm", lat: 55.5307, lon: 13.3764, radiusKm:  40, label: "Malmö/Sturup (ESMS) · Falsterbo / Lomma" },
+  // Halmstad r=65: Ringenäs (10 km) + Varberg/Apelviken (59 km) + Skälderviken (51 km)
+  { type: "metar", icao: "ESMT", tz: "Europe/Stockholm", lat: 56.6911, lon: 12.8208, radiusKm:  65, label: "Halmstad (ESMT) · Ringenäs / Varberg / Skälderviken" },
+  // ── Finnland ───────────────────────────────────────────────────────────────
+  { type: "metar", icao: "EFHK", tz: "Europe/Helsinki",  lat: 60.3172, lon: 24.9633, radiusKm:  25, label: "Helsinki (EFHK) · Lauttasaari" },
+  // Pori r=28: Yyteri Beach (25 km)
+  { type: "metar", icao: "EFPO", tz: "Europe/Helsinki",  lat: 61.4617, lon: 21.7999, radiusKm:  28, label: "Pori (EFPO) · Yyteri" },
+  // Turku r=100: Hanko/Tulliniemi (86 km) — weiteste Abdeckung, wie LGPZ/Vasiliki
+  { type: "metar", icao: "EFTU", tz: "Europe/Helsinki",  lat: 60.5219, lon: 22.2628, radiusKm: 100, label: "Turku (EFTU) · Hanko / Küste" },
+  { type: "metar", icao: "EFLA", tz: "Europe/Helsinki",  lat: 61.1444, lon: 25.6927, radiusKm:  25, label: "Lahti Vesivehmaa (EFLA) · Vesijärvi" },
 ];
 const KN_PER_MS = 1.94384; // feed is in knots; we return m/s to match the forecast contract
 
