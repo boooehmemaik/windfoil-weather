@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — MOS (Model Output Statistics): gelernte Stunden-Bias-Korrektur
-// File version: 1.0.0 (ESM .mjs)  |  App target: v3.22.0
+// File version: 1.1.0 (ESM .mjs)  |  App target: v3.42.0
 // ----------------------------------------------------------------------------
 // Idee in einem Satz: für jede Station und jede lokale Stunde messen, wie weit
 // der Ensemble-Median systematisch neben der Beobachtung liegt, und diese
@@ -95,11 +95,15 @@ export function markObsEpoch(db, iso = new Date().toISOString()) {
 }
 
 // ── Rollup: Rohpolls → ein Sample je (Station, lokaler Tag, lokale Stunde) ──
+// Formatter je Zeitzone cachen: new Intl.DateTimeFormat kostet ~50 µs — bei
+// 10⁴–10⁵ History-Zeilen je Station blockierte das den Event-Loop sekundenlang.
+const TZ_FMT = new Map();
 export function localPartsTZ(epochMs, tz) {
-  const p = new Intl.DateTimeFormat('en-CA', {
+  if (!TZ_FMT.has(tz)) TZ_FMT.set(tz, new Intl.DateTimeFormat('en-CA', {
     timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', hour12: false,
-  }).formatToParts(new Date(epochMs)).reduce((o, x) => (o[x.type] = x.value, o), {});
+  }));
+  const p = TZ_FMT.get(tz).formatToParts(new Date(epochMs)).reduce((o, x) => (o[x.type] = x.value, o), {});
   return { day: `${p.year}-${p.month}-${p.day}`, hour: parseInt(p.hour, 10) % 24 };
 }
 
@@ -220,6 +224,50 @@ export function computeMosBias(obsRows, predByKey) {
   return out;
 }
 
+// ── History-MOS (aus dem Backfill, ml_history) ──────────────────────────────
+// Für Stationen ohne (genug) Live-Beobachtungen: dieselbe Statistik wie oben,
+// aber aus allen Jahren der Historie im Saisonfenster ±windowDays um heute.
+// n zählt weiterhin TAGE — ein Tag aus 2024 und einer aus 2025 sind zwei
+// unabhängige Samples derselben Saison.
+export const MOS_HISTORY_WINDOW_D = 30;
+
+function hasTable(db, name) {
+  return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);
+}
+
+export function dayOfYearDistance(dayA, dayB) {
+  const doy = d => {
+    const [, m, dd] = d.split('-').map(Number);
+    return (Date.UTC(2001, m - 1, dd) - Date.UTC(2001, 0, 1)) / 86400000;
+  };
+  const diff = Math.abs(doy(dayA) - doy(dayB));
+  return Math.min(diff, 365 - diff);
+}
+
+export function computeHistoryMosRows(db, st, { now = new Date(), windowDays = MOS_HISTORY_WINDOW_D } = {}) {
+  if (!st.tz || !hasTable(db, 'ml_history')) return null;
+  const today = localPartsTZ(now.getTime(), st.tz).day;
+  const raw = db.prepare(`
+    SELECT ts, hour_local, obs_wind_ms, fc_ens_wind_ms FROM ml_history
+    WHERE station_key=? AND fc_lead_hours=0
+      AND obs_wind_ms IS NOT NULL AND fc_ens_wind_ms IS NOT NULL`).all(st.key);
+  const obsRows = [], predByKey = new Map();
+  for (const r of raw) {
+    const day = localPartsTZ(Date.parse(r.ts), st.tz).day;
+    if (dayOfYearDistance(day, today) > windowDays) continue;
+    const k = `${day}|${r.hour_local}`;
+    // Herbst-DST: die lokale Stunde 03 gibt es zweimal — nur die erste paaren,
+    // sonst bekäme die erste Obs die Prognose der zweiten.
+    if (predByKey.has(k)) continue;
+    obsRows.push({ local_day: day, hour_local: r.hour_local, wind_ms: r.obs_wind_ms });
+    predByKey.set(k, r.fc_ens_wind_ms);
+  }
+  if (!obsRows.length) return null;
+  return computeMosBias(obsRows, predByKey);
+}
+
+const usableHours = rows => rows.filter(r => r.n_samples >= MOS_MIN_SAMPLES).length;
+
 // ── Job ─────────────────────────────────────────────────────────────────────
 export async function runMosJob(db, stations, {
   fetchImpl = fetch,
@@ -227,6 +275,7 @@ export async function runMosJob(db, stations, {
   // Ende des Lernfensters. Default ist gestern (siehe unten); explizit setzbar,
   // damit Tests nicht am Systemdatum hängen.
   endDay = new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+  now = new Date(),
 } = {}) {
   const epoch = getObsEpoch(db);
   if (!epoch) return { ok: false, error: 'no_obs_epoch — Poller mit Zeitzonen-Fix lief noch nie' };
@@ -244,25 +293,33 @@ export async function runMosJob(db, stations, {
       window_start=excluded.window_start, window_end=excluded.window_end,
       members=excluded.members, updated_at=excluded.updated_at`);
 
-  const now = new Date();
   const results = [];
   for (const st of stations) {
+    await new Promise(r => setImmediate(r)); // Event-Loop zwischen Stationen freigeben
     if (!st.tz) { results.push({ station: st.key, ok: false, error: 'no_tz' }); continue; }
     try {
       const obsRows = db.prepare(
         `SELECT local_day, hour_local, wind_ms FROM station_obs_hourly
          WHERE station_key=? ORDER BY local_day, hour_local`).all(st.key);
-      if (!obsRows.length) { results.push({ station: st.key, ok: false, error: 'no_obs' }); continue; }
+      const histRows = computeHistoryMosRows(db, st, { now });
+      if (!obsRows.length && !histRows) { results.push({ station: st.key, ok: false, error: 'no_obs' }); continue; }
 
       // Fenster aus den vorhandenen Beobachtungen ableiten, aber gestern enden
       // lassen: der heutige Tag ist unvollständig und die Historical-API kennt
       // ihn noch nicht zuverlässig.
+      let rows = null, members = null, source = 'live';
       const days = [...new Set(obsRows.map(r => r.local_day))].sort();
       const startDay = days[Math.max(0, days.length - lookbackDays)];
-      if (startDay > endDay) { results.push({ station: st.key, ok: false, error: 'window_empty' }); continue; }
-
-      const { byKey, members } = await fetchHistoricalEnsemble(st, startDay, endDay, fetchImpl);
-      const rows = computeMosBias(obsRows.filter(r => r.local_day <= endDay), byKey);
+      if (obsRows.length && startDay <= endDay) {
+        const ens = await fetchHistoricalEnsemble(st, startDay, endDay, fetchImpl);
+        rows = computeMosBias(obsRows.filter(r => r.local_day <= endDay), ens.byKey);
+        members = ens.members;
+      }
+      // Live gewinnt, sobald es trägt; bis dahin springt die Historie ein.
+      if (histRows && (!rows || usableHours(histRows) > usableHours(rows))) {
+        rows = histRows; source = 'history'; members = members ?? ['history'];
+      }
+      if (!rows) { results.push({ station: st.key, ok: false, error: 'window_empty' }); continue; }
       const memJson = JSON.stringify(members);
       const iso = now.toISOString();
       db.transaction(() => {
@@ -273,8 +330,9 @@ export async function runMosJob(db, stations, {
       })();
 
       const usable = rows.filter(r => r.n_samples >= MOS_MIN_SAMPLES).length;
-      results.push({ station: st.key, ok: true, hours: rows.length, usableHours: usable,
-                     maxN: Math.max(...rows.map(r => r.n_samples)), window: [startDay, endDay] });
+      results.push({ station: st.key, ok: true, source, hours: rows.length, usableHours: usable,
+                     maxN: Math.max(...rows.map(r => r.n_samples)),
+                     window: [rows[0].window_start, rows[0].window_end] });
     } catch (e) {
       results.push({ station: st.key, ok: false, error: e.message });
     }

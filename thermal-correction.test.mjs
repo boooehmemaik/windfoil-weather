@@ -277,3 +277,33 @@ test('index.html verdrahtet thermalCorrection, nicht mehr seaBreeze direkt', () 
     `seaBreeze( ${calls}× im Code — erlaubt sind genau 2 (Definition + Aufruf in ` +
     `thermalCorrection). Ein zusätzlicher Aufruf umgeht die Doppelzählungs-Sperre.`);
 });
+
+// ── v3.42.0: situative Neural-Korrektur (mos.neuralFc) ─────────────────────
+test('neuralFc: situativer Bias für genau diesen Tag gewinnt, Gewicht nur über Distanz', () => {
+  const regime = null;
+  const mos = { ...mosOf(15, 40, 0.5, 13), neuralFc: { '2026-11-02': Object.assign(new Array(24).fill(null), { 15: 2.4 }) } };
+  const tc = thermalCorrection(15, 225, 11, regime, mos, 1, '2026-11-02');
+  const wf = measuredWeight(13) / STATION_TRUST_AT_SPOT;
+  assert.equal(tc.source, wf >= 0.85 ? 'neural_mos' : 'neural_blend');
+  assert.ok(Math.abs(tc.mosWeight - wf) < 1e-9, 'keine Lead-Dämpfung für Neural');
+  const sbB = tc.sb.active ? tc.sb.boost : 0;
+  assert.equal(tc.addMs, Math.round((wf * 2.4 + (1 - wf) * sbB) * 100) / 100);
+});
+
+test('neuralFc: anderer Tag / fehlende Stunde ⇒ zurück auf Tabelle bzw. linearen MOS', () => {
+  const mos = { ...mosOf(15, 40, 0.5, 0), neuralFc: { '2026-11-02': new Array(24).fill(null) } };
+  const a = thermalCorrection(15, 225, 11, null, mos, 0, '2026-11-02');
+  const b = thermalCorrection(15, 225, 11, null, mos, 0, '2026-11-09');
+  const c = thermalCorrection(15, 225, 11, null, mos, 0);
+  assert.equal(a.source, b.source);
+  assert.equal(b.addMs, c.addMs);
+  assert.ok(a.source === 'mos' || a.source === 'blend');
+});
+
+test('Neural-Tabelle (lead-spezifisch) wird nicht zusätzlich lead-gedämpft, linear schon', () => {
+  const lin = mosOf(15, 40, 1.0, 0);
+  const neu = { ...lin, hours: lin.hours.map((h, i) => (i === 15 ? { ...h, neuralBiasMs24: 1.0 } : h)) };
+  const tLin = thermalCorrection(15, 225, 11, null, lin, 1);
+  const tNeu = thermalCorrection(15, 225, 11, null, neu, 1);
+  assert.ok(tNeu.mosWeight > tLin.mosWeight);
+});
