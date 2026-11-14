@@ -1367,20 +1367,36 @@ function mosWeight(n, km) {
 }
 
 // mos: Antwort von /api/station/mos oder null.
-// leadDay: 0=heute, 1=morgen, 2=übermorgen — dämpft die MOS-Korrektur, weil der
-// gelernte Bias ein t+0-Bias ist und mit der Vorlaufzeit schlechter passt.
+// leadDay: 0=heute, 1=morgen, 2=übermorgen — dämpft die LINEARE MOS-Korrektur,
+// weil der gelernte Bias ein t+0-Bias ist. Neural ist je Vorlaufzeit trainiert
+// und wird deshalb nicht zusätzlich gedämpft.
+// dateStr 'YYYY-MM-DD' (optional): Tag der Stunde → situative Neural-Korrektur
+// mos.neuralFc[dateStr][hour] (Netz × echte Prognose-Features, server-seitig
+// durch ein Eval-Gate freigegeben). Gewicht nur über die Distanz zur Station.
 // sb wird IMMER mitgeliefert — die UI liest dayData.sb an zwei Stellen.
-function thermalCorrection(hour, dir, month, regime, mos, leadDay = 0) {
+function neuralFcBias(mos, dateStr, hour) {
+  const day = mos && mos.neuralFc && dateStr ? mos.neuralFc[dateStr] : null;
+  return day && day[hour] != null ? day[hour] : null;
+}
+function thermalCorrection(hour, dir, month, regime, mos, leadDay = 0, dateStr = null) {
   const sb  = seaBreeze(dir, hour, month, regime);
   const sbB = sb.active ? sb.boost : 0;
   const m   = (mos && mos.hours) ? mos.hours[hour] : null;
+  const fcB = neuralFcBias(mos, dateStr, hour);
+  if (fcB != null) {
+    const wf = clamp01(measuredWeight(mos.station ? mos.station.km : null) / STATION_TRUST_AT_SPOT);
+    if (wf > 0) return {
+      addMs: Math.round((wf * fcB + (1 - wf) * sbB) * 100) / 100,
+      source: wf >= 0.85 ? "neural_mos" : "neural_blend", mosWeight: wf, n: m ? m.n : 0, sb, leadDay,
+    };
+  }
   // Neuronaler Bias je nach Vorlaufzeit (lead=0 heute, lead=24 morgen, lead=48 übermorgen)
   const neuralBias = m
     ? (leadDay >= 2 ? m.neuralBiasMs48 : leadDay >= 1 ? m.neuralBiasMs24 : m.neuralBiasMs) ?? null
     : null;
   const linearBias = (m && m.n >= MOS_MIN_SAMPLES) ? m.biasShrunkMs : null;
   const bias = neuralBias ?? linearBias;
-  const leadDamp = MOS_LEAD_DAMP[Math.min(leadDay, 3)];
+  const leadDamp = neuralBias != null ? 1 : MOS_LEAD_DAMP[Math.min(leadDay, 3)];
   const w    = bias != null ? mosWeight(m.n, mos.station ? mos.station.km : null) * leadDamp : 0;
   if (w <= 0) return { addMs: sbB, source: "seabreeze", mosWeight: 0, n: m ? m.n : 0, sb, leadDay };
   const source = neuralBias != null ? (w >= 0.85 ? "neural_mos" : "neural_blend")
@@ -2844,7 +2860,7 @@ function App() {
     const activeDateStr = h.time[s] ? h.time[s].slice(0,10) : null;
     // Thermik VOR den Stationskorrekturen — siehe Kommentar oben zu k.
     const month_n=new Date().getMonth()+1;
-    const tcs = wins.map((w,i)=> thermalCorrection(i, dirs[i]??180, month_n, regime, mos, activeDay));
+    const tcs = wins.map((w,i)=> thermalCorrection(i, dirs[i]??180, month_n, regime, mos, activeDay, activeDateStr));
     const winsTh = wins.map((w,i)=> w==null ? w : Math.round((w + tcs[i].addMs)*100)/100);
     const lb = applyLiveStationBoost(winsTh, gust, live, activeDay===0);
     const mc = applyMeasuredStationCorrection(lb.wins, lb.gust, measured, activeDateStr);
@@ -2855,7 +2871,7 @@ function App() {
     const midDir=dirs[14]??dirs[12]??180;
     // midW kommt jetzt aus winsEff, das die Thermik SCHON enthält — effW darf sie
     // deshalb nicht noch einmal draufrechnen.
-    const tcPeak=thermalCorrection(regime?.peakHour??14,midDir,month_n,regime,mos,activeDay);
+    const tcPeak=thermalCorrection(regime?.peakHour??14,midDir,month_n,regime,mos,activeDay,activeDateStr);
     const sb=tcPeak.sb;
     const effW=midW;
     // win = angezeigtes Fenster (Chart-Bänder), pickedWing = empfohlene Größe,
@@ -2911,7 +2927,7 @@ function App() {
     const dirs_d=forecast.hourly.winddirection_10m.slice(start,start+24);
     const regime_d=thermalRegime(loc.lat,loc.lon);
     const month_d=new Date().getMonth()+1;
-    slice=slice.map((w,i)=> w==null ? w : Math.round((w + thermalCorrection(i, dirs_d[i]??180, month_d, regime_d, mos, d).addMs)*100)/100);
+    slice=slice.map((w,i)=> w==null ? w : Math.round((w + thermalCorrection(i, dirs_d[i]??180, month_d, regime_d, mos, d, dstr).addMs)*100)/100);
     if (d === 0) { const lb=applyLiveStationBoost(slice,gslice,live,true); slice=lb.wins; gslice=lb.gust; }
     if (d === activeDay) { const mc=applyMeasuredStationCorrection(slice,gslice,measured,dstr); slice=mc.wins; gslice=mc.gust; }
     // Quiver bewertet den ganzen Tag — kein Einzelfenster aus dem Mittagswind.

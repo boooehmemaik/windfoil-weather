@@ -1,4 +1,4 @@
-// proxy-server.js v2.7.0
+// proxy-server.js v2.8.0
 // WindFoil Weather System — Secure backend proxy for real station data
 //
 // WHY THIS EXISTS
@@ -661,10 +661,14 @@ app.get("/api/station/mos", async (req, res) => {
   // greifen, ist die Snapshot-Station die mit den saubereren Zeitstempeln.
   const live = findLiveStation(la, lo);
   const meas = live ? null : findMeasuredStation(la, lo);
-  const st = live || meas;
+  let st = live || meas;
+  let key = st ? (live ? st.key : (st.wc || st.icao || st.station)) : null;
+  // Alle übrigen Spots: automatisch zugeordnete ML-Station (Migration 013).
+  if (!st) {
+    const ml = await findMlStation(la, lo);
+    if (ml) { st = ml; key = ml.key; }
+  }
   if (!st) return res.json({ ok: false, error: "no_mos_station" });
-
-  const key = live ? st.key : (st.wc || st.icao || st.station);
 
   try {
     const ck = `mos:${key}`;
@@ -692,6 +696,16 @@ app.get("/api/station/mos", async (req, res) => {
         m.neuralActive = true;
       }
 
+      // Situativ: Netz × echte Prognose-Features der nächsten 72 h an der Station.
+      // Nur wenn das Eval-Gate es freigegeben hat (activeFc); sonst bleibt es weg.
+      const { predictSituational, loadFc72, getNeuralEval } = await import("./src/neural_mos.mjs");
+      const sit = predictSituational(db, key, loadFc72(db, key), { tz: st.tz || "UTC" });
+      if (sit) { m.neuralFc = sit; m.neuralActive = true; }
+      const ev = getNeuralEval(db, key);
+      if (ev) m.neuralEval = { skill: ev.skill ?? null, maeRaw: ev.maeRaw ?? null, maeModel: ev.maeModel ?? null,
+                               maeLinear: ev.maeLinear ?? null, active: !!ev.active, activeFc: !!ev.activeFc,
+                               n: ev.n, trainedAt: ev.trainedAt };
+
       // Meltemi-Wahrscheinlichkeit: live aus latestFcFeatures wenn vorhanden,
       // sonst aus app_meta (letzter Nightly-Job-Wert)
       if (key === MELTEMI_STATION_KEY) {
@@ -705,7 +719,7 @@ app.get("/api/station/mos", async (req, res) => {
         }
       }
 
-      cacheSet(ck, m, 60 * 60_000);
+      cacheSet(ck, m, 30 * 60_000); // situativ: Features ändern sich stündlich
     }
     res.json({
       ok: true, ...m, cached,
@@ -1199,8 +1213,16 @@ async function fetchCurrentFcFeatures(lat, lon) {
       return f ? { leadHours: lh, ...f } : null;
     }).filter(Boolean);
 
-    return { now, ahead };
+    return { now, ahead, hourly: h };
   } catch { return null; }
+}
+
+// 72-h-Features je Station für die situative Neural-Vorhersage (/api/station/mos).
+function storeFc72(stKey, hourly) {
+  if (!hourly) return;
+  import("./src/neural_mos.mjs")
+    .then(m => m.saveFc72(getObsDb(), stKey, hourly))
+    .catch(e => console.warn(`[fc72] ${stKey}:`, e.message));
 }
 
 async function pollStationObs() {
@@ -1236,6 +1258,7 @@ async function pollStationObs() {
       // ML-Sample + Forecast-Archive: Forecast-Features parallel holen
       fetchCurrentFcFeatures(st.lat, st.lon).then(fcResult => {
         if (!fcResult?.now) return;
+        storeFc72(stKey, fcResult.hourly);
         const { now: fc, ahead } = fcResult;
         const { hour: h, date: day } = localPartsTZ(Date.now() / 1000, st.tz);
         const mo = parseInt(day.slice(5,7), 10);
@@ -1302,6 +1325,7 @@ async function pollStationObs() {
       // ML-Sample + Forecast-Archive: Forecast-Features parallel holen
       fetchCurrentFcFeatures(st.lat, st.lon).then(fcResult => {
         if (!fcResult?.now) return;
+        storeFc72(stKey, fcResult.hourly);
         const { now: fc, ahead } = fcResult;
         const mo = parseInt(localDate.slice(5,7), 10);
         const bias = fc.fc_wind_ms != null ? Math.round((wind - fc.fc_wind_ms) * 100) / 100 : null;
@@ -1379,16 +1403,43 @@ function mosStations() {
   return [
     ...LIVE_STATIONS.map(s => ({
       key: s.key, lat: s.lat, lon: s.lon, tz: s.tz, obsPreFixValid: true,
+      label: s.label,
     })),
     ...MEASURED_STATIONS.map(s => ({
-      key: s.wc || s.icao || s.station, lat: s.lat, lon: s.lon, tz: s.tz,
+      key: s.wc || s.icao || s.station, lat: s.lat, lon: s.lon, tz: s.tz, label: s.label,
     })),
   ];
 }
 
-async function runMos(reason) {
+// Fest konfigurierte Stationen ∪ automatisch zugeordnete ML-Stationen. Die
+// ML-Stationen haben echte UTC-Zeitstempel (kein Phasenfehler) → obsPreFixValid.
+async function allMosStations() {
+  const base = mosStations();
+  const seen = new Set(base.map(s => s.key));
+  const ml = (await getMlStations())
+    .filter(s => s.enabled && !seen.has(s.key))
+    .map(s => ({ key: s.key, lat: s.lat, lon: s.lon, tz: s.tz, label: s.label, obsPreFixValid: true }));
+  return [...base, ...ml];
+}
+
+const yieldLoop = () => new Promise(r => setImmediate(r));
+
+// Ein Lauf zur Zeit — Nightly, /admin/mos/recompute, Train und Post-Backfill
+// teilen sich CPU (synchrones Training) und das Open-Meteo-Budget.
+let mosInFlight = null;
+function runMos(reason) {
+  if (mosInFlight) {
+    console.log(`[mos] ${reason}: läuft bereits — hänge mich an`);
+    return mosInFlight;
+  }
+  mosInFlight = runMosOnce(reason).finally(() => { mosInFlight = null; });
+  return mosInFlight;
+}
+
+async function runMosOnce(reason) {
   const { runMosJob } = await import("./src/mos.mjs");
-  const out = await runMosJob(getObsDb(), mosStations());
+  const stations = await allMosStations();
+  const out = await runMosJob(getObsDb(), stations);
   if (!out.ok) {
     console.warn(`[mos] ${reason}: skipped — ${out.error}`);
   } else {
@@ -1405,9 +1456,13 @@ async function runMos(reason) {
             MELTEMI_STATION_KEY } = await import("./src/neural_mos.mjs");
     const db = getObsDb();
 
-    for (const st of mosStations()) {
+    out.neural = [];
+    for (const st of stations) {
       const nr = trainNeuralMos(db, st.key);
-      console.log(`[neural-mos] ${st.key}: ${nr.ok ? `trained n=${nr.n}` : nr.reason}`);
+      out.neural.push({ station: st.key, ok: nr.ok, n: nr.n ?? 0, reason: nr.reason ?? null,
+                        skill: nr.skill ?? null, active: nr.active ?? false, activeFc: nr.activeFc ?? false });
+      console.log(`[neural-mos] ${st.key}: ${nr.ok ? `trained n=${nr.n} skill=${nr.skill} table=${nr.active} fc=${nr.activeFc}` : nr.reason}`);
+      await yieldLoop(); // Training ist synchron — Event-Loop zwischen Stationen freigeben
     }
 
     // Meltemi-Klassifikator nur für LGPZ
@@ -1431,7 +1486,7 @@ async function runMos(reason) {
   }
 
   // MOS-Cache invalidieren, damit die nächste API-Anfrage neue Werte sieht
-  for (const st of mosStations()) cache.delete(`mos:${st.key}`);
+  for (const st of stations) cache.delete(`mos:${st.key}`);
   return out;
 }
 
@@ -1452,6 +1507,193 @@ app.get("/api/admin/mos/recompute", async (req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// ── ML für alle Spots (v3.42.0, DESIGN-ml-all-spots.md) ──────────────────────
+// Automatische Stationszuordnung je Spot, historischer Backfill, stündliches
+// Live-Polling der neuen ICAO-Stationen. Alles optional: fehlt Migration 013,
+// liefern die Helfer leere Listen und der Rest des Servers läuft unverändert.
+const ML_CATALOG_FILE = path.join(__dirname, "data", "meteostat-stations-ml.json");
+const ML_STATIONS_TTL_MS = 10 * 60_000;
+const MEASURED_ICAOS = new Set(MEASURED_STATIONS.filter(s => s.icao).map(s => s.icao));
+let mlStationsCache = { at: 0, list: [] };
+const mlJob = { running: false, kind: null, startedAt: null, finishedAt: null,
+                progress: null, lastError: null, rateLimited: false, result: null };
+
+async function getMlStations({ fresh = false } = {}) {
+  if (!fresh && Date.now() - mlStationsCache.at < ML_STATIONS_TTL_MS) return mlStationsCache.list;
+  try {
+    const { listMlStations } = await import("./src/ml_stations.mjs");
+    mlStationsCache = { at: Date.now(), list: listMlStations(getObsDb()) };
+  } catch (e) {
+    mlStationsCache = { at: Date.now(), list: [] };
+  }
+  return mlStationsCache.list;
+}
+
+async function findMlStation(lat, lon) {
+  try {
+    const { findMlStationForSpot } = await import("./src/ml_stations.mjs");
+    return findMlStationForSpot(getObsDb(), lat, lon);
+  } catch { return null; }
+}
+
+function readSpotsJson() {
+  try { return JSON.parse(fs.readFileSync(path.join(__dirname, "spots.json"), "utf8")); }
+  catch { return null; }
+}
+
+function readUserLocations() {
+  try { return getObsDb().prepare("SELECT name, latitude, longitude FROM user_locations").all(); }
+  catch { return []; }
+}
+
+async function discoverMlStations() {
+  const { loadMeteostatCatalog, collectSpots, assignStations, EXTRA_SPOTS } =
+    await import("./src/ml_stations.mjs");
+  const catalog = await loadMeteostatCatalog({ fetchImpl: fetch, cacheFile: ML_CATALOG_FILE });
+  const spots = collectSpots({ spotsJson: readSpotsJson(), extraSpots: EXTRA_SPOTS,
+                               userLocations: readUserLocations() });
+  const out = assignStations(getObsDb(), spots, catalog);
+  await getMlStations({ fresh: true });
+  return { ok: true, stations: out.stations.length, spots: out.spots.length, unassigned: out.unassigned };
+}
+
+// Single-flight: Discover, Backfill und Training teilen sich DB und Budget.
+// startMlJob → läuft im Hintergrund; runMlExclusive → wartet auf das Ergebnis.
+function claimMlJob(kind) {
+  if (mlJob.running) return false;
+  Object.assign(mlJob, { running: true, kind, startedAt: new Date().toISOString(),
+                         finishedAt: null, progress: null, lastError: null, rateLimited: false,
+                         result: null });
+  return true;
+}
+
+function releaseMlJob() { mlJob.running = false; mlJob.finishedAt = new Date().toISOString(); }
+
+function startMlJob(kind, fn) {
+  if (!claimMlJob(kind)) return false;
+  Promise.resolve().then(fn)
+    .catch(e => { mlJob.lastError = e.message; console.warn(`[ml-job] ${kind}:`, e.message); })
+    .finally(releaseMlJob);
+  return true;
+}
+
+async function runMlExclusive(kind, fn) {
+  if (!claimMlJob(kind)) return { busy: true };
+  try { return { value: await fn() }; }
+  catch (e) { mlJob.lastError = e.message; throw e; }
+  finally { releaseMlJob(); }
+}
+
+async function runMlBackfill({ months = 24, station = null } = {}) {
+  const { runBackfill } = await import("./src/ml_backfill.mjs");
+  let stations = (await getMlStations({ fresh: true })).filter(s => s.enabled);
+  if (station) stations = stations.filter(s => s.key === station);
+  const out = await runBackfill(getObsDb(), stations, {
+    months, fetchImpl: fetch,
+    log: msg => console.log(msg),
+    onProgress: p => { mlJob.progress = p; },
+  });
+  mlJob.rateLimited = !!out.rateLimited;
+  mlJob.result = { rows: out.rows ?? null, reason: out.reason ?? null, budgetUsed: out.budgetUsed ?? null };
+  // Frisch gelernt → Bias + Netze sofort neu, nicht erst in der Nacht. Nach einem
+  // echten 429 nicht: runMos holt selbst Ensembles und würde das Limit weiter reizen.
+  if (out.rateLimited && out.reason !== "budget") return out;
+  await runMos("post-backfill");
+  return out;
+}
+
+function mlStationStats(db) {
+  const q = (sql, ...a) => { try { return db.prepare(sql).all(...a); } catch { return []; } };
+  const hist = new Map(q(`SELECT station_key, COUNT(*) AS n, MIN(ts) AS t0, MAX(ts) AS t1
+                          FROM ml_history WHERE fc_lead_hours=0 GROUP BY station_key`)
+    .map(r => [r.station_key, r]));
+  const live = new Map(q(`SELECT station_key, COUNT(*) AS n FROM ml_samples
+                          WHERE fc_lead_hours=0 AND obs_wind_ms IS NOT NULL GROUP BY station_key`)
+    .map(r => [r.station_key, r.n]));
+  return { hist, live };
+}
+
+async function mlStatus() {
+  const db = getObsDb();
+  const { getNeuralEval } = await import("./src/neural_mos.mjs");
+  const ml = await getMlStations({ fresh: true });
+  const { hist, live } = mlStationStats(db);
+  const mlKeys = new Set(ml.map(s => s.key));
+  const legacy = mosStations().filter(s => !mlKeys.has(s.key))
+    .map(s => ({ key: s.key, label: s.label, icao: null, tz: s.tz, liveSource: "fest", km: null, spots: [] }));
+  const stations = [...legacy, ...ml].map(s => {
+    const h = hist.get(s.key);
+    return {
+      station_key: s.key, label: s.label, icao: s.icao || null, tz: s.tz,
+      live_source: s.liveSource || null, km: s.km, spots: s.spots || [],
+      hist_rows: h ? h.n : 0, hist_from: h ? h.t0 : null, hist_to: h ? h.t1 : null,
+      live_rows: live.get(s.key) || 0, eval: getNeuralEval(db, s.key),
+    };
+  });
+  return { ok: true, job: { ...mlJob }, stations };
+}
+
+async function pollMlLive() {
+  const { pollMlStationsOnce } = await import("./src/ml_live.mjs");
+  const { saveFc72 } = await import("./src/neural_mos.mjs");
+  // MEASURED-ICAOs (LGKL/LGPZ) pollt der 10-min-Poller bereits — hier nur Forecast.
+  const stations = (await getMlStations())
+    .filter(s => s.enabled)
+    .map(s => ({ station_key: s.key, icao: MEASURED_ICAOS.has(s.icao) ? null : s.icao,
+                 live_source: s.liveSource, lat: s.lat, lon: s.lon, tz: s.tz, enabled: 1 }));
+  if (!stations.length) return;
+  const db = getObsDb();
+  const r = await pollMlStationsOnce(db, stations, {
+    fetchImpl: fetch, log: m => console.warn(`[ml-live] ${m}`),
+    onForecast: (key, hourly, issuedAt) => saveFc72(db, key, hourly, issuedAt),
+  });
+  console.log(`[ml-live] ${r.polled} METAR-Stationen · ${r.obs} Obs · ${r.samples} Samples · ${r.forecasts} Forecasts`);
+}
+
+setTimeout(() => {
+  pollMlLive().catch(e => console.warn("[ml-live] poll error:", e.message));
+  setInterval(() => pollMlLive().catch(e => console.warn("[ml-live] poll error:", e.message)),
+              60 * 60_000);
+}, 120_000);
+
+app.get("/api/admin/ml/status", async (req, res) => {
+  if (!adminGuard(req, res)) return;
+  try { res.json(await mlStatus()); }
+  catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/admin/ml/discover", async (req, res) => {
+  if (!adminGuard(req, res)) return;
+  try {
+    const r = await runMlExclusive("discover", discoverMlStations);
+    if (r.busy) return res.status(409).json({ ok: false, error: "busy" });
+    mlJob.result = r.value;
+    res.json(r.value);
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/admin/ml/backfill", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const months = Math.max(1, Math.min(36, parseInt(req.body && req.body.months, 10) || 24));
+  const station = (req.body && typeof req.body.station === "string") ? req.body.station : null;
+  const started = startMlJob("backfill", () => runMlBackfill({ months, station }));
+  if (!started) return res.status(409).json({ ok: false, error: "busy" });
+  res.json({ ok: true, started: true, months, station });
+});
+
+app.post("/api/admin/ml/train", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const station = (req.body && typeof req.body.station === "string") ? req.body.station : null;
+  // Hintergrund-Job: 40 Stationen × Training + Ensemble-Abruf sprengen sonst das
+  // nginx-Proxy-Timeout (60 s). Ergebnis landet in /status → job.result.
+  const started = startMlJob("train", async () => {
+    const out = await runMos("manual-ml");
+    mlJob.result = (out.neural || []).filter(r => !station || r.station === station);
+  });
+  if (!started) return res.status(409).json({ ok: false, error: "busy" });
+  res.json({ ok: true, started: true });
 });
 
 // ── Claude Code service control ────────────────────────────────────────────────
