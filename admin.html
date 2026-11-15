@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- admin.html v1.1.0 -->
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -66,6 +67,19 @@
   .badge-ok{background:#0d2e18;color:#4cde80}
   .badge-disabled{background:#2e1a0a;color:#e08844}
   .refresh-note{font-size:10px;color:#3a4a5a;margin-top:6px}
+  /* ML-Panel */
+  .ml-progress{height:8px;background:#060f18;border:1px solid #1e3045;border-radius:6px;overflow:hidden;margin:4px 0 14px}
+  .ml-progress>div{height:100%;width:0;background:#3a9ad9;transition:width .3s}
+  .ml-hint{font-size:12px;color:#e08844;background:#2e1a0a;border:1px solid #5c3a1a;border-radius:10px;padding:8px 12px;margin-bottom:12px;display:none}
+  .ml-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .ml-controls .btn{min-height:44px}
+  .ml-controls select{background:#0a1520;border:1px solid #1e3045;color:#c8dce8;border-radius:10px;height:44px;padding:0 10px;font-size:14px;font-family:inherit}
+  .ml-explain{font-size:11px;color:#5a7a96;margin-top:10px;line-height:1.5}
+  #ml-table{min-width:720px}
+  #ml-table td{vertical-align:top}
+  .ml-sub{font-size:10px;color:#5a7a96;font-family:ui-monospace,"SF Mono","Menlo",monospace}
+  .ml-skill-on{color:#4cde80;font-weight:700}
+  .ml-skill-off{color:#5a7a96}
 </style>
 </head>
 <body>
@@ -142,6 +156,39 @@
     </div>
     <div class="flash" id="users-flash"></div>
   </div>
+
+  <!-- ML -->
+  <div class="card full" style="margin-top:16px">
+    <h2>🧠 ML-Lernen (alle Spots)</h2>
+    <div class="status-row">
+      <div class="dot dot-grey" id="ml-dot"></div>
+      <div>
+        <div class="status-label" id="ml-status-label">Lade…</div>
+        <div class="status-sub" id="ml-status-sub"></div>
+      </div>
+    </div>
+    <div class="ml-progress"><div id="ml-bar"></div></div>
+    <div class="ml-hint" id="ml-hint">⚠️ Open-Meteo-Tageslimit erreicht – morgen erneut starten, setzt automatisch fort.</div>
+    <div class="ml-controls">
+      <button class="btn btn-neutral ml-btn" onclick="mlDiscover()">🔍 Stationen suchen</button>
+      <select id="ml-months" class="ml-btn" aria-label="Monate Historie">
+        <option value="6">6 Monate</option>
+        <option value="12">12 Monate</option>
+        <option value="24" selected>24 Monate</option>
+      </select>
+      <button class="btn btn-primary ml-btn" onclick="mlBackfill()">⬇ Historie laden</button>
+      <button class="btn btn-green ml-btn" onclick="mlTrain()">🧠 Jetzt trainieren</button>
+      <button class="btn btn-neutral" onclick="loadMlStatus()">⟳ Refresh</button>
+    </div>
+    <div class="flash" id="ml-flash"></div>
+    <div class="tbl-wrap" style="margin-top:10px">
+      <table id="ml-table">
+        <thead><tr><th>Station</th><th>Spots</th><th>Historie</th><th>Live</th><th>Skill</th><th>MAE roh → Modell</th></tr></thead>
+        <tbody id="ml-body"><tr><td colspan="6" style="color:#3a4a5a;text-align:center;padding:16px">Lade…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="ml-explain">Skill = relative Verbesserung des mittleren absoluten Fehlers (MAE) gegenüber dem Rohmodell auf den jüngsten 20 % der Daten (Holdout). Ein Modell wird nur aktiv, wenn es dort mindestens 3 % besser ist und nicht schlechter als der lineare Stunden-Bias – sonst übernimmt automatisch der lineare MOS. „situativ" = das Netz rechnet mit der echten Prognose (Richtung, Druck …) der nächsten 72 h.</p>
+  </div>
 </div>
 
 <script>
@@ -188,6 +235,7 @@ document.getElementById('pw').addEventListener('keydown', e => { if (e.key === '
 
 function logout() {
   TOKEN = '';
+  mlStopPolling();
   try { sessionStorage.removeItem('wf_admin_token'); } catch(_){}
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = '';
@@ -200,6 +248,7 @@ async function showApp() {
   loadClaudeStatus();
   loadServices();
   loadUsers();
+  loadMlStatus();
 }
 
 // ── Claude Code ──────────────────────────────────────────────────────────────
@@ -319,6 +368,216 @@ async function resetPw(id, email) {
     if (d.ok && d.newPassword) alert(`Neues Passwort für ${email}:\n\n${d.newPassword}`);
     else flash('users-flash', d.message || 'Fehler', !d.ok);
   } catch(e) { flash('users-flash', e.message, true); }
+}
+
+// ── ML-Lernen ────────────────────────────────────────────────────────────────
+const KN_PER_MS = 1.94384;
+let mlPollTimer = null;
+let mlBusy = false;
+
+function mlStopPolling() { if (mlPollTimer) { clearTimeout(mlPollTimer); mlPollTimer = null; } }
+function mlSchedulePoll() { mlStopPolling(); mlPollTimer = setTimeout(loadMlStatus, 5000); }
+
+function mlSetButtons(disabled) {
+  document.querySelectorAll('.ml-btn').forEach(b => { b.disabled = disabled; });
+}
+
+function mlFmtDate(v) {
+  if (!v) return '—';
+  const d = new Date(v);
+  return isNaN(d) ? String(v) : d.toLocaleDateString('de-DE');
+}
+
+function mlFmtTime(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  return isNaN(d) ? String(v) : d.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function mlFmtMae(ms) {
+  if (ms == null || !isFinite(ms)) return '–';
+  return ms.toFixed(2) + ' (' + (ms * KN_PER_MS).toFixed(2) + ' kn)';
+}
+
+function mlKindLabel(kind) {
+  return { backfill: 'Historie laden', train: 'Training', discover: 'Stationssuche' }[kind] || 'Job';
+}
+
+function mlEl(tag, text, cls) {
+  const el = document.createElement(tag);
+  if (text != null) el.textContent = text;
+  if (cls) el.className = cls;
+  return el;
+}
+
+function mlRenderJob(job) {
+  job = job || {};
+  const p = job.progress || {};
+  const dot = document.getElementById('ml-dot');
+  const label = document.getElementById('ml-status-label');
+  const sub = document.getElementById('ml-status-sub');
+  const total = Number(p.total) || 0;
+  const done = Number(p.done) || 0;
+  document.getElementById('ml-bar').style.width = total ? Math.min(100, done / total * 100).toFixed(1) + '%' : (job.running ? '0%' : '0');
+  document.getElementById('ml-hint').style.display = job.rateLimited ? 'block' : 'none';
+
+  if (job.running) {
+    dot.className = 'dot dot-spin';
+    label.textContent = mlKindLabel(job.kind) + ' läuft…' + (total ? ` ${done}/${total}` : '');
+    const parts = [];
+    if (p.station) parts.push('Station ' + p.station);
+    if (p.chunk) parts.push('Monat ' + p.chunk);
+    if (job.startedAt) parts.push('seit ' + mlFmtTime(job.startedAt));
+    sub.textContent = parts.join(' · ');
+  } else if (job.rateLimited) {
+    dot.className = 'dot dot-red';
+    label.textContent = 'Rate-Limit erreicht' + (total ? ` (${done}/${total})` : '');
+    sub.textContent = job.finishedAt ? 'gestoppt ' + mlFmtTime(job.finishedAt) : '';
+  } else if (job.lastError) {
+    dot.className = 'dot dot-red';
+    label.textContent = 'Fehler: ' + job.lastError;
+    sub.textContent = job.finishedAt ? mlFmtTime(job.finishedAt) : '';
+  } else if (job.finishedAt) {
+    dot.className = 'dot dot-green';
+    label.textContent = mlKindLabel(job.kind) + ' fertig' + (total ? ` (${done}/${total})` : '');
+    sub.textContent = mlFmtTime(job.finishedAt);
+  } else {
+    dot.className = 'dot dot-grey';
+    label.textContent = 'Kein Job gelaufen';
+    sub.textContent = '';
+  }
+}
+
+function mlStationRow(st) {
+  const tr = document.createElement('tr');
+
+  const tdSt = document.createElement('td');
+  tdSt.appendChild(mlEl('div', st.label || st.station_key || '—'));
+  const meta = [st.station_key, st.live_source ? 'live: ' + st.live_source : null].filter(Boolean).join(' · ');
+  tdSt.appendChild(mlEl('div', meta, 'ml-sub'));
+  tr.appendChild(tdSt);
+
+  const spots = (st.spots || []).map(s => `${s.name} (${s.km != null ? Number(s.km).toFixed(1) : '?'} km)`).join(', ');
+  tr.appendChild(mlEl('td', spots || '—'));
+
+  const tdHist = document.createElement('td');
+  tdHist.appendChild(mlEl('div', (Number(st.hist_rows) || 0).toLocaleString('de-DE')));
+  if (st.hist_from || st.hist_to) tdHist.appendChild(mlEl('div', mlFmtDate(st.hist_from) + ' – ' + mlFmtDate(st.hist_to), 'ml-sub'));
+  tr.appendChild(tdHist);
+
+  tr.appendChild(mlEl('td', (Number(st.live_rows) || 0).toLocaleString('de-DE')));
+
+  const ev = st.eval;
+  const tdSkill = document.createElement('td');
+  if (ev && ev.skill != null && isFinite(ev.skill)) {
+    const on = !!(ev.activeFc || ev.active);
+    const mode = ev.activeFc ? 'aktiv · situativ' : ev.active ? 'aktiv · Tabelle' : 'inaktiv → linear';
+    tdSkill.appendChild(mlEl('div', (ev.skill * 100).toFixed(1) + ' %', on ? 'ml-skill-on' : 'ml-skill-off'));
+    tdSkill.appendChild(mlEl('div', mode + (ev.n ? ' · n=' + ev.n : ''), 'ml-sub'));
+  } else {
+    tdSkill.textContent = '–';
+    tdSkill.className = 'ml-skill-off';
+  }
+  tr.appendChild(tdSkill);
+
+  const tdMae = document.createElement('td');
+  tdMae.style.whiteSpace = 'nowrap';
+  if (ev) {
+    tdMae.appendChild(mlEl('div', mlFmtMae(ev.maeRaw) + ' →'));
+    tdMae.appendChild(mlEl('div', mlFmtMae(ev.maeModel), (ev.activeFc || ev.active) ? 'ml-skill-on' : null));
+    if (ev.maeLinear != null) tdMae.appendChild(mlEl('div', 'linear ' + mlFmtMae(ev.maeLinear), 'ml-sub'));
+    if (ev.trainedAt) tdMae.appendChild(mlEl('div', 'trainiert ' + mlFmtTime(ev.trainedAt), 'ml-sub'));
+  } else {
+    tdMae.textContent = '–';
+  }
+  tr.appendChild(tdMae);
+  return tr;
+}
+
+function mlRenderStations(stations) {
+  const tbody = document.getElementById('ml-body');
+  tbody.replaceChildren();
+  if (!stations || !stations.length) {
+    const tr = document.createElement('tr');
+    const td = mlEl('td', 'Keine Stationen – „Stationen suchen" starten');
+    td.colSpan = 6;
+    td.style.cssText = 'color:#3a4a5a;text-align:center;padding:16px';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+  stations.forEach(st => tbody.appendChild(mlStationRow(st)));
+}
+
+async function loadMlStatus() {
+  mlStopPolling();
+  try {
+    const d = await api('/ml/status');
+    if (!d.ok) throw new Error(d.error || 'Status nicht verfügbar');
+    mlRenderJob(d.job);
+    mlReportTrainResult(d.job);
+    mlRenderStations(d.stations);
+    const running = !!(d.job && d.job.running);
+    mlSetButtons(running || mlBusy);
+    if (running) mlSchedulePoll();
+  } catch (e) {
+    document.getElementById('ml-dot').className = 'dot dot-grey';
+    document.getElementById('ml-status-label').textContent = 'Fehler beim Laden';
+    document.getElementById('ml-status-sub').textContent = e.message;
+    mlSetButtons(mlBusy);
+  }
+}
+
+async function mlRun(fn) {
+  mlBusy = true;
+  mlSetButtons(true);
+  try { await fn(); }
+  catch (e) { flash('ml-flash', e.message, true); }
+  mlBusy = false;
+  loadMlStatus();
+}
+
+function mlDiscover() {
+  return mlRun(async () => {
+    const d = await api('/ml/discover', 'POST', {});
+    if (!d.ok) throw new Error(d.error || 'Stationssuche fehlgeschlagen');
+    let msg = `${d.stations ?? 0} Stationen für ${d.spots ?? 0} Spots zugeordnet`;
+    const un = d.unassigned || [];
+    if (un.length) msg += ` · ohne Station: ${un.join(', ')}`;
+    flash('ml-flash', msg, false);
+  });
+}
+
+function mlBackfill() {
+  const months = Number(document.getElementById('ml-months').value) || 24;
+  return mlRun(async () => {
+    const d = await api('/ml/backfill', 'POST', { months });
+    if (d.error === 'busy') throw new Error('Es läuft bereits ein Job – bitte warten.');
+    if (!d.ok) throw new Error(d.error || 'Backfill konnte nicht gestartet werden');
+    flash('ml-flash', `Backfill gestartet (${months} Monate)`, false);
+  });
+}
+
+function mlTrain() {
+  return mlRun(async () => {
+    const d = await api('/ml/train', 'POST', {});
+    if (d.error === 'busy') throw new Error('Es läuft bereits ein Job – bitte warten.');
+    if (!d.ok) throw new Error(d.error || 'Training konnte nicht gestartet werden');
+    mlAwaitTrainResult = true;
+    flash('ml-flash', 'Training gestartet – Ergebnis erscheint hier, sobald es fertig ist.', false);
+  });
+}
+
+// Training läuft im Hintergrund (sonst nginx-Timeout); das Ergebnis kommt über /status.
+let mlAwaitTrainResult = false;
+function mlReportTrainResult(job) {
+  if (!mlAwaitTrainResult || !job || job.running || job.kind !== 'train') return;
+  mlAwaitTrainResult = false;
+  if (job.lastError) { flash('ml-flash', 'Training fehlgeschlagen: ' + job.lastError, true); return; }
+  const res = job.result || [];
+  const trained = res.filter(r => r.ok).length;
+  const active = res.filter(r => r.active || r.activeFc).length;
+  flash('ml-flash', `${trained}/${res.length} Stationen trainiert · ${active} aktiv`, false);
 }
 
 // ── Auto-login if token in session ───────────────────────────────────────────
