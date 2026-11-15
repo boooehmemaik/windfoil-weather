@@ -1,5 +1,5 @@
 /**
- * ml-live.test.mjs  (v1.0.0 · App v3.42.0)
+ * ml-live.test.mjs  (v1.0.0 · App v3.43.0)
  * Stündliches Batch-Polling der ML-Stationen: METAR-Parsing, Multi-Location-
  * Forecast, stundengenaue ml_samples. Netz komplett gemockt.
  */

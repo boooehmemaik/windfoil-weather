@@ -1,5 +1,5 @@
 /**
- * neural-mos-history.test.mjs  (v1.0.0 · App v3.42.0)
+ * neural-mos-history.test.mjs  (v1.0.0 · App v3.43.0)
  * Neural-MOS v2.1: Training aus ml_samples ∪ ml_history, Lead-Join auf Stunde,
  * deterministisches Subsampling, chronologisches Eval-Gate, History-MOS.
  * Kein Netz: alle Daten werden synthetisch in eine :memory:-DB geschrieben.

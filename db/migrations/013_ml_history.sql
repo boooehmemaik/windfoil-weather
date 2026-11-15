@@ -1,6 +1,6 @@
 -- ============================================================================
 -- WindFoil — Schema Migration 013 (ML für alle Spots + historischer Backfill)
--- File version: 1.0.0   |   App target: v3.42.0   |   Engine: SQLite 3
+-- File version: 1.0.0   |   App target: v3.43.0   |   Engine: SQLite 3
 -- ----------------------------------------------------------------------------
 -- Bisher lernen Neural-MOS und linearer MOS nur aus live gepollten Daten an
 -- fünf fest konfigurierten Stationen; ml_samples wird nach 90 Tagen gepruned.

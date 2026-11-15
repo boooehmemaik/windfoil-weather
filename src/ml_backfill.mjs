@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Historischer ML-Backfill: Stationsbeobachtungen ↔ damalige Prognosen
-// File version: 1.1.0  |  App target: v3.42.0
+// File version: 1.1.0  |  App target: v3.43.0
 // ----------------------------------------------------------------------------
 // Liefert sofort tausende Trainingspaare je Station statt Monate Live-Polling.
 // Arbeitet in Monats-Chunks, die in ml_backfill_progress quittiert werden: ein
@@ -29,7 +29,7 @@ const RETRY_ERROR_MS = 86400000;
 const FETCH_TIMEOUT_MS = 30000;
 // Open-Meteo-Tageskontingent teilt sich der Backfill mit den Nutzer-Forecasts
 // derselben Server-IP — deshalb ein eigenes, konservatives Budget.
-export const OM_DAILY_BUDGET = parseInt(process.env.ML_OM_DAILY_BUDGET || '4000', 10);
+export const OM_DAILY_BUDGET = parseInt(process.env.ML_OM_DAILY_BUDGET || '3000', 10);
 
 export class RateLimitError extends Error {
   constructor(url, reason = 'http_429') { super(`rate_limited (${reason}): ${url}`); this.name = 'RateLimitError'; this.reason = reason; }

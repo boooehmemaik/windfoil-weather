@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Live-Polling der automatisch gewählten ML-Stationen
-// File version: 1.0.0 (ESM .mjs)  |  App target: v3.42.0
+// File version: 1.0.0 (ESM .mjs)  |  App target: v3.43.0
 // ----------------------------------------------------------------------------
 // Stündlich EIN METAR-Request für alle ICAO-Stationen und EIN Open-Meteo-
 // Multi-Location-Request (bis FC_BATCH Orte) für die Features aller Stationen.
