@@ -384,6 +384,25 @@ test('Meteostat-Ausfall: ohne ICAO bricht die Station ab, Chunks bleiben offen',
   assert.ok(r2.rows > 0);
 });
 
+test('hourlyFromReports: zwei Reports in derselben Stunde → nur der nähere gewinnt', () => {
+  // Bucket 01:00Z: Timestamps zwischen 00:30:01 und 01:29:59 runden via Math.round auf Stunde 1.
+  // r1 (:15) → delta 15 min; r2 (:05) → delta 5 min → r2 gewinnt.
+  const r1 = { t: Date.parse('2025-10-26T01:15:00Z'), wind_ms: 5, gust_ms: null, dir_deg: 270 };
+  const r2 = { t: Date.parse('2025-10-26T01:05:00Z'), wind_ms: 10, gust_ms: null, dir_deg: 280 };
+  const m = hourlyFromReports([r1, r2]);
+  assert.equal(m.size, 1, 'genau eine Stunden-Entry');
+  const val = [...m.values()][0];
+  assert.equal(val.wind_ms, 10, ':05 liegt näher an der vollen Stunde — gewinnt');
+});
+
+test('fetchIemAsos: HTTP 429 → RateLimitError', async () => {
+  const fake = async () => resp(429);
+  await assert.rejects(
+    () => fetchIemAsos('LGKL', '2025-01-01', '2025-01-31', fake),
+    e => e instanceof RateLimitError,
+  );
+});
+
 test('runBackfill: rows=0 wenn alles done — kein Re-Training-Trigger', async () => {
   // Simulation: alle Chunks bereits als "done" markiert → runBackfill schreibt nichts,
   // gibt rows=0 zurück. Der Nightly-MOS-Job prüft !out.rows und ruft runMos("post-backfill")

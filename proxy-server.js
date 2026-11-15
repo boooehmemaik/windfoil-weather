@@ -57,6 +57,7 @@ const { mountWindfoil } = require("./src/server.integration.cjs");
 })();
 
 const app = express();
+app.set("trust proxy", 1); // X-Forwarded-For via nginx reverse proxy; req.ip ist korrekte Client-IP
 const PORT = process.env.PORT || 8787;
 const KEY = process.env.WEATHERBIT_KEY;
 
@@ -96,7 +97,7 @@ const MAX_FAILS = 5;
 const LOCK_MS = 15 * 60 * 1000; // 15 min
 
 function adminGuard(req, res) {
-  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
   const now = Date.now();
   const rec = adminFails.get(ip);
   if (rec && rec.until > now) {
@@ -108,10 +109,14 @@ function adminGuard(req, res) {
     res.status(403).json({ ok: false, error: "Admin-Funktionen serverseitig nicht aktiviert (ADMIN_TOKEN fehlt)." });
     return null;
   }
-  // Constant-time comparison to avoid timing attacks
+  // Constant-time comparison: pad to equal length so timingSafeEqual always runs
+  // (a.length !== b.length short-circuit would otherwise leak token length via timing)
   const a = Buffer.from(String(token));
   const b = Buffer.from(ADMIN_TOKEN);
-  const valid = a.length === b.length && crypto.timingSafeEqual(a, b);
+  const len = Math.max(a.length, b.length, 32);
+  const pa = Buffer.alloc(len); a.copy(pa);
+  const pb = Buffer.alloc(len); b.copy(pb);
+  const valid = crypto.timingSafeEqual(pa, pb) && a.length === b.length;
   if (!valid) {
     const f = adminFails.get(ip) || { count: 0, until: 0 };
     f.count += 1;
@@ -969,7 +974,7 @@ app.get("/api/stats/active-users", (req, res) => {
 // (from the env file) and, only on success, returns the admin token. This keeps
 // both the password and the token out of the frontend source code.
 app.post("/api/admin/login", (req, res) => {
-  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
   const now = Date.now();
   const rec = adminFails.get(ip);
   if (rec && rec.until > now) {
@@ -1722,6 +1727,7 @@ app.post("/api/admin/ml/backfill", (req, res) => {
   if (!adminGuard(req, res)) return;
   const months = Math.max(1, Math.min(36, parseInt(req.body && req.body.months, 10) || 24));
   const station = (req.body && typeof req.body.station === "string") ? req.body.station : null;
+  if (station && !/^[a-z0-9_:.-]{1,40}$/i.test(station)) return res.status(400).json({ ok: false, error: "Ungültiger Station-Key." });
   const started = startMlJob("backfill", () => runMlBackfill({ months, station }));
   if (!started) return res.status(409).json({ ok: false, error: "busy" });
   res.json({ ok: true, started: true, months, station });
@@ -1730,6 +1736,7 @@ app.post("/api/admin/ml/backfill", (req, res) => {
 app.post("/api/admin/ml/train", (req, res) => {
   if (!adminGuard(req, res)) return;
   const station = (req.body && typeof req.body.station === "string") ? req.body.station : null;
+  if (station && !/^[a-z0-9_:.-]{1,40}$/i.test(station)) return res.status(400).json({ ok: false, error: "Ungültiger Station-Key." });
   // Hintergrund-Job: 40 Stationen × Training + Ensemble-Abruf sprengen sonst das
   // nginx-Proxy-Timeout (60 s). Ergebnis landet in /status → job.result.
   const started = startMlJob("train", async () => {

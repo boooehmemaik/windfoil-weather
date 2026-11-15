@@ -220,6 +220,7 @@ export async function fetchMeteostatHourly(meteostatId, fetchImpl = fetch,
     if (!res.ok) throw new Error(`meteostat_hourly_${res.status}`);
     const csv = gunzipSync(Buffer.from(await res.arrayBuffer())).toString('utf8');
     for (const [k, v] of parseMeteostatHourlyCsv(csv, { sinceDay, stats })) out.set(k, v);
+    await new Promise(r => setImmediate(r)); // Eventloop nach jeder Jahres-CSV atmen lassen
   }
   return out;
 }

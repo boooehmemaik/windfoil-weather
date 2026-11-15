@@ -1,5 +1,11 @@
 # WindFoil — Version History
 
+## v3.43.2 (2026-11-15)
+**SECURITY: X-Forwarded-For spoofing, timing-safe comparison, station-key validation**
+- `proxy-server.js`: `app.set("trust proxy", 1)` → korrekte `req.ip` aus nginx; beide `x-forwarded-for`-Header-Zugriffe durch `req.ip` ersetzt (adminGuard + login); timing-sicherer Token-Vergleich: beide Buffer auf gleiche Länge padded vor `timingSafeEqual`; Station-Key-Regex-Validierung in `/api/admin/ml/backfill` + `/api/admin/ml/train`
+- `src/ml_backfill.mjs`: `setImmediate`-Yield nach jedem Jahres-CSV-Parse → Event-Loop atmet während Backfill
+- `ml-backfill.test.mjs`: 2 neue Tests — `hourlyFromReports` Tie-Breaking + `fetchIemAsos` HTTP-429 → `RateLimitError`; 459/459 Tests grün
+
 ## v3.43.1 (2026-11-15)
 **ML-HOTFIXES + UX: ICAO-Korrekturen, Nightly-Backfill-Continuation, MOS-Caption mit Subtyp**
 - `proxy-server.js`: LERR → **LERS** (Reus/Tarragona, korrekte ICAO; LERR liefert HTTP 204); EFLA entfernt (Lahti Vesivehmaa hat kein METAR, HTTP 204); Nightly-Backfill-Continuation nach `runMosOnce` via `startMlJob('nightly-backfill', runMlBackfill)`; `runMlBackfill` ruft `runMos("post-backfill")` nur noch auf wenn `out.rows > 0` (verhindert Endlos-Ping-Pong)
