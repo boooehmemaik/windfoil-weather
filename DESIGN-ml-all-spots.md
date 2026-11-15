@@ -1,6 +1,6 @@
 # DESIGN — ML für alle Spots + historischer Backfill (v3.43.0)
 
-File version: 1.1.0 · App target: v3.43.0 · Phase 3 (🟦 Architect) · nach QA-Review überarbeitet
+File version: 1.3.0 · App target: v3.43.1 · Phase 6 (Verifizierung auf LXC abgeschlossen)
 
 ## Ziel
 
@@ -152,10 +152,44 @@ Abdeckung bei Nordlage). Deshalb:
 - `thermalCorrection(…, dateStr)` nimmt `neuralFc[dateStr][hour]` vor Tabelle und linear,
   Gewicht `measuredWeight(km) / STATION_TRUST_AT_SPOT`, konvex mit seaBreeze wie bisher.
 
-### Offene Punkte für Phase 6 (Verifizierung auf dem LXC)
-- Erster echter Discovery-Lauf: Zuordnung Spot → Station/km im Admin-Panel prüfen
-- Meteostat-`_source`-Werte im Backfill-Log ansehen und ggf. `MODEL_SOURCE_RE` schärfen
-- Nach 1–2 Backfill-Tagen: Skill/MAE je Station im Panel; welche Stationen `situativ` aktiv sind
+### Phase-6-Ergebnisse (2026-11-15, LXC-Verifikation abgeschlossen)
+
+#### Discovery
+24 ML-Stationen für 33 Spots gefunden. Abweichungen vom Plan (besser):
+- Villasimius → **LIEC** Capo Carbonara 2 km (statt LIEE 44 km)
+- Messina → **LICF** Messina 11 km (statt LICR 100 km)
+- Skälderviken → **ESTA** Ängelholm 8 km
+
+Ohne Meteostat-Station ≤ 40 km (Backfill aus MEASURED-Live-Daten): Porto Botte, Cala Gonone, Avola, Isola delle Correnti, Capo d'Orlando, Roses, Delta de l'Ebre, Peñíscola, Denia, Grönhögen, Varberg.
+
+#### ICAO-Korrekturen (v3.43.1)
+- **LERR → LERS** (Reus Airport; LERR liefert HTTP 204 bei aviationweather.gov)
+- **EFLA entfernt** (Lahti Vesivehmaa hat kein METAR; Lahti/Vesijärvi bleibt ohne ML-Station)
+
+#### Erster Backfill-Lauf
+EDMO (Oberpfaffenhofen): **51 372 Zeilen** in 24 Monaten, danach Open-Meteo 429.
+Budget: 357 Calls verbraucht, ML_OM_DAILY_BUDGET=3000 → 23 Stationen werden nachtweise abgearbeitet.
+
+#### Meteostat `_source`-Analyse (EDMO)
+`{"isd_lite":6299,"metar":3330,"metno_forecast":122,"ghcnh":7491}` — `MODEL_SOURCE_RE` filtert korrekt nur `metno_forecast` aus.
+
+#### Skill-Ergebnisse nach erstem Backfill
+| Station | Spots | hist_rows | Skill | Modus |
+|---|---|---|---|---|
+| EDMO | Wörthsee, Pilsensee, Ammersee | 51 372 | 0.195 | **situativ** |
+| LGKL | Gialova/Navarino | — (live) | 0.004 | linear |
+| LGPZ | Vasiliki, Lefkada | — (live) | 0.089 | Tabelle |
+| torbole | Torbole | — (live) | −0.096 | linear |
+| talamone | Talamone | — (live) | −0.021 | linear |
+| 23 weitere | — | 0 | — | pending Backfill |
+
+#### Nightly-Backfill-Continuation
+`runMosOnce` ruft nach Training `startMlJob('nightly-backfill', runMlBackfill)` auf.
+`runMlBackfill` überspringt `runMos("post-backfill")` wenn `out.rows === 0` (kein Ping-Pong).
+
+#### UX-Caption
+`thermalCorrection` gibt jetzt `subtype` + `stationKey`/`stationKm` zurück.
+Anzeige: `Neural-MOS (situativ) · EDMO 8 km` / `Neural-MOS (Tabelle) · LGPZ 14 km` / `MOS · LGKL 32 km`.
 
 ## v1.2 — Integration mit v3.42.0 (19 MEASURED-METAR-Stationen)
 - Gleiche ICAO = gleicher `station_key` → Live-Samples des 10-min-Pollers und Backfill-Historie trainieren gemeinsam.

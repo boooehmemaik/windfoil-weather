@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.43.1 (2026-11-15)
+**ML-HOTFIXES + UX: ICAO-Korrekturen, Nightly-Backfill-Continuation, MOS-Caption mit Subtyp**
+- `proxy-server.js`: LERR → **LERS** (Reus/Tarragona, korrekte ICAO; LERR liefert HTTP 204); EFLA entfernt (Lahti Vesivehmaa hat kein METAR, HTTP 204); Nightly-Backfill-Continuation nach `runMosOnce` via `startMlJob('nightly-backfill', runMlBackfill)`; `runMlBackfill` ruft `runMos("post-backfill")` nur noch auf wenn `out.rows > 0` (verhindert Endlos-Ping-Pong)
+- `src/app.jsx` v3.43.1: `thermalCorrection` gibt `subtype` (`situativ`|`table`|`linear`) + `stationKey`/`stationKm` zurück; Quellen-Caption zeigt z.B. `Neural-MOS (situativ) · EDMO 8 km`
+- `ml-backfill.test.mjs`: Regression-Test `rows=0 wenn alles done`
+- `help.html`: neue Sektion §11 „Wie lernt WindFoil?" (MOS, Neural Tabelle, situativ, Backfill)
+- Discovery-Ergebnisse: 24 ML-Stationen, 33 Spot-Zuordnungen; EDMO 51 372 History-Zeilen nach erstem Backfill-Lauf; Wörthsee/Pilsensee/Ammersee sofort situatives Neural-MOS (skill=0.195); verbleibende 23 Stationen werden nachtweise nachgefüllt
+
 ## v3.43.0 (2026-11-15)
 **ML FÜR ALLE SPOTS — automatische Stationswahl, 24-Monats-Backfill, situatives Neural-MOS mit Eval-Gate**
 - `db/migrations/013_ml_history.sql` v1.0.0: `ml_stations`, `ml_station_spots`, `ml_history` (stundengenau, kein Pruning), `ml_backfill_progress` (Resume)
