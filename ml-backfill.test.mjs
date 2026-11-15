@@ -383,3 +383,19 @@ test('Meteostat-Ausfall: ohne ICAO bricht die Station ab, Chunks bleiben offen',
   assert.equal(r2.errors, 0, 'mit ICAO: weiter mit IEM');
   assert.ok(r2.rows > 0);
 });
+
+test('runBackfill: rows=0 wenn alles done — kein Re-Training-Trigger', async () => {
+  // Simulation: alle Chunks bereits als "done" markiert → runBackfill schreibt nichts,
+  // gibt rows=0 zurück. Der Nightly-MOS-Job prüft !out.rows und ruft runMos("post-backfill")
+  // dann NICHT auf — kein Endlos-Ping-Pong.
+  const db = buildDb();
+  const net = fakeNet();
+  const opts = { months: 1, endDay: '2025-01-31', fetchImpl: net.fetchImpl, sleepMs: 0, fetchEnsemble: fakeEnsemble };
+  // Erster Lauf: schreibt Zeilen
+  const r1 = await runBackfill(db, [ST], opts);
+  assert.ok(r1.rows > 0, 'erster Lauf schreibt Zeilen');
+  // Zweiter Lauf: alle Chunks sind "done" → nichts zu tun
+  const r2 = await runBackfill(db, [ST], opts);
+  assert.equal(r2.rows, 0, 'zweiter Lauf: rows=0, kein Re-Training-Trigger');
+  assert.equal(r2.rateLimited, false, 'nicht rate-limited — einfach nichts zu tun');
+});

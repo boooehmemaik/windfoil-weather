@@ -1383,11 +1383,14 @@ function thermalCorrection(hour, dir, month, regime, mos, leadDay = 0, dateStr =
   const sbB = sb.active ? sb.boost : 0;
   const m   = (mos && mos.hours) ? mos.hours[hour] : null;
   const fcB = neuralFcBias(mos, dateStr, hour);
+  const stationKey = mos?.station?.key ?? null;
+  const stationKm  = mos?.station?.km  ?? null;
   if (fcB != null) {
-    const wf = clamp01(measuredWeight(mos.station ? mos.station.km : null) / STATION_TRUST_AT_SPOT);
+    const wf = clamp01(measuredWeight(stationKm) / STATION_TRUST_AT_SPOT);
     if (wf > 0) return {
       addMs: Math.round((wf * fcB + (1 - wf) * sbB) * 100) / 100,
-      source: wf >= 0.85 ? "neural_mos" : "neural_blend", mosWeight: wf, n: m ? m.n : 0, sb, leadDay,
+      source: wf >= 0.85 ? "neural_mos" : "neural_blend", subtype: "situativ",
+      mosWeight: wf, n: m ? m.n : 0, sb, leadDay, stationKey, stationKm,
     };
   }
   // Neuronaler Bias je nach Vorlaufzeit (lead=0 heute, lead=24 morgen, lead=48 übermorgen)
@@ -1397,13 +1400,14 @@ function thermalCorrection(hour, dir, month, regime, mos, leadDay = 0, dateStr =
   const linearBias = (m && m.n >= MOS_MIN_SAMPLES) ? m.biasShrunkMs : null;
   const bias = neuralBias ?? linearBias;
   const leadDamp = neuralBias != null ? 1 : MOS_LEAD_DAMP[Math.min(leadDay, 3)];
-  const w    = bias != null ? mosWeight(m.n, mos.station ? mos.station.km : null) * leadDamp : 0;
+  const w    = bias != null ? mosWeight(m.n, stationKm) * leadDamp : 0;
   if (w <= 0) return { addMs: sbB, source: "seabreeze", mosWeight: 0, n: m ? m.n : 0, sb, leadDay };
-  const source = neuralBias != null ? (w >= 0.85 ? "neural_mos" : "neural_blend")
-                                    : (w >= 0.85 ? "mos" : "blend");
+  const source  = neuralBias != null ? (w >= 0.85 ? "neural_mos" : "neural_blend")
+                                     : (w >= 0.85 ? "mos" : "blend");
+  const subtype = neuralBias != null ? "table" : "linear";
   return {
     addMs: Math.round((w * bias + (1 - w) * sbB) * 100) / 100,
-    source, mosWeight: w, n: m.n, sb, leadDay,
+    source, subtype, mosWeight: w, n: m.n, sb, leadDay, stationKey, stationKm,
   };
 }
 // <</thermal-correction>>
@@ -3537,7 +3541,14 @@ function App() {
                     )}
                     {forecast?.__model && MODEL_LABELS[forecast.__model] && (
                       <div style={{marginTop:6,fontSize:10,color:C.muted,fontFamily:"monospace"}}>
-                        {t('source_label')} {MODEL_LABELS[forecast.__model]}{(dayData.thermal?.source==="neural_mos"||dayData.thermal?.source==="neural_blend") ? ` + ${t('neural_mos')}` : (dayData.thermal?.source==="mos"||dayData.thermal?.source==="blend") ? ` + ${t('mos_label')}` : ""}{dayData.liveBoost?.applied ? ` + ${t('live_station')}` : dayData.measuredCorr?.applied ? ` + ${t('meas_station')}` : ""}
+                        {t('source_label')} {MODEL_LABELS[forecast.__model]}
+                        {(dayData.thermal?.source==="neural_mos"||dayData.thermal?.source==="neural_blend")
+                          ? ` + ${t('neural_mos')}${dayData.thermal.subtype==="situativ" ? " (situativ)" : dayData.thermal.subtype==="table" ? " (Tabelle)" : ""}`
+                          : (dayData.thermal?.source==="mos"||dayData.thermal?.source==="blend") ? ` + ${t('mos_label')}` : ""}
+                        {dayData.thermal?.stationKey && (dayData.thermal?.source==="neural_mos"||dayData.thermal?.source==="neural_blend"||dayData.thermal?.source==="mos"||dayData.thermal?.source==="blend")
+                          ? ` · ${dayData.thermal.stationKey}${dayData.thermal.stationKm != null ? ` ${dayData.thermal.stationKm} km` : ""}`
+                          : ""}
+                        {dayData.liveBoost?.applied ? ` + ${t('live_station')}` : dayData.measuredCorr?.applied ? ` + ${t('meas_station')}` : ""}
                       </div>
                     )}
                     {mos?.meltemProb != null && (

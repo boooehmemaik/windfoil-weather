@@ -390,6 +390,7 @@
         <li><a href="#windalarm">Windalarm</a></li>
         <li><a href="#logbuch">Session-Logbuch</a></li>
         <li><a href="#reiseplaner">Reiseplaner</a></li>
+        <li><a href="#lernen">Wie lernt WindFoil?</a></li>
       </ol>
     </nav>
   </aside>
@@ -957,6 +958,67 @@
       <div class="tip">
         <strong>Forecast neu laden</strong>
         Der Button <span class="chip chip-gray">↺ Forecast neu laden</span> fragt die aktuellen 7-Tage-Vorhersagen für alle Spots im Radius neu ab. Das ist sinnvoll, wenn du den Reiseplaner längere Zeit geöffnet gelassen hast und sichergehen möchtest, dass die Daten noch frisch sind.
+      </div>
+    </section>
+
+    <!-- ────────────────────────────────────────────────────── -->
+    <section id="lernen">
+      <h2><span class="section-num">11</span> Wie lernt WindFoil?</h2>
+
+      <p>Globale Wettermodelle rechnen für ein Gitter von mehreren Kilometern — aber dein Spot liegt vielleicht in einer Bucht, hinter einem Hügel oder direkt an einer Meeresenge. WindFoil gleicht die Modellvorhersage täglich mit echten Messungen ab und lernt dabei, wie sich dein Spot vom Modell unterscheidet. Das Ergebnis ist eine korrigierte Prognose, die mit der Zeit immer besser zu deinem Spot passt.</p>
+
+      <div class="tip blue">
+        <strong>Wo siehst du das?</strong>
+        In der App steht unter jedem Prognose-Tag klein in Grau z. B. <span class="chip chip-gray">Neural-MOS (situativ) · LGKL 31 km</span> oder <span class="chip chip-gray">MOS · Kalamata 32 km</span>. Das zeigt dir, welche Lernmethode gerade aktiv ist und welche Wetterstation als Referenz dient.
+      </div>
+
+      <h3>Schritt 1 — Modell trifft Messung (MOS-Korrektur)</h3>
+      <p>Jede Stunde vergleicht WindFoil die Modellvorhersage mit dem, was die nächste Wetterstation tatsächlich gemessen hat. Aus diesen Paaren entsteht ein stundenweiser Korrekturwert — der sogenannte Bias. Dieser Wert wird auf die nächste Prognose angewandt: der Morgen-Forecast kommt also schon mit der Erfahrung der vergangenen Tage.</p>
+      <ul>
+        <li>Stationen werden automatisch aus einem Katalog von rund <strong>15.000 Wetterstationen</strong> zugeordnet — bevorzugt innerhalb von 20 km, maximal 100 km.</li>
+        <li>Für eine verlässliche Korrektur braucht WindFoil mindestens <strong>8 Stundenwerte</strong>, das entspricht ungefähr einer Woche.</li>
+        <li>Quelle der Messdaten: <strong>METAR-Stationen</strong> (Flugwetterstationen) — z. B. LGKL Kalamata als Referenz für Gialova.</li>
+      </ul>
+
+      <h3>Schritt 2 — Neuronales Netz lernt Muster (Neural MOS)</h3>
+      <p>Sobald rund 60 Station-Prognose-Paare gesammelt sind, trainiert WindFoil ein kleines neuronales Netz auf den historischen Daten — bis zu <strong>24 Monate zurück</strong>. Das Netz kennt nicht nur den Wind, sondern auch Luftdruck, Temperatur, Windrichtung und Jahreszeit. So lernt es wiederkehrende Muster, die der lineare Korrekturwert nicht erfassen kann.</p>
+      <p>Das Netz tritt erst dann in Kraft, wenn es den einfachen Korrekturwert um mindestens <strong>3 % genauer</strong> macht — sonst bleibt der einfachere MOS aktiv. So kann sich ein schlechtes Modell nicht einschleichen.</p>
+
+      <h3>Schritt 3 — Situative Prognose (Neural MOS situativ)</h3>
+      <p>Wenn genug Daten vorliegen und das Netz gut genug ist, berechnet WindFoil eine vollständige <strong>24-Stunden-Prognose</strong> statt einer einfachen Tabelle. Das Netz versteht dann situationsabhängige Zusammenhänge — zum Beispiel: Seebrise entwickelt sich bei SW-Lage anders als bei NW-Lage. Dieser Modus ist die genaueste Variante und wird automatisch aktiviert, sobald die Datenbasis reicht.</p>
+
+      <h3>Neue Spots starten sofort</h3>
+      <p>Ein neuer Spot muss nicht Monate warten, bis er genug Daten hat. WindFoil lädt im Hintergrund automatisch bis zu <strong>24 Monate historische Daten</strong> nach (Backfill). Die passende Wetterstation wird aus dem globalen Katalog zugeordnet — ohne manuellen Eingriff.</p>
+
+      <div class="panel">
+        <div class="panel-title">Die drei Lernmethoden im Überblick</div>
+        <table>
+          <thead>
+            <tr><th>Anzeige in der App</th><th>Was ist aktiv?</th><th>Wann?</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="chip chip-gray">MOS · Station X km</span></td>
+              <td>Linearer Korrekturwert</td>
+              <td>Ab ~1 Woche Messdaten</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-gray">Neural-MOS · Station X km</span></td>
+              <td>Neuronales Netz (Tabelle)</td>
+              <td>Ab ~60 Paaren, wenn ≥ 3 % besser</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-gray">Neural-MOS (situativ) · Station X km</span></td>
+              <td>Neuronales Netz (24-h-Prognose)</td>
+              <td>Genug Daten + besteht Genauigkeitstest</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip green">
+        <strong>Kein Eingriff nötig</strong>
+        Das Lernen läuft vollständig automatisch im Hintergrund. Du musst nichts konfigurieren — WindFoil wechselt eigenständig zur genauesten verfügbaren Methode.
       </div>
     </section>
 

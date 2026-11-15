@@ -1166,24 +1166,49 @@ function mosWeight(n, km) {
   if (!n || n < MOS_MIN_SAMPLES) return 0;
   return clamp01(n / (n + MOS_W_K) * (measuredWeight(km) / STATION_TRUST_AT_SPOT));
 }
-function thermalCorrection(hour, dir, month, regime, mos, leadDay = 0) {
+function neuralFcBias(mos, dateStr, hour) {
+  const day = mos && mos.neuralFc && dateStr ? mos.neuralFc[dateStr] : null;
+  return day && day[hour] != null ? day[hour] : null;
+}
+function thermalCorrection(hour, dir, month, regime, mos, leadDay = 0, dateStr = null) {
   const sb = seaBreeze(dir, hour, month, regime);
   const sbB = sb.active ? sb.boost : 0;
   const m = mos && mos.hours ? mos.hours[hour] : null;
+  const fcB = neuralFcBias(mos, dateStr, hour);
+  const stationKey = mos?.station?.key ?? null;
+  const stationKm = mos?.station?.km ?? null;
+  if (fcB != null) {
+    const wf = clamp01(measuredWeight(stationKm) / STATION_TRUST_AT_SPOT);
+    if (wf > 0) return {
+      addMs: Math.round((wf * fcB + (1 - wf) * sbB) * 100) / 100,
+      source: wf >= 0.85 ? "neural_mos" : "neural_blend",
+      subtype: "situativ",
+      mosWeight: wf,
+      n: m ? m.n : 0,
+      sb,
+      leadDay,
+      stationKey,
+      stationKm
+    };
+  }
   const neuralBias = m ? (leadDay >= 2 ? m.neuralBiasMs48 : leadDay >= 1 ? m.neuralBiasMs24 : m.neuralBiasMs) ?? null : null;
   const linearBias = m && m.n >= MOS_MIN_SAMPLES ? m.biasShrunkMs : null;
   const bias = neuralBias ?? linearBias;
-  const leadDamp = MOS_LEAD_DAMP[Math.min(leadDay, 3)];
-  const w = bias != null ? mosWeight(m.n, mos.station ? mos.station.km : null) * leadDamp : 0;
+  const leadDamp = neuralBias != null ? 1 : MOS_LEAD_DAMP[Math.min(leadDay, 3)];
+  const w = bias != null ? mosWeight(m.n, stationKm) * leadDamp : 0;
   if (w <= 0) return { addMs: sbB, source: "seabreeze", mosWeight: 0, n: m ? m.n : 0, sb, leadDay };
   const source = neuralBias != null ? w >= 0.85 ? "neural_mos" : "neural_blend" : w >= 0.85 ? "mos" : "blend";
+  const subtype = neuralBias != null ? "table" : "linear";
   return {
     addMs: Math.round((w * bias + (1 - w) * sbB) * 100) / 100,
     source,
+    subtype,
     mosWeight: w,
     n: m.n,
     sb,
-    leadDay
+    leadDay,
+    stationKey,
+    stationKm
   };
 }
 async function tryFetchForecast(lat, lon) {
@@ -2568,7 +2593,7 @@ function App() {
     const thermik = Array.from({ length: 24 }, (_, i) => computeThermik(h, s + i, regime));
     const activeDateStr2 = h.time[s] ? h.time[s].slice(0, 10) : null;
     const month_n = (/* @__PURE__ */ new Date()).getMonth() + 1;
-    const tcs = wins.map((w, i) => thermalCorrection(i, dirs[i] ?? 180, month_n, regime, mos, activeDay));
+    const tcs = wins.map((w, i) => thermalCorrection(i, dirs[i] ?? 180, month_n, regime, mos, activeDay, activeDateStr2));
     const winsTh = wins.map((w, i) => w == null ? w : Math.round((w + tcs[i].addMs) * 100) / 100);
     const lb = applyLiveStationBoost(winsTh, gust, live, activeDay === 0);
     const mc = applyMeasuredStationCorrection(lb.wins, lb.gust, measured, activeDateStr2);
@@ -2577,7 +2602,7 @@ function App() {
     const midW = slice(winsEff, 12, 16).reduce((a, b) => a + b, 0) / 4 || winsEff[12] || 0;
     const midG = slice(gustEff, 12, 16).reduce((a, b) => a + b, 0) / 4 || gustEff[12] || 0;
     const midDir = dirs[14] ?? dirs[12] ?? 180;
-    const tcPeak = thermalCorrection(regime?.peakHour ?? 14, midDir, month_n, regime, mos, activeDay);
+    const tcPeak = thermalCorrection(regime?.peakHour ?? 14, midDir, month_n, regime, mos, activeDay, activeDateStr2);
     const sb = tcPeak.sb;
     const effW = midW;
     let win, pickedGear = null, pickedWing = null;
@@ -2618,7 +2643,7 @@ function App() {
     const dirs_d = forecast.hourly.winddirection_10m.slice(start, start + 24);
     const regime_d = thermalRegime(loc.lat, loc.lon);
     const month_d = (/* @__PURE__ */ new Date()).getMonth() + 1;
-    slice = slice.map((w, i) => w == null ? w : Math.round((w + thermalCorrection(i, dirs_d[i] ?? 180, month_d, regime_d, mos, d).addMs) * 100) / 100);
+    slice = slice.map((w, i) => w == null ? w : Math.round((w + thermalCorrection(i, dirs_d[i] ?? 180, month_d, regime_d, mos, d, dstr).addMs) * 100) / 100);
     if (d === 0) {
       const lb = applyLiveStationBoost(slice, gslice, live, true);
       slice = lb.wins;
@@ -3140,7 +3165,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     const adj = applyConfidence(dayData.dayScore, conf);
     const cc = classifyConfidence(conf);
     const scoreColor = sc2col(adj.score);
-    return /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", borderLeft: `3px solid ${scoreColor}`, background: `linear-gradient(90deg,${scoreColor}12 0%,${C.panel} 40%)` } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", minWidth: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontWeight: 900, fontSize: 56, color: scoreColor, lineHeight: 1 } }, adj.score), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 } }, sport === "kite" ? t("score_kite") : t("score_foil")), adj.adjusted && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.caution, marginTop: 3 } }, t("score_raw_adj", { raw: dayData.dayScore }))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 160 } }, dayData.session && dayData.session.startHour != null && dayData.dayScore > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: C.go, fontFamily: "monospace", fontWeight: 700, marginBottom: 4 } }, t("score_best_time", { from: String(dayData.session.startHour).padStart(2, "0"), to: String(dayData.session.endHour).padStart(2, "0") })), dayData.pickedGear ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: `${C.go}1e`, border: `1px solid ${C.go}`, borderRadius: 8, padding: "7px 12px" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F392}"), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em" } }, t("score_auto_rec")), /* @__PURE__ */ React.createElement("b", { style: { fontSize: 15, color: C.go, fontFamily: "monospace" } }, dayData.pickedGear.name || `${dayData.pickedGear.wing} m\xB2`), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted } }, "\xB7 ", dayData.pickedGear.wing, " m\xB2 \xB7 ", rider.weight, " kg")) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, sport === "kite" ? `${kiteRider.kiteModel} ${kiteRider.kiteSize}m \xB7 ${kiteRider.weight}kg \xB7 ${kiteRider.skill}` : `${rider.weight}kg \xB7 ${rider.wingSize}m\xB2${rider.planeKn ? ` \xB7 ab ${rider.planeKn}kn` : ""}`), conf != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: cc.color } }, cc.icon, " ", confidenceLabel(cc), " (", conf, "%)"), dayData.liveBoost?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, dayData.liveBoost.nowKn != null ? `\u2191 Live-Station ${dayData.liveBoost.station}: jetzt ~${dayData.liveBoost.nowKn} kn` : `\u2191 an Live-Station ${dayData.liveBoost.station} angepasst (\xD7${dayData.liveBoost.k})`), dayData.measuredCorr?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, "\u2191 an Station ", dayData.measuredCorr.station, dayData.measuredCorr.km >= 2 ? ` (~${dayData.measuredCorr.km} km)` : "", " angepasst"), forecast?.__model && MODEL_LABELS[forecast.__model] && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.muted, fontFamily: "monospace" } }, t("source_label"), " ", MODEL_LABELS[forecast.__model], dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" ? ` + ${t("neural_mos")}` : dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend" ? ` + ${t("mos_label")}` : "", dayData.liveBoost?.applied ? ` + ${t("live_station")}` : dayData.measuredCorr?.applied ? ` + ${t("meas_station")}` : ""), mos?.meltemProb != null && /* @__PURE__ */ React.createElement("div", { style: {
+    return /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", borderLeft: `3px solid ${scoreColor}`, background: `linear-gradient(90deg,${scoreColor}12 0%,${C.panel} 40%)` } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", minWidth: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontWeight: 900, fontSize: 56, color: scoreColor, lineHeight: 1 } }, adj.score), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 } }, sport === "kite" ? t("score_kite") : t("score_foil")), adj.adjusted && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.caution, marginTop: 3 } }, t("score_raw_adj", { raw: dayData.dayScore }))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 160 } }, dayData.session && dayData.session.startHour != null && dayData.dayScore > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: C.go, fontFamily: "monospace", fontWeight: 700, marginBottom: 4 } }, t("score_best_time", { from: String(dayData.session.startHour).padStart(2, "0"), to: String(dayData.session.endHour).padStart(2, "0") })), dayData.pickedGear ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: `${C.go}1e`, border: `1px solid ${C.go}`, borderRadius: 8, padding: "7px 12px" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F392}"), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em" } }, t("score_auto_rec")), /* @__PURE__ */ React.createElement("b", { style: { fontSize: 15, color: C.go, fontFamily: "monospace" } }, dayData.pickedGear.name || `${dayData.pickedGear.wing} m\xB2`), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted } }, "\xB7 ", dayData.pickedGear.wing, " m\xB2 \xB7 ", rider.weight, " kg")) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, sport === "kite" ? `${kiteRider.kiteModel} ${kiteRider.kiteSize}m \xB7 ${kiteRider.weight}kg \xB7 ${kiteRider.skill}` : `${rider.weight}kg \xB7 ${rider.wingSize}m\xB2${rider.planeKn ? ` \xB7 ab ${rider.planeKn}kn` : ""}`), conf != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: cc.color } }, cc.icon, " ", confidenceLabel(cc), " (", conf, "%)"), dayData.liveBoost?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, dayData.liveBoost.nowKn != null ? `\u2191 Live-Station ${dayData.liveBoost.station}: jetzt ~${dayData.liveBoost.nowKn} kn` : `\u2191 an Live-Station ${dayData.liveBoost.station} angepasst (\xD7${dayData.liveBoost.k})`), dayData.measuredCorr?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, "\u2191 an Station ", dayData.measuredCorr.station, dayData.measuredCorr.km >= 2 ? ` (~${dayData.measuredCorr.km} km)` : "", " angepasst"), forecast?.__model && MODEL_LABELS[forecast.__model] && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.muted, fontFamily: "monospace" } }, t("source_label"), " ", MODEL_LABELS[forecast.__model], dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" ? ` + ${t("neural_mos")}${dayData.thermal.subtype === "situativ" ? " (situativ)" : dayData.thermal.subtype === "table" ? " (Tabelle)" : ""}` : dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend" ? ` + ${t("mos_label")}` : "", dayData.thermal?.stationKey && (dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" || dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend") ? ` \xB7 ${dayData.thermal.stationKey}${dayData.thermal.stationKm != null ? ` ${dayData.thermal.stationKm} km` : ""}` : "", dayData.liveBoost?.applied ? ` + ${t("live_station")}` : dayData.measuredCorr?.applied ? ` + ${t("meas_station")}` : ""), mos?.meltemProb != null && /* @__PURE__ */ React.createElement("div", { style: {
       marginTop: 6,
       fontSize: 10,
       fontFamily: "monospace",

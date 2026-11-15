@@ -414,7 +414,7 @@ const MEASURED_STATIONS = [
   { type: "metar", icao: "LICR", tz: "Europe/Rome",      lat: 38.0714, lon: 15.6511, radiusKm: 100, label: "Reggio Calabria (LICR) · Messina / Capo d'Orlando" },
   // ── Spanien ────────────────────────────────────────────────────────────────
   { type: "metar", icao: "LEGE", tz: "Europe/Madrid",    lat: 41.9011, lon:  2.7600, radiusKm:  65, label: "Girona (LEGE) · Roses / Costa Brava" },
-  { type: "metar", icao: "LERR", tz: "Europe/Madrid",    lat: 41.1472, lon:  1.1672, radiusKm:  60, label: "Reus (LERR) · Delta de l'Ebre" },
+  { type: "metar", icao: "LERS", tz: "Europe/Madrid",    lat: 41.1472, lon:  1.1672, radiusKm:  65, label: "Reus (LERS) · Delta de l'Ebre" },
   { type: "metar", icao: "LECH", tz: "Europe/Madrid",    lat: 40.2136, lon:  0.0731, radiusKm:  50, label: "Castellón (LECH) · Peñíscola" },
   { type: "metar", icao: "LEAL", tz: "Europe/Madrid",    lat: 38.2822, lon: -0.5581, radiusKm:  90, label: "Alicante (LEAL) · Denia / Costa Blanca" },
   { type: "metar", icao: "LXGB", tz: "Europe/Gibraltar", lat: 36.1500, lon: -5.3466, radiusKm:  35, label: "Gibraltar (LXGB) · Tarifa" },
@@ -430,7 +430,7 @@ const MEASURED_STATIONS = [
   { type: "metar", icao: "EFPO", tz: "Europe/Helsinki",  lat: 61.4617, lon: 21.7999, radiusKm:  28, label: "Pori (EFPO) · Yyteri" },
   // Turku r=100: Hanko/Tulliniemi (86 km) — weiteste Abdeckung, wie LGPZ/Vasiliki
   { type: "metar", icao: "EFTU", tz: "Europe/Helsinki",  lat: 60.5219, lon: 22.2628, radiusKm: 100, label: "Turku (EFTU) · Hanko / Küste" },
-  { type: "metar", icao: "EFLA", tz: "Europe/Helsinki",  lat: 61.1444, lon: 25.6927, radiusKm:  25, label: "Lahti Vesivehmaa (EFLA) · Vesijärvi" },
+  // EFLA (Lahti Vesivehmaa) liefert kein METAR (HTTP 204); Vesijärvi bleibt ohne ML-Station
 ];
 const KN_PER_MS = 1.94384; // feed is in knots; we return m/s to match the forecast contract
 
@@ -1517,6 +1517,12 @@ async function runMosOnce(reason) {
 
   // MOS-Cache invalidieren, damit die nächste API-Anfrage neue Werte sieht
   for (const st of stations) cache.delete(`mos:${st.key}`);
+
+  // Nightly backfill continuation — läuft im Hintergrund, nur wenn kein anderer
+  // ML-Job aktiv ist. runMlBackfill ruft seinerseits runMos("post-backfill") auf,
+  // aber nur wenn rows > 0, sodass kein Endlos-Ping-Pong entsteht.
+  startMlJob('nightly-backfill', runMlBackfill);
+
   return out;
 }
 
@@ -1634,6 +1640,8 @@ async function runMlBackfill({ months = 24, station = null } = {}) {
   mlJob.result = { rows: out.rows ?? null, reason: out.reason ?? null, budgetUsed: out.budgetUsed ?? null };
   // Frisch gelernt → Bias + Netze sofort neu, nicht erst in der Nacht. Nach einem
   // echten 429 nicht: runMos holt selbst Ensembles und würde das Limit weiter reizen.
+  // Nichts gelernt (alles done) → kein Re-Training nötig.
+  if (!out.rows) return out;
   if (out.rateLimited && out.reason !== "budget") return out;
   await runMos("post-backfill");
   return out;
