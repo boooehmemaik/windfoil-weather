@@ -16,11 +16,16 @@ const DAY0 = '2026-11-10';
 const NOW = new Date(`${DAY0}T05:00:00Z`);
 const pad = n => String(n).padStart(2, '0');
 
-/** Konstanter Wind über fünf Tage; 10 m/s = Score 100 für den Referenzfahrer. */
-function forecast(ms = 10) {
+/** Konstanter Wind über fünf Tage; 10 m/s = Score 100 für den Referenzfahrer.
+ *  baseDate = null → fester Testtag DAY0 (für Tests mit now=NOW).
+ *  baseDate = new Date() → dynamischer Start (für startAlertScheduler-Tests mit realem now). */
+function forecast(ms = 10, baseDate = null) {
+  const startMs = baseDate
+    ? Date.UTC(baseDate.getUTCFullYear(), baseDate.getUTCMonth(), baseDate.getUTCDate())
+    : Date.UTC(2026, 10, 10);
   const h = { time: [], windspeed_10m: [], winddirection_10m: [] };
   for (let d = 0; d < 5; d++) {
-    const date = new Date(Date.UTC(2026, 10, 10 + d)).toISOString().slice(0, 10);
+    const date = new Date(startMs + d * 86400000).toISOString().slice(0, 10);
     for (let hr = 0; hr < 24; hr++) {
       h.time.push(`${date}T${pad(hr)}:00`);
       h.windspeed_10m.push(ms); h.winddirection_10m.push(180);
@@ -205,7 +210,7 @@ test('startAlertScheduler: ein Durchlauf ohne einen einzigen Erfolg landet trotz
       devicesOf: () => [DEV('u1')], markDeviceOk() {}, markDeviceFail() {}, deleteDevice() {},
     },
     send: async () => ({ gone: true, status: 410 }),
-    loadForecast: async () => forecast(),
+    loadForecast: async () => forecast(10, new Date()),
     spots: SPOTS,
   });
   try { await sched.tick(); } finally { sched.stop(); console.log = orig; }
