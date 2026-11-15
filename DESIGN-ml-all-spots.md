@@ -1,6 +1,6 @@
-# DESIGN — ML für alle Spots + historischer Backfill (v3.42.0)
+# DESIGN — ML für alle Spots + historischer Backfill (v3.43.0)
 
-File version: 1.1.0 · App target: v3.42.0 · Phase 3 (🟦 Architect) · nach QA-Review überarbeitet
+File version: 1.1.0 · App target: v3.43.0 · Phase 3 (🟦 Architect) · nach QA-Review überarbeitet
 
 ## Ziel
 
@@ -131,7 +131,7 @@ Eval-Gate (Rauschen → inaktiv, systematischer Bias → aktiv), Resume nach 429
 | # | Befund | Entscheidung |
 |---|---|---|
 | 1 | Gate ohne Holdout ließ ungeprüfte Netze durch | ohne Val/Test ≥ 30 bleibt Neural **aus**, linear übernimmt |
-| 2 | Backfill verbraucht Open-Meteo-Kontingent der Nutzer-Forecasts | eigenes Tagesbudget `ML_OM_DAILY_BUDGET` (Default 4000, Gewichtsformel Orte × Tage/14 × Variablen/10 × Modelle), Stopp **vor** dem Limit; nach echtem 429 kein Post-Backfill-MOS |
+| 2 | Backfill verbraucht Open-Meteo-Kontingent der Nutzer-Forecasts | eigenes Tagesbudget `ML_OM_DAILY_BUDGET` (Default 3000 — seit v3.42.0 pollen 21 MEASURED-Stationen à 144/Tag, Gewichtsformel Orte × Tage/14 × Variablen/10 × Modelle), Stopp **vor** dem Limit; nach echtem 429 kein Post-Backfill-MOS |
 | 3 | Event-Loop | Intl-Formatter je TZ gecacht, `setImmediate` zwischen Stationen in `runMosJob` und Training, adaptive Epochen auch für Meltemi |
 | 4 | stille Lücken (`done` trotz Fehler) | `done` nur bei vollständigem Monat, Ensemble ok, previous-runs ok (ab 2024-03) und ≥ 90 % Tage mit Obs; sonst `partial` (Retry ≤ 1×/Woche), `error` Retry ≤ 1×/Tag; Meteostat-Ausfall ohne ICAO bricht die Station ab |
 | 5 | Meteostat-„Obs" enthalten Modelldaten | neue Jahres-Dumps, `wspd_source` gegen Modell-Quellen gefiltert, Quellen-Statistik im Log |
@@ -156,3 +156,8 @@ Abdeckung bei Nordlage). Deshalb:
 - Erster echter Discovery-Lauf: Zuordnung Spot → Station/km im Admin-Panel prüfen
 - Meteostat-`_source`-Werte im Backfill-Log ansehen und ggf. `MODEL_SOURCE_RE` schärfen
 - Nach 1–2 Backfill-Tagen: Skill/MAE je Station im Panel; welche Stationen `situativ` aktiv sind
+
+## v1.2 — Integration mit v3.42.0 (19 MEASURED-METAR-Stationen)
+- Gleiche ICAO = gleicher `station_key` → Live-Samples des 10-min-Pollers und Backfill-Historie trainieren gemeinsam.
+- `/api/station/mos`: ML-Station gewinnt gegen MEASURED nur, wenn < 70 % der Distanz **und** bereits ein MOS existiert; LIVE gewinnt immer.
+- `pollMlLive` lässt MEASURED-ICAOs ganz aus (Obs + 72-h-Features kommen aus dem 10-min-Poller).

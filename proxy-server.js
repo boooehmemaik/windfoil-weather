@@ -689,10 +689,14 @@ app.get("/api/station/mos", async (req, res) => {
   const meas = live ? null : findMeasuredStation(la, lo);
   let st = live || meas;
   let key = st ? (live ? st.key : (st.wc || st.icao || st.station)) : null;
-  // Alle übrigen Spots: automatisch zugeordnete ML-Station (Migration 013).
-  if (!st) {
+  // Automatisch zugeordnete ML-Station (Migration 013): springt ein, wo keine
+  // feste Station passt — und schlägt eine MEASURED-Station, wenn sie deutlich
+  // näher liegt und schon einen MOS hat (z. B. Methoni 13 km vs. Kalamata 32 km
+  // für Gialova). LIVE-Stationen (In-Spot-Feeds) gewinnen immer.
+  if (!live) {
     const ml = await findMlStation(la, lo);
-    if (ml) { st = ml; key = ml.key; }
+    const measKm = meas ? haversineKm(la, lo, meas.lat, meas.lon) : Infinity;
+    if (ml && (!meas || (ml.km < measKm * 0.7 && mlHasMos(ml.key)))) { st = ml; key = ml.key; }
   }
   if (!st) return res.json({ ok: false, error: "no_mos_station" });
 
@@ -1535,7 +1539,7 @@ app.get("/api/admin/mos/recompute", async (req, res) => {
   }
 });
 
-// ── ML für alle Spots (v3.42.0, DESIGN-ml-all-spots.md) ──────────────────────
+// ── ML für alle Spots (v3.43.0, DESIGN-ml-all-spots.md) ──────────────────────
 // Automatische Stationszuordnung je Spot, historischer Backfill, stündliches
 // Live-Polling der neuen ICAO-Stationen. Alles optional: fehlt Migration 013,
 // liefern die Helfer leere Listen und der Rest des Servers läuft unverändert.
@@ -1555,6 +1559,11 @@ async function getMlStations({ fresh = false } = {}) {
     mlStationsCache = { at: Date.now(), list: [] };
   }
   return mlStationsCache.list;
+}
+
+function mlHasMos(key) {
+  try { return !!getObsDb().prepare("SELECT 1 FROM station_mos_bias WHERE station_key=? LIMIT 1").get(key); }
+  catch { return false; }
 }
 
 async function findMlStation(lat, lon) {
@@ -1664,10 +1673,11 @@ async function mlStatus() {
 async function pollMlLive() {
   const { pollMlStationsOnce } = await import("./src/ml_live.mjs");
   const { saveFc72 } = await import("./src/neural_mos.mjs");
-  // MEASURED-ICAOs (LGKL/LGPZ) pollt der 10-min-Poller bereits — hier nur Forecast.
+  // MEASURED-ICAOs (seit v3.42.0 inkl. 19 Flughäfen) pollt der 10-min-Poller
+  // bereits inkl. 72-h-Features → hier komplett auslassen, kein Doppel-Abruf.
   const stations = (await getMlStations())
-    .filter(s => s.enabled)
-    .map(s => ({ station_key: s.key, icao: MEASURED_ICAOS.has(s.icao) ? null : s.icao,
+    .filter(s => s.enabled && !MEASURED_ICAOS.has(s.icao))
+    .map(s => ({ station_key: s.key, icao: s.icao,
                  live_source: s.liveSource, lat: s.lat, lon: s.lon, tz: s.tz, enabled: 1 }));
   if (!stations.length) return;
   const db = getObsDb();

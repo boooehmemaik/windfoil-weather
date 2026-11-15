@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ============================================================================
 // WindFoil — CLI: ML-Stationen entdecken + historischen Backfill fahren
-// File version: 1.0.0  |  App target: v3.42.0
+// File version: 1.0.0  |  App target: v3.43.0
 // ----------------------------------------------------------------------------
 // node tools/ml-backfill.mjs [--discover] [--months N] [--station KEY] [--train] [--dry-run]
 // DB: WINDFOIL_DB_PATH (Default data/windfoil.db). Nach 429 einfach erneut starten.

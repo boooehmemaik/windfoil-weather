@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Neural MOS + Meltemi-Klassifikator (reines JS, keine npm-Deps)
-// File version: 2.1.0  |  App target: v3.42.0
+// File version: 2.1.0  |  App target: v3.43.0
 // ----------------------------------------------------------------------------
 // Zwei Modelle auf einer gemeinsamen MLP-Architektur:
 //

@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — ML-Stationswahl: jedem Spot automatisch die beste reale Station
-// File version: 1.0.0  |  App target: v3.42.0
+// File version: 1.0.0  |  App target: v3.43.0
 // ----------------------------------------------------------------------------
 // Quelle ist der keyless Meteostat-Katalog. Bevorzugt werden ICAO-Stationen,
 // weil nur sie stündlich live über METAR nachgepollt werden können.

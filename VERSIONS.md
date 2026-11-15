@@ -1,18 +1,21 @@
 # WindFoil — Version History
 
-## v3.42.0 (2026-11-14)
+## v3.43.0 (2026-11-15)
 **ML FÜR ALLE SPOTS — automatische Stationswahl, 24-Monats-Backfill, situatives Neural-MOS mit Eval-Gate**
 - `db/migrations/013_ml_history.sql` v1.0.0: `ml_stations`, `ml_station_spots`, `ml_history` (stundengenau, kein Pruning), `ml_backfill_progress` (Resume)
 - `src/ml_stations.mjs` v1.0.0: Meteostat-Katalog (icao/wmo/tz), Spots aus spots.json + `EXTRA_SPOTS` + allen `user_locations`, beste Station ≤ 20 km bevorzugt / ≤ 40 km max, ICAO bevorzugt (Live)
-- `src/ml_backfill.mjs` v1.1.0: Obs aus Meteostat-Jahres-Dumps (data.meteostat.net, Modell-Lückenfüller per `_source` verworfen) + IEM-ASOS; Modell lead 0 (historical-forecast), lead 24/48 (previous-runs), Ensemble-Median; eigenes Open-Meteo-Tagesbudget, ehrliche Chunk-Status (done/partial/error mit Retry-Drossel), Timeouts
+- `src/ml_backfill.mjs` v1.1.0: Obs aus Meteostat-Jahres-Dumps (data.meteostat.net, Modell-Lückenfüller per `_source` verworfen) + IEM-ASOS; Modell lead 0 (historical-forecast), lead 24/48 (previous-runs), Ensemble-Median; eigenes Open-Meteo-Tagesbudget (Default 3000, `ML_OM_DAILY_BUDGET`), ehrliche Chunk-Status (done/partial/error mit Retry-Drossel), Timeouts
 - `src/ml_live.mjs` v1.0.0: stündlich METAR-Batch + Multi-Location-Forecast; stundengenaue `ml_samples`; 72-h-Features je Station
 - `src/neural_mos.mjs` v2.1.0: Training aus `ml_samples ∪ ml_history`; **Bugfix** lead-24/48-Join (exakter ts traf nie); Live-Entdopplung; Saison-Subsampling ≤ 12 000; Seeds + Best-of-3; Split 60/20/20; Gate gegen Rohmodell **und** linearen MOS; neue **situative** Vorhersage `predictSituational()`; CAPE nur lead 0
 - `src/mos.mjs` v1.1.0: History-MOS (Tag-im-Jahr ±30 über alle Jahre) als Fallback; TZ-Formatter-Cache; Yield je Station; DST-Doppelstunde
-- `proxy-server.js` v2.8.0: `/api/station/mos` Fallback auf ML-Station + `neuralFc`/`neuralEval`; `runMos`-Mutex; ML-Jobs single-flight; `GET /api/admin/ml/status`, `POST /api/admin/ml/discover|backfill|train`
+- `proxy-server.js` v2.8.0: `/api/station/mos` nutzt die ML-Station, wo keine feste passt oder wenn sie < 70 % der Distanz der MEASURED-Station liegt und schon einen MOS hat (Gialova: Methoni 13 km statt LGKL 32 km); `neuralFc`/`neuralEval`; MEASURED-ICAOs aus v3.42.0 werden nicht doppelt gepollt; `runMos`-Mutex; ML-Jobs single-flight; `GET /api/admin/ml/status`, `POST /api/admin/ml/discover|backfill|train`
 - `src/app.jsx`: `thermalCorrection(…, dateStr)` nutzt situative Neural-Korrektur; keine doppelte Lead-Dämpfung für Neural (App-Versionsbump beim Deploy)
 - `admin.html` v1.1.0: Panel „🧠 ML-Lernen (alle Spots)"
 - `tools/ml-backfill.mjs` v1.0.0: CLI `--discover --months 24 --train`
 - Tests: `ml-stations`, `ml-backfill`, `ml-live`, `neural-mos-history`, `ml-e2e-gialova` (E2E Navarino/Gialova), `thermal-correction` erweitert
+
+## v3.42.0 (2026-11-14)
+**19 NEUE METAR-STATIONEN** (parallele Session): MEASURED_STATIONS für Sardinien, Sizilien, Spanien, Schweden, Finnland, Montenegro (LYPG ersetzt den ausgefallenen Neverin-Ulcinj-Feed) — `proxy-server.js`, `package.json`
 
 ## v3.28.14 (2026-09-29)
 **BILINGUAL DE/EN — Sprachtoggle neben Dark-Mode**

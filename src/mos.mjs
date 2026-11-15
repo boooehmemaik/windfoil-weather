@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — MOS (Model Output Statistics): gelernte Stunden-Bias-Korrektur
-// File version: 1.1.0 (ESM .mjs)  |  App target: v3.42.0
+// File version: 1.1.0 (ESM .mjs)  |  App target: v3.43.0
 // ----------------------------------------------------------------------------
 // Idee in einem Satz: für jede Station und jede lokale Stunde messen, wie weit
 // der Ensemble-Median systematisch neben der Beobachtung liegt, und diese
