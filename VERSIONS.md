@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.43.5 (2026-11-16)
+**FIX(vergleich): Lichtenauer See exakte Position, Ammersee Eching ohne Offshore-Sperre**
+- Lichtenauer See: 48.6906, 11.3335 (vom Nutzer genannt) in `spots.json`, `vergleich.html`, `watcher.html`
+- Ammersee Eching: `offshoreDir` entfernt — Ost/West immer fahrbar, Süd gut; die 0°-Sperre (±45° um Nord) hätte auch NW/NO fälschlich auf 0 gesetzt. „Zu starker Nord" lässt sich mit der reinen Richtungssperre nicht abbilden
+
 ## v3.43.4 (2026-11-16)
 **FEAT(vergleich): Vier bayerische Seen — Ammersee Eching, Hollerner See, Starnberger See Ambach, Lichtenauer See**
 - `spots.json` (`unpagedSpots`), `vergleich.html` (`ALL_SPOTS`, Filter „Bayern", 44 statt 40 Spots), `watcher.html`: Region „Bayern", alle mit `noMarine: true` (Binnenseen, keine SST-Abfrage)
