@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.44.3 (2026-11-16)
+**FIX(spots): Porto Pino — Nord/West abgedeckt, Ost/Süd bevorzugt**
+- `offshoreDir` 45 → 315 (`spots.json`, `vergleich.html`): Wind aus ca. W bis N (±45° um NW) setzt den Score auf 0, Ost und Süd bleiben frei. Die 45 waren aus Porto Botte geschätzt und falsch (hätten NE gesperrt)
+- Texte in `spots.json` und `sardinia.html` angepasst (kein Maestrale-Spot)
+
 ## v3.44.2 (2026-11-16)
 **FEAT(spots): Porto Pino + Sardinien-Strände auf der Sardinien-Regionsseite**
 - `spots.json`: neuer Spot `s_porto_pino` (38.9622/8.5969, Golf von Palmas, `offshoreDir: 45` — aus Porto Botte abgeleitet, geschätzt); Porto Pino und die drei Strände aus v3.44.0 (Sa Capannizza, Ginestre, Lido di Orrì) liegen jetzt in `regions.sardinia.spots` statt `unpagedSpots`

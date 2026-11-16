@@ -98,12 +98,12 @@
           "id": "s_porto_pino",
           "name": "Porto Pino",
           "emoji": "🏝",
-          "desc": "Maestrale · Südwest-Dünenküste",
+          "desc": "Ost/Süd · Nord & West abgedeckt",
           "lat": 38.9622,
           "lon": 8.5969,
-          "shoreNote": "Golf von Palmas, Dünenstrand",
+          "shoreNote": "Golf von Palmas, Dünenstrand, Nord/West abgeschirmt",
           "color": "#38bdf8",
-          "offshoreDir": 45,
+          "offshoreDir": 315,
           "vergleichRegion": "Sardinien"
         },
         {
