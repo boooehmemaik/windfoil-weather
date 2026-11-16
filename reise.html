@@ -173,7 +173,7 @@
 // verhindern soll.
 // ═══════════════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
-const state = { spots: [], fc: null, win: null, rider: null, center: null, centerLabel: '', results: [] };
+const state = { spots: [], fc: null, win: null, rider: null, center: null, centerLabel: '', results: [], below: [] };
 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 const COMPASS16 = ['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'];
@@ -284,6 +284,25 @@ function rankSpots(opts) {
   return out;
 }
 
+/** Spots im Radius, die der Mindest-Score ausgefiltert hat — mit der Zahl der Tage,
+ *  die nur die 70-%-Offshore-Sperre auf 0 gesetzt hat (Wind ohne Sperre fahrbar). */
+function belowThreshold(o, shown) {
+  const shownIds = new Set(shown.map(r => r.spot.id));
+  const all = rankSpots({ ...o, minScore: null });
+  return all.filter(r => !shownIds.has(r.spot.id)).map(r => {
+    const h = o.forecasts[r.spot.id].hourly;
+    let blocked = 0, total = 0;
+    for (let start = 0; start + 24 <= h.windspeed_10m.length; start += 24) {
+      total++;
+      if (r.spot.offshoreDir == null) continue;
+      const withOff = WF.bestSession(h.windspeed_10m, o.win, { start, dirs: h.winddirection_10m, offshoreDir: r.spot.offshoreDir }).score;
+      const noOff = WF.bestSession(h.windspeed_10m, o.win, { start, dirs: null, offshoreDir: null }).score;
+      if (noOff > 0 && withOff === 0) blocked++;
+    }
+    return { ...r, blocked, total };
+  });
+}
+
 // ── Eingaben ───────────────────────────────────────────────
 
 function renderStartSelect() {
@@ -326,11 +345,21 @@ function dayChip(d) {
     + '</div>';
 }
 
+function renderBelow() {
+  if (!state.below.length) return '';
+  return '<div class="card"><p class="note">Im Radius, aber unter dem Mindest-Score:</p><ul class="note" style="margin:6px 0 0 18px">'
+    + state.below.map(r => '<li>' + esc((r.spot.emoji || '') + ' ' + r.spot.name) + ' · Ø ' + r.block.mean
+      + ' · ' + fmtKm(r.distanceKm)
+      + (r.blocked ? ' · ' + r.blocked + ' von ' + r.total + ' Tagen wegen Ablandwind (70 %-Grenze) gesperrt' : '')
+      + '</li>').join('')
+    + '</ul></div>';
+}
+
 function renderResults() {
   const box = $('results');
   if (!state.results.length) {
     box.innerHTML = '<div class="card"><p class="note warn">Kein Spot erfüllt diese Kombination. '
-      + 'Mehr Radius, kürzere Reise oder ein niedrigerer Mindest-Score helfen.</p></div>';
+      + 'Mehr Radius, kürzere Reise oder ein niedrigerer Mindest-Score helfen.</p></div>' + renderBelow();
     return;
   }
   box.innerHTML = state.results.map((r, i) => {
@@ -356,7 +385,7 @@ function renderResults() {
         + '<a href="' + esc(r.spot.regionUrl) + '" class="tag">Spot-Seite →</a>'
       + '</div>'
     + '</div>';
-  }).join('');
+  }).join('') + renderBelow();
 }
 
 // ── Karte ──────────────────────────────────────────────────
@@ -430,6 +459,10 @@ function search() {
     center: state.center, spots: state.spots, forecasts: state.fc.spots,
     win: state.win, radiusKm: o.radiusKm, tripLen: o.tripLen, minScore: o.minScore,
   });
+  state.below = o.minScore == null ? [] : belowThreshold({
+    center: state.center, spots: state.spots, forecasts: state.fc.spots,
+    win: state.win, radiusKm: o.radiusKm, tripLen: o.tripLen,
+  }, state.results);
   const scope = o.radiusKm == null ? 'ohne Radiusgrenze' : 'im Radius von ' + o.radiusKm + ' km';
   setNote(state.results.length + ' Spot(s) ' + scope + ' mit ' + o.tripLen + ' passenden Tagen in Folge.',
     state.results.length ? 'ok' : 'warn');

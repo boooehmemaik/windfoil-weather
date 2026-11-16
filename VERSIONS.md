@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.44.1 (2026-11-16)
+**FEAT(reise): Reiseplanung zeigt Spots unter dem Mindest-Score samt Grund**
+- `reise.html`: neue Liste „Im Radius, aber unter dem Mindest-Score" (`belowThreshold`) mit Ø-Score, Entfernung und der Zahl der Tage, die allein die 70-%-Offshore-Sperre auf 0 gesetzt hat. Anlass: die drei Sardinien-Spots (v3.44.0) standen im Startspot-Menü, tauchten in den Treffern aber nicht auf — diese Woche weht W/NW, an der Ostküste ablandig, und der Standard-Mindest-Score ist 70
+
 ## v3.44.0 (2026-11-16)
 **FEAT(spots): Sardinien-Reisespots — Spiaggia Sa Capannizza, Spiaggia delle Ginestre, Lido di Orrì**
 - `spots.json` (`unpagedSpots`, Region Sardinien), `vergleich.html` (`ALL_SPOTS`, 47 Spots), `watcher.html`; `reise.html` liest `spots.json` und bekommt die Spots damit automatisch
