@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.43.6 (2026-11-16)
+**FIX(vergleich): Ammersee Eching — Nord-Sperre wiederhergestellt**
+- `offshoreDir: 0` zurück in `spots.json` und `vergleich.html`: Wind aus Nord (±45°) ist dort wegen totaler Abdeckung nicht fahrbar; Ost/West/Süd bleiben unberührt. v3.43.5 hatte die Sperre fälschlich ganz entfernt
+
 ## v3.43.5 (2026-11-16)
 **FIX(vergleich): Lichtenauer See exakte Position, Ammersee Eching ohne Offshore-Sperre**
 - Lichtenauer See: 48.6906, 11.3335 (vom Nutzer genannt) in `spots.json`, `vergleich.html`, `watcher.html`
