@@ -144,7 +144,7 @@
     </svg>
     <div>
       <div class="hdr-title">WINDFOIL</div>
-      <div class="hdr-sub">Spot-Vergleich · 44 Spots · 5-Tage-Forecast</div>
+      <div class="hdr-sub">Spot-Vergleich · 47 Spots · 5-Tage-Forecast</div>
     </div>
   </div>
   <div class="hdr-links">
@@ -179,7 +179,7 @@
   </div>
 
   <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <span>📊 Vollständiges Ranking · alle 44 Spots</span>
+    <span>📊 Vollständiges Ranking · alle 47 Spots</span>
     <div class="filter-row" style="margin:0">
       <button class="filter-btn active" aria-pressed="true" onclick="setFilter('all',this)">Alle</button>
       <button class="filter-btn" aria-pressed="false" onclick="setFilter('Sardinien',this)">Sardinien</button>
@@ -197,7 +197,7 @@
 
   <div class="tbl-wrap">
     <table id="compare-table">
-      <caption class="visually-hidden">Spot-Vergleich – 44 Spots, 5-Tage-Forecast (9–18 Uhr). Klick auf Spaltenköpfe zum Sortieren.</caption>
+      <caption class="visually-hidden">Spot-Vergleich – 47 Spots, 5-Tage-Forecast (9–18 Uhr). Klick auf Spaltenköpfe zum Sortieren.</caption>
       <thead>
         <tr>
           <th scope="col" data-sk="rank" aria-sort="none" onclick="sortBy('rank')">#<span class="sort-arrow">↕</span></th>
@@ -215,7 +215,7 @@
         </tr>
       </thead>
       <tbody id="compare-body">
-        <tr><td colspan="12"><div class="loading-overlay"><span class="spin">⟳</span> Lade alle 44 Spots…</div></td></tr>
+        <tr><td colspan="12"><div class="loading-overlay"><span class="spin">⟳</span> Lade alle 47 Spots…</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -241,8 +241,8 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// WindFoil Spot-Vergleich — 44 Spots, 5-Tage-Forecast
-// Sardinien(6)+Sizilien(7)+Spanien(5)+Nordspanien(3)+Apulien(1)+Kroatien(4)+Griechenland(3)+Schweden(7)+Finnland(4)+Bayern(4)
+// WindFoil Spot-Vergleich — 47 Spots, 5-Tage-Forecast
+// Sardinien(9)+Sizilien(7)+Spanien(5)+Nordspanien(3)+Apulien(1)+Kroatien(4)+Griechenland(3)+Schweden(7)+Finnland(4)+Bayern(4)
 // ═══════════════════════════════════════════════════════════
 
 function tickClock(){
@@ -263,6 +263,9 @@ const ALL_SPOTS = [
   { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_porto_botte',   name:'Porto Botte',          emoji:'🌅', lat:39.054, lon:8.566,  offshoreDir:45  },
   { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_cala_gonone',   name:'Cala Gonone',          emoji:'🏔', lat:40.283, lon:9.629,  offshoreDir:270 },
   { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_villasimius',   name:'Villasimius',          emoji:'🐠', lat:39.118, lon:9.533,  offshoreDir:315 },
+  { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_capannizza', name:'Spiaggia Sa Capannizza', emoji:'🏖', lat:40.7001, lon:9.7213, offshoreDir:270 },
+  { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_ginestre', name:'Spiaggia delle Ginestre', emoji:'🏖', lat:39.8266, lon:9.6792, offshoreDir:270 },
+  { region:'Sardinien',    regionColor:'#3a9ad9', regionUrl:'/sardinia.html', id:'s_lido_orri', name:'Lido di Orrì', emoji:'🏖', lat:39.9003, lon:9.6819, offshoreDir:270 },
   // Sizilien
   { region:'Sizilien',     regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_puzziteddu',    name:'Puzziteddu/Granitola', emoji:'🌊', lat:37.634, lon:12.665, offshoreDir:45  },
   { region:'Sizilien',     regionColor:'#f07820', regionUrl:'/sizilien.html', id:'z_ragusa',        name:'Marina di Ragusa',     emoji:'🌅', lat:36.868, lon:14.555, offshoreDir:0   },

@@ -618,6 +618,39 @@
       "lat": 48.6906,
       "lon": 11.3335,
       "noMarine": true
+    },
+    {
+      "region": "Sardinien",
+      "regionColor": "#3a9ad9",
+      "regionUrl": "/sardinia.html",
+      "id": "s_capannizza",
+      "name": "Spiaggia Sa Capannizza",
+      "emoji": "🏖",
+      "lat": 40.7001,
+      "lon": 9.7213,
+      "offshoreDir": 270
+    },
+    {
+      "region": "Sardinien",
+      "regionColor": "#3a9ad9",
+      "regionUrl": "/sardinia.html",
+      "id": "s_ginestre",
+      "name": "Spiaggia delle Ginestre",
+      "emoji": "🏖",
+      "lat": 39.8266,
+      "lon": 9.6792,
+      "offshoreDir": 270
+    },
+    {
+      "region": "Sardinien",
+      "regionColor": "#3a9ad9",
+      "regionUrl": "/sardinia.html",
+      "id": "s_lido_orri",
+      "name": "Lido di Orrì",
+      "emoji": "🏖",
+      "lat": 39.9003,
+      "lon": 9.6819,
+      "offshoreDir": 270
     }
   ]
 }

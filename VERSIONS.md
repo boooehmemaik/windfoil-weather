@@ -1,5 +1,12 @@
 # WindFoil — Version History
 
+## v3.44.0 (2026-11-16)
+**FEAT(spots): Sardinien-Reisespots — Spiaggia Sa Capannizza, Spiaggia delle Ginestre, Lido di Orrì**
+- `spots.json` (`unpagedSpots`, Region Sardinien), `vergleich.html` (`ALL_SPOTS`, 47 Spots), `watcher.html`; `reise.html` liest `spots.json` und bekommt die Spots damit automatisch
+- Alle drei mit `offshoreDir: 270` (Ostküste, Land im Westen): Wind innerhalb 45° davon (cos > 0,7 = mehr als 70 % ablandig) setzt den Score auf 0 — in Vergleich, Reiseplanung und Alarm
+- Positionen: Sa Capannizza 40.7001/9.7213 (Tanaunella, Budoni), Lido di Orrì 39.9003/9.6819 (Tortolì); „Spiaggia delle Ginestre" ist nicht eindeutig — Näherung 39.8266/9.6792 (Via delle Ginestre, Torre di Bari)
+- `forecast-routes.test.mjs`: Testtitel 47 Spots
+
 ## v3.43.7 (2026-11-16)
 **FIX(vergleich): Karte zoomt beim Regionsfilter auf die Region**
 - `vergleich.html`: `fitMapToFilter()` — Filter „Bayern" (und jede andere Region) zoomt die Karte auf die gefilterten Spots (maxZoom 9), „Alle" setzt die Europa-Ansicht zurück. Vorher lagen die vier Bayern-Seen bei Zoom 4 als Stapel übereinander (~1° Abstand ≈ 11 px) und waren nicht erkennbar
