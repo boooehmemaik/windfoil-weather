@@ -130,7 +130,7 @@ for (const [key, cfg] of Object.entries(SPOTS.regions)) {
   });
 }
 
-test('/batch?region=all: deckt alle 40 Spots aus vergleich.html ab', async () => {
+test('/batch?region=all: deckt alle 44 Spots aus vergleich.html ab', async () => {
   reset();
   const r = await get('/batch?region=all&days=5');
   const expected = [...Object.values(SPOTS.regions).flatMap(x => x.spots), ...SPOTS.unpagedSpots].length;

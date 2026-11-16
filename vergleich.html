@@ -144,7 +144,7 @@
     </svg>
     <div>
       <div class="hdr-title">WINDFOIL</div>
-      <div class="hdr-sub">Spot-Vergleich · 40 Spots · 5-Tage-Forecast</div>
+      <div class="hdr-sub">Spot-Vergleich · 44 Spots · 5-Tage-Forecast</div>
     </div>
   </div>
   <div class="hdr-links">
@@ -179,7 +179,7 @@
   </div>
 
   <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <span>📊 Vollständiges Ranking · alle 40 Spots</span>
+    <span>📊 Vollständiges Ranking · alle 44 Spots</span>
     <div class="filter-row" style="margin:0">
       <button class="filter-btn active" aria-pressed="true" onclick="setFilter('all',this)">Alle</button>
       <button class="filter-btn" aria-pressed="false" onclick="setFilter('Sardinien',this)">Sardinien</button>
@@ -191,12 +191,13 @@
       <button class="filter-btn" aria-pressed="false" onclick="setFilter('Griechenland',this)">Griechenland</button>
       <button class="filter-btn" aria-pressed="false" onclick="setFilter('Schweden',this)">Schweden</button>
       <button class="filter-btn" aria-pressed="false" onclick="setFilter('Finnland',this)">Finnland</button>
+      <button class="filter-btn" aria-pressed="false" onclick="setFilter('Bayern',this)">Bayern</button>
     </div>
   </div>
 
   <div class="tbl-wrap">
     <table id="compare-table">
-      <caption class="visually-hidden">Spot-Vergleich – 40 Spots, 5-Tage-Forecast (9–18 Uhr). Klick auf Spaltenköpfe zum Sortieren.</caption>
+      <caption class="visually-hidden">Spot-Vergleich – 44 Spots, 5-Tage-Forecast (9–18 Uhr). Klick auf Spaltenköpfe zum Sortieren.</caption>
       <thead>
         <tr>
           <th scope="col" data-sk="rank" aria-sort="none" onclick="sortBy('rank')">#<span class="sort-arrow">↕</span></th>
@@ -214,7 +215,7 @@
         </tr>
       </thead>
       <tbody id="compare-body">
-        <tr><td colspan="12"><div class="loading-overlay"><span class="spin">⟳</span> Lade alle 40 Spots…</div></td></tr>
+        <tr><td colspan="12"><div class="loading-overlay"><span class="spin">⟳</span> Lade alle 44 Spots…</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -240,8 +241,8 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// WindFoil Spot-Vergleich — 40 Spots, 5-Tage-Forecast
-// Sardinien(6)+Sizilien(7)+Spanien(5)+Nordspanien(3)+Apulien(1)+Kroatien(4)+Griechenland(3)+Schweden(7)+Finnland(4)
+// WindFoil Spot-Vergleich — 44 Spots, 5-Tage-Forecast
+// Sardinien(6)+Sizilien(7)+Spanien(5)+Nordspanien(3)+Apulien(1)+Kroatien(4)+Griechenland(3)+Schweden(7)+Finnland(4)+Bayern(4)
 // ═══════════════════════════════════════════════════════════
 
 function tickClock(){
@@ -304,6 +305,11 @@ const ALL_SPOTS = [
   { region:'Finnland',     regionColor:'#06b6d4', regionUrl:'/skandinavien.html', id:'sk_pori_yyteri',      name:'Pori / Yyteri',            emoji:'🌊', lat:61.600, lon:21.440, offshoreDir:90  },
   { region:'Finnland',     regionColor:'#06b6d4', regionUrl:'/skandinavien.html', id:'sk_lauttasaari',      name:'Lauttasaari / Helsinki',   emoji:'💨', lat:60.148, lon:24.886, offshoreDir:0   },
   { region:'Finnland',     regionColor:'#06b6d4', regionUrl:'/skandinavien.html', id:'sk_lahti',            name:'Lahti / Vesijärvi',        emoji:'🏞', lat:60.980, lon:25.660, offshoreDir:180, noMarine:true },
+  // Bayern (4 Seen)
+  { region:'Bayern',       regionColor:'#a78bfa', regionUrl:'/',              id:'x_ammersee_eching', name:'Ammersee Eching', emoji:'🏞', lat:48.0619, lon:11.1207, offshoreDir:0, noMarine:true },
+  { region:'Bayern',       regionColor:'#a78bfa', regionUrl:'/',              id:'x_hollerner_see', name:'Hollerner See', emoji:'🏞', lat:48.2842, lon:11.6019, noMarine:true },
+  { region:'Bayern',       regionColor:'#a78bfa', regionUrl:'/',              id:'x_starnberger_ambach', name:'Starnberger See Ambach', emoji:'🏞', lat:47.8675, lon:11.3357, offshoreDir:90, noMarine:true },
+  { region:'Bayern',       regionColor:'#a78bfa', regionUrl:'/',              id:'x_lichtenauer_see', name:'Lichtenauer See', emoji:'🏞', lat:48.7092, lon:11.3559, noMarine:true },
 ];
 
 // ── Scoring ────────────────────────────────────────────────

@@ -572,6 +572,52 @@
       "lat": 36.983,
       "lon": 21.667,
       "offshoreDir": 45
+    },
+    {
+      "region": "Bayern",
+      "regionColor": "#a78bfa",
+      "regionUrl": "/",
+      "id": "x_ammersee_eching",
+      "name": "Ammersee Eching",
+      "emoji": "🏞",
+      "lat": 48.0619,
+      "lon": 11.1207,
+      "offshoreDir": 0,
+      "noMarine": true
+    },
+    {
+      "region": "Bayern",
+      "regionColor": "#a78bfa",
+      "regionUrl": "/",
+      "id": "x_hollerner_see",
+      "name": "Hollerner See",
+      "emoji": "🏞",
+      "lat": 48.2842,
+      "lon": 11.6019,
+      "noMarine": true
+    },
+    {
+      "region": "Bayern",
+      "regionColor": "#a78bfa",
+      "regionUrl": "/",
+      "id": "x_starnberger_ambach",
+      "name": "Starnberger See Ambach",
+      "emoji": "🏞",
+      "lat": 47.8675,
+      "lon": 11.3357,
+      "offshoreDir": 90,
+      "noMarine": true
+    },
+    {
+      "region": "Bayern",
+      "regionColor": "#a78bfa",
+      "regionUrl": "/",
+      "id": "x_lichtenauer_see",
+      "name": "Lichtenauer See",
+      "emoji": "🏞",
+      "lat": 48.7092,
+      "lon": 11.3559,
+      "noMarine": true
     }
   ]
 }

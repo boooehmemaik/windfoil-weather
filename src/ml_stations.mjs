@@ -18,7 +18,7 @@ export const EXTRA_SPOTS = [
   { id: 'x_woerthsee',       name: 'Wörthsee',          lat: 48.0717, lon: 11.1683 },
   { id: 'x_pilsensee',       name: 'Pilsensee',         lat: 48.0283, lon: 11.1867 },
   { id: 'x_ammersee_eching', name: 'Ammersee Eching',   lat: 48.0619, lon: 11.1207 },
-  { id: 'x_hollerner_see',   name: 'Hollerner See',     lat: 48.2989, lon: 11.6178 },
+  { id: 'x_hollerner_see',   name: 'Hollerner See',     lat: 48.2842, lon: 11.6019 },
   { id: 'x_chioggia',        name: 'Chioggia',          lat: 45.2271, lon: 12.3046 },
   { id: 'x_gialova',         name: 'Gialova / Navarino', lat: 36.9485, lon: 21.6953 },
   { id: 'x_vasiliki',        name: 'Vasiliki',          lat: 38.6290, lon: 20.6060 },

@@ -1,5 +1,12 @@
 # WindFoil — Version History
 
+## v3.43.4 (2026-11-16)
+**FEAT(vergleich): Vier bayerische Seen — Ammersee Eching, Hollerner See, Starnberger See Ambach, Lichtenauer See**
+- `spots.json` (`unpagedSpots`), `vergleich.html` (`ALL_SPOTS`, Filter „Bayern", 44 statt 40 Spots), `watcher.html`: Region „Bayern", alle mit `noMarine: true` (Binnenseen, keine SST-Abfrage)
+- Schätzwerte: `offshoreDir` Eching 0°/Ambach 90° aus der Uferlage abgeleitet (Hollerner See/Lichtenauer See ohne Offshore-Abzug); Lichtenauer See bei Weichering nicht eindeutig auffindbar — Position (48.709, 11.356) ist eine Näherung
+- `src/ml_stations.mjs`: Koordinaten Hollerner See in `EXTRA_SPOTS` korrigiert (48.2842, 11.6019)
+- `forecast-routes.test.mjs`: Testtitel auf 44 Spots
+
 ## v3.43.3 (2026-11-16)
 **FIX(gear): Wing-Größe aus 65. Perzentil der Fahrstunden statt Mittagsmittel**
 - `js/wf-scoring.js`: neue `ridingWind()` (65. Perzentil der lokalen Stunden 09-18 Uhr), exportiert über `WF`
