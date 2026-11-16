@@ -567,6 +567,13 @@ function setFilter(region, btn) {
   btn.classList.add('active');
   btn.setAttribute('aria-pressed','true');
   renderTable();
+  fitMapToFilter(region);
+}
+
+function fitMapToFilter(region) {
+  if (region==='all') { vergleichMap.setView([40.5,10.0],4); return; }
+  const pts=ALL_SPOTS.filter(s=>s.region===region).map(s=>[s.lat,s.lon]);
+  if (pts.length) vergleichMap.fitBounds(pts,{padding:[50,50],maxZoom:9});
 }
 
 // ── Auto-refresh countdown ─────────────────────────────────

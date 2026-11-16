@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.43.7 (2026-11-16)
+**FIX(vergleich): Karte zoomt beim Regionsfilter auf die Region**
+- `vergleich.html`: `fitMapToFilter()` — Filter „Bayern" (und jede andere Region) zoomt die Karte auf die gefilterten Spots (maxZoom 9), „Alle" setzt die Europa-Ansicht zurück. Vorher lagen die vier Bayern-Seen bei Zoom 4 als Stapel übereinander (~1° Abstand ≈ 11 px) und waren nicht erkennbar
+- `CLAUDE.md`: Abschnitt „Agency-Agents"
+
 ## v3.43.6 (2026-11-16)
 **FIX(vergleich): Ammersee Eching — Nord-Sperre wiederhergestellt**
 - `offshoreDir: 0` zurück in `spots.json` und `vergleich.html`: Wind aus Nord (±45°) ist dort wegen totaler Abdeckung nicht fahrbar; Ost/West/Süd bleiben unberührt. v3.43.5 hatte die Sperre fälschlich ganz entfernt
