@@ -93,6 +93,54 @@
           "camper": true,
           "camperNote": "Camping Capo Ferrato nahe Villasimius",
           "vergleichRegion": "Sardinien"
+        },
+        {
+          "id": "s_porto_pino",
+          "name": "Porto Pino",
+          "emoji": "🏝",
+          "desc": "Maestrale · Südwest-Dünenküste",
+          "lat": 38.9622,
+          "lon": 8.5969,
+          "shoreNote": "Golf von Palmas, Dünenstrand",
+          "color": "#38bdf8",
+          "offshoreDir": 45,
+          "vergleichRegion": "Sardinien"
+        },
+        {
+          "id": "s_capannizza",
+          "name": "Spiaggia Sa Capannizza",
+          "emoji": "🏖",
+          "desc": "Levante · Ostküste Budoni",
+          "lat": 40.7001,
+          "lon": 9.7213,
+          "shoreNote": "Ostexposition, Strand bei Tanaunella",
+          "color": "#fb923c",
+          "offshoreDir": 270,
+          "vergleichRegion": "Sardinien"
+        },
+        {
+          "id": "s_ginestre",
+          "name": "Spiaggia delle Ginestre",
+          "emoji": "🏖",
+          "desc": "Levante · Ostküste Ogliastra",
+          "lat": 39.8266,
+          "lon": 9.6792,
+          "shoreNote": "Ostexposition bei Torre di Bari",
+          "color": "#34d399",
+          "offshoreDir": 270,
+          "vergleichRegion": "Sardinien"
+        },
+        {
+          "id": "s_lido_orri",
+          "name": "Lido di Orrì",
+          "emoji": "🏖",
+          "desc": "Levante · Ostküste Tortolì",
+          "lat": 39.9003,
+          "lon": 9.6819,
+          "shoreNote": "Ostexposition, Strand bei Tortolì",
+          "color": "#facc15",
+          "offshoreDir": 270,
+          "vergleichRegion": "Sardinien"
         }
       ],
       "vergleichRegions": [
@@ -618,39 +666,6 @@
       "lat": 48.6906,
       "lon": 11.3335,
       "noMarine": true
-    },
-    {
-      "region": "Sardinien",
-      "regionColor": "#3a9ad9",
-      "regionUrl": "/sardinia.html",
-      "id": "s_capannizza",
-      "name": "Spiaggia Sa Capannizza",
-      "emoji": "🏖",
-      "lat": 40.7001,
-      "lon": 9.7213,
-      "offshoreDir": 270
-    },
-    {
-      "region": "Sardinien",
-      "regionColor": "#3a9ad9",
-      "regionUrl": "/sardinia.html",
-      "id": "s_ginestre",
-      "name": "Spiaggia delle Ginestre",
-      "emoji": "🏖",
-      "lat": 39.8266,
-      "lon": 9.6792,
-      "offshoreDir": 270
-    },
-    {
-      "region": "Sardinien",
-      "regionColor": "#3a9ad9",
-      "regionUrl": "/sardinia.html",
-      "id": "s_lido_orri",
-      "name": "Lido di Orrì",
-      "emoji": "🏖",
-      "lat": 39.9003,
-      "lon": 9.6819,
-      "offshoreDir": 270
     }
   ]
 }
