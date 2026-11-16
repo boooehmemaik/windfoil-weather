@@ -15,7 +15,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.43.3",
+    version_label: "Weather Intelligence · v3.43.6",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -329,7 +329,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.43.3",
+    version_label: "Weather Intelligence · v3.43.6",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -646,7 +646,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.43.3
+// WindFoil Weather Intelligence v3.43.6
+// Changelog v3.43.6: nur Versionsanzeige — Bayern-Seen (vergleich.html) ohne Änderung an der Hauptapp
 // Changelog v3.43.3: fix(gear): Wing-Größe und Foil-Empfehlung aus dem 65. Perzentil der Fahrstunden (ridingWind, 09-18 Uhr) statt Mittagsmittel 12-16
 // Changelog v3.43.0: ML für alle Spots — situatives Neural-MOS, thermalCorrection(dateStr), Backfill 24 Monate
 // Changelog v3.41.0: feat(a11y+perf): vollständige Accessibility + esbuild Pre-Build — Babel→esbuild (-617 KB), skip-to-main, aria landmarks, aria-sort, role=dialog+focus-trap, FeedbackModal label/htmlFor, wing-size buttons, delete aria-label
@@ -4122,7 +4123,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.43.3</span>
+        <span>WindFoil Weather Intelligence v3.43.6</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
