@@ -15,7 +15,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.43.2",
+    version_label: "Weather Intelligence · v3.43.3",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -329,7 +329,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.43.2",
+    version_label: "Weather Intelligence · v3.43.3",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -646,8 +646,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.43.2
-// Changelog v3.43.2: X-Forwarded-For spoofing fix (trust proxy + req.ip), timing-safe token comparison, station-key validation on ML endpoints
+// WindFoil Weather Intelligence v3.43.3
+// Changelog v3.43.3: fix(gear): Wing-Größe und Foil-Empfehlung aus dem 65. Perzentil der Fahrstunden (ridingWind, 09-18 Uhr) statt Mittagsmittel 12-16
 // Changelog v3.43.0: ML für alle Spots — situatives Neural-MOS, thermalCorrection(dateStr), Backfill 24 Monate
 // Changelog v3.41.0: feat(a11y+perf): vollständige Accessibility + esbuild Pre-Build — Babel→esbuild (-617 KB), skip-to-main, aria landmarks, aria-sort, role=dialog+focus-trap, FeedbackModal label/htmlFor, wing-size buttons, delete aria-label
 // Changelog v3.39.0: fix(db): foreign_keys + SIGTERM-Handler; fix(a11y): Kontrast #5a7a96→#7fa0be, focus-visible, aria-pressed in alarm.html + vergleich.html; IANA-Timezone-Validierung in feedback.routes.mjs
@@ -1568,6 +1568,7 @@ var blendWindows       = WF.blendWindows;
 var scoreHour          = WF.scoreHour;
 var riderQuiver        = WF.riderQuiver;
 var bestWingForWind    = WF.bestWingForWind;
+var ridingWind         = WF.ridingWind;
 var scorerFor          = WF.scorerFor;
 var carries            = WF.carries;
 var sessionWings       = WF.sessionWings;
@@ -2879,7 +2880,16 @@ function App() {
     // deshalb nicht noch einmal draufrechnen.
     const tcPeak=thermalCorrection(regime?.peakHour??14,midDir,month_n,regime,mos,activeDay,activeDateStr);
     const sb=tcPeak.sb;
-    const effW=midW;
+    // Wing-Wahl und Empfehlungstext gehen vom oberen Mittelfeld der Fahrstunden aus
+    // (WF.ridingWind), nicht vom Mittagsmittel: sonst empfiehlt die App die größere
+    // Größe, obwohl der angezeigte Wind schon darüber liegt. Der Text vergleicht effW
+    // mit dem Fenster dieser Größe, also muss es derselbe Wind sein. Kite behält das
+    // Mittagsmittel; midW/midG bleiben unverändert für predictedWindKt.
+    const rideW=ridingWind(winsEff)??midW;
+    const rideG=ridingWind(gustEff)??midG;
+    const foilRide=sport==="foil";
+    const effW=foilRide?rideW:midW;
+    const effG=foilRide?rideG:midG;
     // win = angezeigtes Fenster (Chart-Bänder), pickedWing = empfohlene Größe,
     // pickedGear = der zugehörige Eintrag der Materialliste, falls es einen gibt.
     // Alle drei kommen aus DEMSELBEN Quiver wie der Score. Käme das Band aus einer
@@ -2887,7 +2897,7 @@ function App() {
     // grüne Stunden sichtbar über dem Band — und rec_window nennte ein zu enges Fenster.
     let win, pickedGear=null, pickedWing=null;
     if(quiver){
-      const best = bestWingForWind(quiver, midW);
+      const best = bestWingForWind(quiver, rideW);
       if(best){
         win = best.win;
         pickedWing = best.wing;
@@ -2913,7 +2923,7 @@ function App() {
     // formatierten String: der Separator gehört wingAdvice, nicht dem Aufrufer.
     const wingPlanChanges = new Set(sessWings.map(w=>w.wing)).size > 1;
     const thInfo=classifyThermik(maxTh);
-    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,winsEffBoosted,dayScore,thInfo,pickedGear,pickedWing,session,wingPlan,wingPlanChanges,liveBoost:lb,measuredCorr:mc,ens:ensD,carrierWins,thermal:tcPeak,thermalHours:tcs};
+    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,effG,rideW,winsEffBoosted,dayScore,thInfo,pickedGear,pickedWing,session,wingPlan,wingPlanChanges,liveBoost:lb,measuredCorr:mc,ens:ensD,carrierWins,thermal:tcPeak,thermalHours:tcs};
   })();
 
   const dayScores = forecast ? Array.from({length:7},(_,d)=>{
@@ -2978,7 +2988,7 @@ function App() {
   // ── Recommendation ──────────────────────────────────────────────────────────
   const rec = (() => {
     if(!dayData) return "";
-    const{effW,midG,win,pickedGear,wingPlan,wingPlanChanges}=dayData;
+    const{effW,effG:midG,win,pickedGear,wingPlan,wingPlanChanges}=dayData;
     if(sport==="kite") return kiteRec(effW,midG,win,kiteRider.kiteModel,kiteRider.kiteSize,kiteRider.skill,windUnit);
     const{weight,wingSize,skill}=rider;
     const lines=[];
@@ -4112,7 +4122,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.43.2</span>
+        <span>WindFoil Weather Intelligence v3.43.3</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>

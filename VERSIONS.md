@@ -1,5 +1,12 @@
 # WindFoil — Version History
 
+## v3.43.3 (2026-11-16)
+**FIX(gear): Wing-Größe aus 65. Perzentil der Fahrstunden statt Mittagsmittel**
+- `js/wf-scoring.js`: neue `ridingWind()` (65. Perzentil der lokalen Stunden 09-18 Uhr), exportiert über `WF`
+- `src/app.jsx` (+ neu gebautes `js/app.js`): Wing-Größen-Wahl (`bestWingForWind`) und Foil-Empfehlungstext nutzen `rideW`/`rideG` aus `ridingWind` statt des 12-16-Uhr-Mittels; Kite und `predictedWindKt` unverändert. Anlass: Ammersee bekam 6 m empfohlen, obwohl der Wind über dem 6-m-Bereich lag und 5 m passte — das Mittagsmittel zog die Größe nach unten
+- `quiver.test.mjs`: 2 neue Tests
+- `index.html`: Cache-Busting `?v=3.43.3` an `/js/wf-scoring.js` und `/js/app.js` (nginx liefert `/js/` mit `immutable`, 1 Jahr; `sw.js` cached keine Assets und hat keine Cache-Version)
+
 ## v3.43.2 (2026-11-15)
 **SECURITY: X-Forwarded-For spoofing, timing-safe comparison, station-key validation**
 - `proxy-server.js`: `app.set("trust proxy", 1)` → korrekte `req.ip` aus nginx; beide `x-forwarded-for`-Header-Zugriffe durch `req.ip` ersetzt (adminGuard + login); timing-sicherer Token-Vergleich: beide Buffer auf gleiche Länge padded vor `timingSafeEqual`; Station-Key-Regex-Validierung in `/api/admin/ml/backfill` + `/api/admin/ml/train`

@@ -204,6 +204,27 @@
     return best;
   }
 
+  /** Wind, nach dem die Wing-Größe gewählt wird: ein oberes Quantil der Fahrstunden.
+   *
+   *  Ein Mittelwert über ein paar Mittagsstunden zieht die Größe nach unten, wenn
+   *  der Wind nachmittags aufbaut — man fährt dann mit dem großen Wing in den
+   *  stärkeren Stunden überpowert. Das 65. Perzentil über 09–18 Uhr Ortszeit
+   *  (Open-Meteo liefert mit timezone=auto Ortsstunden, Index = Uhrzeit) liegt
+   *  in der oberen Mitte des Fahrbereichs. Stunden ohne Wert (null/NaN) zählen
+   *  nicht; echte 0 schon. Ohne einen einzigen Wert: null. */
+  const RIDE_PERCENTILE = 0.65;
+  const RIDE_FROM = 9;
+  const RIDE_TO = 19;
+  function ridingWind(winds, opts) {
+    const o = opts || {};
+    const q = o.q != null ? o.q : RIDE_PERCENTILE;
+    const vals = (winds || []).slice(o.from != null ? o.from : RIDE_FROM, o.to != null ? o.to : RIDE_TO)
+      .filter(w => typeof w === 'number' && isFinite(w))
+      .sort((a, b) => a - b);
+    if (!vals.length) return null;
+    return vals[Math.min(vals.length - 1, Math.floor(vals.length * q))];
+  }
+
   /** Score einer Stunde mit dem besten Wing des Quivers. */
   function scoreHourQuiver(windMs, quiver) {
     const best = bestWingForWind(quiver, windMs);
@@ -419,6 +440,7 @@
            calcWindow, rangeToWindow, blendWindows, wingTableWindow, wingWindow,
            scoreHour, offshoreMultiplier, meanDirection, bestSession, scoreDay,
            hourlyScores, bestBlock, defaultQuiver, riderQuiver, bestWingForWind,
+           ridingWind, RIDE_PERCENTILE,
            scoreHourQuiver, scorerFor, carries, sessionWings, wingAdvice,
            guestWindow, guestQuiver, windowFromRider, loadRider, describeRider };
 });

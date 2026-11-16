@@ -208,3 +208,26 @@ test('describeRider nennt den Quiver, nicht eine einzelne Größe', () => {
   assert.match(txt, /Quiver 3\/4\/5\/6 m²/);
   assert.match(WF.describeRider(null, q), /Referenzfahrer/);
 });
+
+// ── Wing-Wahl nach oberem Mittelfeld der Fahrstunden ────────────────────────
+test('ridingWind: 65. Perzentil über 09–18 Uhr, Nacht und Lücken zählen nicht', () => {
+  const day = Array.from({ length: 24 }, (_, h) => (h >= 9 && h <= 18 ? h - 8 : 99));
+  // 10 Fahrstunden mit 1..10 → Index floor(10*0.65)=6 → 7
+  assert.strictEqual(WF.ridingWind(day), 7);
+  const gaps = day.slice(); gaps[10] = null; gaps[11] = NaN; gaps[12] = undefined;
+  assert.strictEqual(WF.ridingWind(gaps), 8, '7 gültige Werte: floor(7*0.65)=4 → fünftkleinster');
+  assert.strictEqual(WF.ridingWind(Array(24).fill(0)), 0, 'echte 0 ist ein Wert');
+  assert.strictEqual(WF.ridingWind(Array(24).fill(null)), null);
+  assert.strictEqual(WF.ridingWind([]), null);
+});
+
+test('ridingWind: baut der Wind nachmittags auf, wählt es das kleinere Wing als der 12–16-Uhr-Mittelwert', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  const day = building(7.5, 12.5);              // bis 13 Uhr 7,5 m/s, ab 14 Uhr 12,5 m/s
+  const mean1216 = day.slice(12, 16).reduce((a, b) => a + b, 0) / 4;
+  const ride = WF.ridingWind(day);
+  assert.ok(ride > mean1216, `${ride} muss über dem Mittagsmittel ${mean1216} liegen`);
+  const oldPick = WF.bestWingForWind(q, mean1216).wing;
+  const newPick = WF.bestWingForWind(q, ride).wing;
+  assert.ok(newPick < oldPick, `neu ${newPick} m² muss kleiner sein als alt ${oldPick} m²`);
+});
