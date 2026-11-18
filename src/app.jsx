@@ -1,5 +1,5 @@
 const { useState, useEffect, useCallback, useRef } = React;
-const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, ReferenceDot, Cell } = Recharts;
+const { LineChart, Line, ComposedChart, Area, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceDot, Cell } = Recharts;
 // ── Bilingual support (DE/EN) ─────────────────────────────────────────────────
 // lang is a module-level variable updated each render so all t() calls in the
 // same render see the current language without threading it through every fn.
@@ -15,7 +15,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.45.0",
+    version_label: "Weather Intelligence · v3.45.1",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -322,7 +322,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.45.0",
+    version_label: "Weather Intelligence · v3.45.1",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -632,8 +632,9 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.45.0
-// Changelog v3.45.0: Wing-Größe je Stunde (hourlyWings), Karten zusammengeführt, Böen-Tiebreak
+// WindFoil Weather Intelligence v3.45.1
+// Changelog v3.45.1: Böenhinweis nur mit kleinerer Quiver-Größe; Kite-Größe je Stunde mit Hysterese (prevKite); ReferenceArea-Import und Alias ridingWind entfernt
+// Changelog v3.45.0: Wing-Größe je Stunde (hourlyWings), Karten zusammengeführt, Böen-Tiebreak; Größe je Stunde aus WF.hourlyWings, Tagesgröße = dominante Größe der besten Session
 // Changelog v3.43.6: nur Versionsanzeige — Bayern-Seen (vergleich.html) ohne Änderung an der Hauptapp
 // Changelog v3.43.3: fix(gear): Wing-Größe und Foil-Empfehlung aus dem 65. Perzentil der Fahrstunden (ridingWind, 09-18 Uhr) statt Mittagsmittel 12-16
 // Changelog v3.43.0: ML für alle Spots — situatives Neural-MOS, thermalCorrection(dateStr), Backfill 24 Monate
@@ -1558,7 +1559,6 @@ var blendWindows       = WF.blendWindows;
 var scoreHour          = WF.scoreHour;
 var riderQuiver        = WF.riderQuiver;
 var bestWingForWind    = WF.bestWingForWind;
-var ridingWind         = WF.ridingWind;
 var scorerFor          = WF.scorerFor;
 var carries            = WF.carries;
 var sessionWings       = WF.sessionWings;
@@ -2987,21 +2987,26 @@ function App() {
   const gearByHour = (() => {
     if (!dayData) return null;
     const { winsEffBoosted, labels } = dayData;
+    let prevKite = null;
     return labels.map((_, i) => {
       const w = winsEffBoosted[i];
-      if (!w || w < 0.5) return null;
+      if (!w || w < 0.5) { prevKite = null; return null; }
       if (sport === "kite") {
         const kite = CRAZYFLY_KITES.find(k => k.model === kiteRider.kiteModel);
-        if (!kite) return null;
-        let best = null, bestPri = -1;
+        if (!kite) { prevKite = null; return null; }
+        let best = null, bestPri = -1, prevPri = 0;
         for (const s of kite.sizes) {
           const adj = calcKiteWindow(s.minKn, s.maxKn, kiteRider.skill, kiteRider.weight);
           const inOpt = w >= adj.optMin && w <= adj.optMax;
           const inRange = w >= adj.minWind && w <= adj.maxWind;
           const pri = inOpt ? 2 : inRange ? 1 : 0;
           if (pri > bestPri) { bestPri = pri; best = { m: s.m, pri }; }
+          if (s.m === prevKite) prevPri = pri;
         }
-        return best && best.pri > 0 ? { label: String(best.m), score: best.pri === 2 ? 88 : 50 } : null;
+        if (prevPri > 0 && prevPri >= bestPri) best = { m: prevKite, pri: prevPri };
+        if (!best || best.pri <= 0) { prevKite = null; return null; }
+        prevKite = best.m;
+        return { label: String(best.m), score: best.pri === 2 ? 88 : 50 };
       }
       const hw = dayData.hourWings[i];
       return hw ? { label: String(hw.wing), score: hw.score } : null;
@@ -3492,7 +3497,7 @@ function App() {
                         {t('score_wing_size',{plan:dayData.wingPlan})}
                       </div>
                     )}
-                    {sport!=="kite" && dayData.wingPlan && dayData.sessGust>dayData.win.optMax && (
+                    {sport!=="kite" && dayData.wingPlan && dayData.sessGust>dayData.win.optMax && quiver && quiver.some(q=>q.wing<dayData.pickedWing) && (
                       <div style={{fontSize:14,color:C.cautionText,marginBottom:6}}>
                         {t('score_gust_cap',{g:fmtW(dayData.sessGust,windUnit)})}
                       </div>
@@ -4085,7 +4090,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.45.0</span>
+        <span>WindFoil Weather Intelligence v3.45.1</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>

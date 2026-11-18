@@ -1,5 +1,11 @@
 # WindFoil — Version History
 
+## v3.45.1 (2026-11-18)
+**FIX(gear): Böenhinweis nur mit kleinerer Größe, Kite-Hysterese, Aufräumen**
+- Böenhinweis „Größe nicht größer wählen" erscheint nur noch, wenn der Quiver tatsächlich eine kleinere Größe hat
+- Kite-Größe je Stunde mit Hysterese — kein Springen mehr (z. B. 9-12-9)
+- Aufräumen: ungenutzten `ReferenceArea`-Import und Alias `ridingWind` entfernt
+
 ## v3.45.0 (2026-11-18)
 **FEAT(gear): Wing-Größe je Stunde — Karten zusammengeführt, Böen-Tiebreak**
 - Wing-Größe gilt je Stunde: Chart zeigt in jeder tragenden Stunde die Größe als Zahl (statt Punkten), Stunden ohne Wind/zu niedrigem Score zeigen nichts; Tagesband und Mindestwind-Linie entfallen
