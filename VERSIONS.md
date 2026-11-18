@@ -1,5 +1,9 @@
 # WindFoil — Version History
 
+## v3.45.2 (2026-11-18)
+**FIX(ui): Wing-Windranges — Harlem-Wing-Zeilen ohne weißen Button-Hintergrund**
+- Größenzeilen der Harlem-Wings hatten als Buttons den weißen Browser-Standardhintergrund — jetzt transparent und passend zum Rest der Karte (Rahmen/Schrift zurückgesetzt, aktive Größe mit `goText` im hellen Theme)
+
 ## v3.45.1 (2026-11-18)
 **FIX(gear): Böenhinweis nur mit kleinerer Größe, Kite-Hysterese, Aufräumen**
 - Böenhinweis „Größe nicht größer wählen" erscheint nur noch, wenn der Quiver tatsächlich eine kleinere Größe hat

@@ -15,7 +15,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.45.1",
+    version_label: "Weather Intelligence · v3.45.2",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -322,7 +322,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.45.1",
+    version_label: "Weather Intelligence · v3.45.2",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -632,7 +632,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.45.1
+// WindFoil Weather Intelligence v3.45.2
+// Changelog v3.45.2: Harlem-Wing-Größenzeilen (Buttons) ohne weißen Browser-Standardhintergrund; aktive Größe mit goText
 // Changelog v3.45.1: Böenhinweis nur mit kleinerer Quiver-Größe; Kite-Größe je Stunde mit Hysterese (prevKite); ReferenceArea-Import und Alias ridingWind entfernt
 // Changelog v3.45.0: Wing-Größe je Stunde (hourlyWings), Karten zusammengeführt, Böen-Tiebreak; Größe je Stunde aus WF.hourlyWings, Tagesgröße = dominante Größe der besten Session
 // Changelog v3.43.6: nur Versionsanzeige — Bayern-Seen (vergleich.html) ohne Änderung an der Hauptapp
@@ -3676,11 +3677,13 @@ function App() {
                           <button key={sz} type="button" title={`${size} m² auswählen`}
                             onClick={()=>{ setRi(r=>({...r,wingSize:size})); setRider(r=>({...r,wingSize:size})); setActiveDay(0); }}
                             style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"3px 8px",
-                            fontSize:11,color:isActive?C.go:C.muted,marginBottom:3,
+                            background:"none",border:"none",borderRadius:0,width:"100%",textAlign:"left",
+                            font:"inherit",cursor:"pointer",padding:0,
+                            fontSize:11,color:isActive?C.goText:C.muted,marginBottom:3,
                             borderLeft:`2px solid ${isActive?C.go:C.border}`,paddingLeft:6}}>
                             <span>{size} m²</span>
                             <span style={{fontFamily:"monospace",color:C.dim}}>{data.rangeKn[0]}–{data.rangeKn[1]} kn</span>
-                            <span style={{fontFamily:"monospace",color:isActive?C.go:C.muted}}>
+                            <span style={{fontFamily:"monospace",color:isActive?C.goText:C.muted}}>
                               {adjOk?`${Math.round(msToKn(adj.minWind))}–${Math.round(msToKn(adj.maxWind))} kn`:"—"}
                             </span>
                           </button>
@@ -4090,7 +4093,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.45.1</span>
+        <span>WindFoil Weather Intelligence v3.45.2</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>

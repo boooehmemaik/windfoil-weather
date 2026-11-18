@@ -11,7 +11,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo\u2026",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence \xB7 v3.45.1",
+    version_label: "Weather Intelligence \xB7 v3.45.2",
     sport_foil: "\u{1F3C4} Wingfoiling",
     sport_kite: "\u{1FA81} Kitesurfing",
     // Loc bar
@@ -318,7 +318,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo\u2026",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence \xB7 v3.45.1",
+    version_label: "Weather Intelligence \xB7 v3.45.2",
     sport_foil: "\u{1F3C4} Wingfoiling",
     sport_kite: "\u{1FA81} Kitesurfing",
     // Loc bar
@@ -3195,8 +3195,16 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
           display: "grid",
           gridTemplateColumns: "auto 1fr 1fr",
           gap: "3px 8px",
+          background: "none",
+          border: "none",
+          borderRadius: 0,
+          width: "100%",
+          textAlign: "left",
+          font: "inherit",
+          cursor: "pointer",
+          padding: 0,
           fontSize: 11,
-          color: isActive ? C.go : C.muted,
+          color: isActive ? C.goText : C.muted,
           marginBottom: 3,
           borderLeft: `2px solid ${isActive ? C.go : C.border}`,
           paddingLeft: 6
@@ -3204,7 +3212,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       },
       /* @__PURE__ */ React.createElement("span", null, size, " m\xB2"),
       /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", color: C.dim } }, data.rangeKn[0], "\u2013", data.rangeKn[1], " kn"),
-      /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", color: isActive ? C.go : C.muted } }, adjOk ? `${Math.round(msToKn(adj.minWind))}\u2013${Math.round(msToKn(adj.maxWind))} kn` : "\u2014")
+      /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", color: isActive ? C.goText : C.muted } }, adjOk ? `${Math.round(msToKn(adj.minWind))}\u2013${Math.round(msToKn(adj.maxWind))} kn` : "\u2014")
     );
   }))))), /* @__PURE__ */ React.createElement("div", { style: S.grid6 }, [
     { v: cvt(dayData.avgW, windUnit).toFixed(windUnit === "bf" ? 0 : 1), u: unitLabel(windUnit), l: t("stat_avg_wind") },
@@ -3369,7 +3377,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     setCustom({ link: "", name: "" });
     setLinkError("");
     setShowLoc(false);
-  } }, t("loc_add_btn")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.dim, lineHeight: 1.5 } }, t("loc_add_hint")))))), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderTop: `1px solid ${C.border}`, padding: "8px 20px calc(14px + env(safe-area-inset-bottom))", textAlign: "center", fontFamily: "monospace", fontSize: 9, color: C.muted, display: "flex", justifyContent: "center", alignItems: "center", gap: 24, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", null, "WindFoil Weather Intelligence v3.45.1"), userEmail && /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, t("auth_logged_as"), ": ", userEmail), /* @__PURE__ */ React.createElement("span", null, "Open-Meteo \xB7 ERA5 ECMWF \xB7 Rider-Input"), /* @__PURE__ */ React.createElement("span", null, t("footer_loc", { name: loc.name })), /* @__PURE__ */ React.createElement("a", { href: "/sardinia.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sardinien"), /* @__PURE__ */ React.createElement("a", { href: "/sizilien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sizilien"), /* @__PURE__ */ React.createElement("a", { href: "/spanien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F1EA}\u{1F1F8} Spanien"), /* @__PURE__ */ React.createElement("a", { href: "/vergleich.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F4CA} Vergleich"), /* @__PURE__ */ React.createElement("a", { href: "/watcher.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F52D} Watcher"), /* @__PURE__ */ React.createElement("a", { href: "/alarm.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F514} Windalarm"), /* @__PURE__ */ React.createElement("a", { href: "/logbuch.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F6F6} Logbuch"), /* @__PURE__ */ React.createElement("a", { href: "/reise.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F9ED} Reiseplaner"), /* @__PURE__ */ React.createElement("a", { href: "/help.html", style: { color: C.sky, textDecoration: "none" } }, t("footer_help")), /* @__PURE__ */ React.createElement(
+  } }, t("loc_add_btn")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.dim, lineHeight: 1.5 } }, t("loc_add_hint")))))), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderTop: `1px solid ${C.border}`, padding: "8px 20px calc(14px + env(safe-area-inset-bottom))", textAlign: "center", fontFamily: "monospace", fontSize: 9, color: C.muted, display: "flex", justifyContent: "center", alignItems: "center", gap: 24, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", null, "WindFoil Weather Intelligence v3.45.2"), userEmail && /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, t("auth_logged_as"), ": ", userEmail), /* @__PURE__ */ React.createElement("span", null, "Open-Meteo \xB7 ERA5 ECMWF \xB7 Rider-Input"), /* @__PURE__ */ React.createElement("span", null, t("footer_loc", { name: loc.name })), /* @__PURE__ */ React.createElement("a", { href: "/sardinia.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sardinien"), /* @__PURE__ */ React.createElement("a", { href: "/sizilien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sizilien"), /* @__PURE__ */ React.createElement("a", { href: "/spanien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F1EA}\u{1F1F8} Spanien"), /* @__PURE__ */ React.createElement("a", { href: "/vergleich.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F4CA} Vergleich"), /* @__PURE__ */ React.createElement("a", { href: "/watcher.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F52D} Watcher"), /* @__PURE__ */ React.createElement("a", { href: "/alarm.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F514} Windalarm"), /* @__PURE__ */ React.createElement("a", { href: "/logbuch.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F6F6} Logbuch"), /* @__PURE__ */ React.createElement("a", { href: "/reise.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F9ED} Reiseplaner"), /* @__PURE__ */ React.createElement("a", { href: "/help.html", style: { color: C.sky, textDecoration: "none" } }, t("footer_help")), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => {
