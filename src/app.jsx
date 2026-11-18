@@ -15,7 +15,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.43.6",
+    version_label: "Weather Intelligence · v3.45.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -109,8 +109,14 @@ const TRANSLATIONS = {
     stat_kite_window: "Kite-Fenster",
     // Details divider
     more_details: "Weitere Details",
-    // Equipment rec section
-    equip_rec_title: "Equipment-Empfehlung",
+    // Wing-Größe in der Score-Karte und im Chart
+    score_wing_size: "Wing {plan}",
+    score_gust_cap: "Böen bis {g} — Größe nicht größer wählen",
+    chart_sizes_aria: "Foil-Fenster, Größen:",
+    chart_sizes_run: "{from}–{to} Uhr {s} m²",
+    chart_sizes_one: "{h} Uhr {s} m²",
+    chart_sizes_none: "Foil-Fenster, keine tragende Stunde.",
+    chart_sizes_wind: "Maximal {w} Wind, {g} Böen.",
     foil_window_title: "Wingfoil-Fenster Analyse — Rider-spezifisch + Foil-Score",
     kite_window_title: "Kite-Fenster Analyse — Rider-spezifisch + Kite-Score",
     foil_window_ref: "🏄 Wing-Windranges",
@@ -118,19 +124,6 @@ const TRANSLATIONS = {
     ref_weight_adj: "Herstellerangaben (Referenzgewicht {ref} kg). Die zweite Spalte zeigt dein angepasstes Fenster für {weight} kg · {skill}.",
     ref_weight_adj_kite: "Herstellerangaben (Referenzgewicht ~80 kg). Die zweite Spalte zeigt dein angepasstes Fenster für {weight} kg · {skill}.",
     // Recommendation lines
-    rec_too_little: "⚠️ <b>Zu wenig Wind</b> — {w}, benötigt ≥{min}",
-    rec_too_little_tip: "💡 Größeren Wing wählen oder auf Nachmittags-Thermik warten.",
-    rec_optimal: "✅ <b>Optimale Bedingungen</b> — {w} im Fenster ({optMin}–{optMax})",
-    rec_optimal_rider: "🏄 Wing {sz} m² — ideal für {kg} kg · {skill}",
-    rec_overpowered: "⚠️ <b>Overpowered-Zone</b> — {w} an der Obergrenze",
-    rec_overpowered_tip: "💡 Kleineren Wing: {x} m² erwägen",
-    rec_too_much: "🚨 <b>Zu viel Wind</b> — {w} > Max {max}",
-    rec_too_much_tip: "⛔ Sitzung abbrechen oder deutlich kleineres Equipment",
-    rec_gust_delta: "💨 <b>Böen-Δ {dw}</b> — Erhöhte Kontrollbelastung!",
-    rec_window: "<br>📐 <b>Dein Fenster:</b> Abheben {min} · Optimal {optMin}–{optMax} · Max {max}",
-    rec_setup: "🎒 <b>Empfohlenes Setup aus deinem Material:</b> {name} — Wing {wing} m²{plane}",
-    rec_setup_plane: " · ab {kn} kn",
-    rec_wing_plan: "🔄 <b>Größenwechsel über die Session:</b> {plan}",
     // Kite rec
     kite_rec_too_little: "⚠️ <b>Zu wenig Wind</b> — {w}, Kite braucht ≥{min}",
     kite_rec_too_little_tip: "💡 Größeren Kite wählen oder auf Wind-Zunahme warten.",
@@ -329,7 +322,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.43.6",
+    version_label: "Weather Intelligence · v3.45.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -423,8 +416,14 @@ const TRANSLATIONS = {
     stat_kite_window: "Kite window",
     // Details divider
     more_details: "More details",
-    // Equipment rec section
-    equip_rec_title: "Equipment recommendation",
+    // Wing size in the score card and chart
+    score_wing_size: "Wing {plan}",
+    score_gust_cap: "Gusts up to {g} — do not go bigger",
+    chart_sizes_aria: "Foil window, sizes:",
+    chart_sizes_run: "{from}–{to}h {s} m²",
+    chart_sizes_one: "{h}h {s} m²",
+    chart_sizes_none: "Foil window, no carrying hour.",
+    chart_sizes_wind: "Peak {w} wind, {g} gusts.",
     foil_window_title: "Wingfoil window analysis — rider-specific + foil score",
     kite_window_title: "Kite window analysis — rider-specific + kite score",
     foil_window_ref: "🏄 Wing wind ranges",
@@ -432,19 +431,6 @@ const TRANSLATIONS = {
     ref_weight_adj: "Manufacturer specs (reference weight {ref} kg). Second column shows your adjusted window for {weight} kg · {skill}.",
     ref_weight_adj_kite: "Manufacturer specs (reference weight ~80 kg). Second column shows your adjusted window for {weight} kg · {skill}.",
     // Recommendation lines
-    rec_too_little: "⚠️ <b>Too little wind</b> — {w}, needs ≥{min}",
-    rec_too_little_tip: "💡 Choose a larger wing or wait for afternoon thermals.",
-    rec_optimal: "✅ <b>Optimal conditions</b> — {w} in window ({optMin}–{optMax})",
-    rec_optimal_rider: "🏄 Wing {sz} m² — ideal for {kg} kg · {skill}",
-    rec_overpowered: "⚠️ <b>Overpowered zone</b> — {w} at upper limit",
-    rec_overpowered_tip: "💡 Consider a smaller wing: {x} m²",
-    rec_too_much: "🚨 <b>Too much wind</b> — {w} > max {max}",
-    rec_too_much_tip: "⛔ Abort session or use significantly smaller equipment",
-    rec_gust_delta: "💨 <b>Gust-Δ {dw}</b> — Increased control load!",
-    rec_window: "<br>📐 <b>Your window:</b> Takeoff {min} · Optimal {optMin}–{optMax} · Max {max}",
-    rec_setup: "🎒 <b>Recommended setup from your gear:</b> {name} — Wing {wing} m²{plane}",
-    rec_setup_plane: " · from {kn} kn",
-    rec_wing_plan: "🔄 <b>Size change over the session:</b> {plan}",
     // Kite rec
     kite_rec_too_little: "⚠️ <b>Too little wind</b> — {w}, kite needs ≥{min}",
     kite_rec_too_little_tip: "💡 Choose a larger kite or wait for more wind.",
@@ -646,7 +632,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.43.6
+// WindFoil Weather Intelligence v3.45.0
+// Changelog v3.45.0: Wing-Größe je Stunde (hourlyWings), Karten zusammengeführt, Böen-Tiebreak
 // Changelog v3.43.6: nur Versionsanzeige — Bayern-Seen (vergleich.html) ohne Änderung an der Hauptapp
 // Changelog v3.43.3: fix(gear): Wing-Größe und Foil-Empfehlung aus dem 65. Perzentil der Fahrstunden (ridingWind, 09-18 Uhr) statt Mittagsmittel 12-16
 // Changelog v3.43.0: ML für alle Spots — situatives Neural-MOS, thermalCorrection(dateStr), Backfill 24 Monate
@@ -769,12 +756,14 @@ const THEMES = {
   dark: {
     bg:"#0a0e14",surface:"#111820",panel:"#151d28",border:"#1e2d3d",border2:"#243040",
     sky:"#3a9ad9",signal:"#f07820",caution:"#f5b942",go:"#3ddc84",stop:"#e84040",
+    goText:"#3ddc84",cautionText:"#f5b942",
     text:"#d8e4f0",muted:"#7fa0be",dim:"#2a3d52",
     headerBg:"rgba(10,14,20,.97)",gridStroke:"rgba(255,255,255,0.05)",
   },
   light: {
     bg:"#e7edf3",surface:"#f3f6fa",panel:"#ffffff",border:"#cdd9e6",border2:"#b6c6d6",
     sky:"#1f7fc0",signal:"#dd6510",caution:"#b07d10",go:"#149048",stop:"#d62828",
+    goText:"#0b6b30",cautionText:"#8a5f00",
     text:"#13202e",muted:"#5b7186",dim:"#9fb1c2",
     headerBg:"rgba(247,249,252,.97)",gridStroke:"rgba(0,0,0,0.06)",
   },
@@ -1573,6 +1562,8 @@ var ridingWind         = WF.ridingWind;
 var scorerFor          = WF.scorerFor;
 var carries            = WF.carries;
 var sessionWings       = WF.sessionWings;
+var hourlyWings        = WF.hourlyWings;
+var dominantWing       = WF.dominantWing;
 var wingAdvice         = WF.wingAdvice;
 var scoreDay    = (winds, win, start=0) => WF.scoreDay(winds, win, { start });
 var bestSession = (winds, win, start=0) => WF.bestSession(winds, win, { start });
@@ -2877,54 +2868,40 @@ function App() {
     const midW=slice(winsEff,12,16).reduce((a,b)=>a+b,0)/4||winsEff[12]||0;
     const midG=slice(gustEff,12,16).reduce((a,b)=>a+b,0)/4||gustEff[12]||0;
     const midDir=dirs[14]??dirs[12]??180;
-    // midW kommt jetzt aus winsEff, das die Thermik SCHON enthält — effW darf sie
-    // deshalb nicht noch einmal draufrechnen.
     const tcPeak=thermalCorrection(regime?.peakHour??14,midDir,month_n,regime,mos,activeDay,activeDateStr);
     const sb=tcPeak.sb;
-    // Wing-Wahl und Empfehlungstext gehen vom oberen Mittelfeld der Fahrstunden aus
-    // (WF.ridingWind), nicht vom Mittagsmittel: sonst empfiehlt die App die größere
-    // Größe, obwohl der angezeigte Wind schon darüber liegt. Der Text vergleicht effW
-    // mit dem Fenster dieser Größe, also muss es derselbe Wind sein. Kite behält das
-    // Mittagsmittel; midW/midG bleiben unverändert für predictedWindKt.
-    const rideW=ridingWind(winsEff)??midW;
-    const rideG=ridingWind(gustEff)??midG;
-    const foilRide=sport==="foil";
-    const effW=foilRide?rideW:midW;
-    const effG=foilRide?rideG:midG;
-    // win = angezeigtes Fenster (Chart-Bänder), pickedWing = empfohlene Größe,
-    // pickedGear = der zugehörige Eintrag der Materialliste, falls es einen gibt.
-    // Alle drei kommen aus DEMSELBEN Quiver wie der Score. Käme das Band aus einer
-    // einzelnen Größe, während die Stundenwerte die ganze Tasche bewerten, lägen
-    // grüne Stunden sichtbar über dem Band — und rec_window nennte ein zu enges Fenster.
-    let win, pickedGear=null, pickedWing=null;
-    if(quiver){
-      const best = bestWingForWind(quiver, rideW);
-      if(best){
-        win = best.win;
-        pickedWing = best.wing;
-        if(useGear && gear.length) pickedGear = gear.find(g=>parseFloat(g.wing)===best.wing) || null;
-      }
-    }
-    if(!win) win=getActiveWin();
     // winsEff enthält die Thermik bereits (siehe winsTh oben). Ein zweiter
     // Durchgang wäre genau die Doppelzählung, gegen die thermalCorrection baut.
     const winsEffBoosted=winsEff;
-    const scoreSrc = quiver || win;
+    // Größe je Stunde (WF.hourlyWings) ist die einzige Quelle: Chart-Ticks,
+    // Session-Plan und Tagesgröße leiten sich daraus ab. win = Fenster der
+    // Tagesgröße, pickedGear = der zugehörige Eintrag der Materialliste.
+    const hourWings = quiver ? hourlyWings(winsEffBoosted, quiver, gustEff) : [];
+    const scoreSrc = quiver || getActiveWin();
+    const session=bestSession(winsEffBoosted,scoreSrc); // {score,startHour,endHour}
+    const sessWings = quiver && session.startHour!=null
+      ? sessionWings(winsEffBoosted, quiver, session.startHour, session.endHour, 0, gustEff) : [];
+    const pickedWing = dominantWing(sessWings);
+    let win, pickedGear=null;
+    if(quiver && pickedWing!=null){
+      win = (quiver.find(q=>q.wing===pickedWing)||{}).win;
+      if(useGear && gear.length) pickedGear = gear.find(g=>parseFloat(g.wing)===pickedWing) || null;
+    }
+    if(!win) win=getActiveWin();
     const scores=winsEffBoosted.map(scorerFor(scoreSrc));
     const avgW=winsEffBoosted.reduce((a,b)=>a+b,0)/winsEffBoosted.length;
     const maxG=Math.max(...gustEff);
     const maxT=Math.max(...temp);
     const maxTh=Math.max(...thermik);
     const dayScore=scoreDay(winsEffBoosted,scoreSrc);
-    const session=bestSession(winsEffBoosted,scoreSrc); // {score,startHour,endHour}
-    const sessWings = quiver && session.startHour!=null
-      ? sessionWings(winsEffBoosted, quiver, session.startHour, session.endHour, 0) : [];
+    const sessGust = session.startHour!=null
+      ? Math.max(0,...gustEff.slice(session.startHour, session.endHour).filter(g=>typeof g==="number"&&isFinite(g))) : 0;
     const wingPlan = wingAdvice(sessWings);
     // Ob gewechselt wird, entscheidet die Anzahl der Größen — nicht ein Zeichen im
     // formatierten String: der Separator gehört wingAdvice, nicht dem Aufrufer.
     const wingPlanChanges = new Set(sessWings.map(w=>w.wing)).size > 1;
     const thInfo=classifyThermik(maxTh);
-    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,effW,effG,rideW,winsEffBoosted,dayScore,thInfo,pickedGear,pickedWing,session,wingPlan,wingPlanChanges,liveBoost:lb,measuredCorr:mc,ens:ensD,carrierWins,thermal:tcPeak,thermalHours:tcs};
+    return{wins,gust,dirs,temp,pres,labels,thermik,win,scores,avgW,maxG,maxT,maxTh,midW,midG,sb,regime,hourWings,sessGust,winsEffBoosted,dayScore,thInfo,pickedGear,pickedWing,session,wingPlan,wingPlanChanges,liveBoost:lb,measuredCorr:mc,ens:ensD,carrierWins,thermal:tcPeak,thermalHours:tcs};
   })();
 
   const dayScores = forecast ? Array.from({length:7},(_,d)=>{
@@ -2986,37 +2963,9 @@ function App() {
   return res.map(r=>({...r,era5:r.era5!=null?Math.round(cvt(r.era5,windUnit)*10)/10:null}));
   })();
 
-  // ── Recommendation ──────────────────────────────────────────────────────────
-  const rec = (() => {
-    if(!dayData) return "";
-    const{effW,effG:midG,win,pickedGear,wingPlan,wingPlanChanges}=dayData;
-    if(sport==="kite") return kiteRec(effW,midG,win,kiteRider.kiteModel,kiteRider.kiteSize,kiteRider.skill,windUnit);
-    const{weight,wingSize,skill}=rider;
-    const lines=[];
-    if(pickedGear){
-      const gname = pickedGear.name ? `<b>${pickedGear.name}</b>` : "Setup";
-      const planePart = pickedGear.planeKn ? t('rec_setup_plane',{kn:pickedGear.planeKn}) : "";
-      lines.push(t('rec_setup',{name:gname,wing:pickedGear.wing,plane:planePart}));
-    }
-    if(effW<win.minWind){
-      lines.push(t('rec_too_little',{w:fmtW(effW,windUnit),min:fmtW(win.minWind,windUnit)}));
-      lines.push(t('rec_too_little_tip'));
-    } else if(effW<=win.optMax){
-      lines.push(t('rec_optimal',{w:fmtW(effW,windUnit),optMin:fmtW(win.optMin,windUnit),optMax:fmtW(win.optMax,windUnit)}));
-      if(!pickedGear) lines.push(t('rec_optimal_rider',{sz:wingSize,kg:weight,skill}));
-    } else if(effW<=win.maxWind){
-      lines.push(t('rec_overpowered',{w:fmtW(effW,windUnit)}));
-      lines.push(t('rec_overpowered_tip',{x:(wingSize-0.5).toFixed(1)}));
-    } else {
-      lines.push(t('rec_too_much',{w:fmtW(effW,windUnit),max:fmtW(win.maxWind,windUnit)}));
-      lines.push(t('rec_too_much_tip'));
-    }
-    if(midG-effW>4) lines.push(t('rec_gust_delta',{dw:fmtW(midG-effW,windUnit)}));
-    // Größenwechsel-Hinweis: nur wenn der Quiver mehr als eine Größe empfiehlt.
-    if(wingPlanChanges) lines.push(t('rec_wing_plan',{plan:wingPlan}));
-    lines.push(t('rec_window',{min:fmtW(win.minWind,windUnit),optMin:fmtW(win.optMin,windUnit),optMax:fmtW(win.optMax,windUnit),max:fmtW(win.maxWind,windUnit)}));
-    return lines.join("<br>");
-  })();
+  // ── Kite-Hinweis (Kite-Modus der Score-Karte) ──────────────────────────────
+  const kiteHint = (dayData && sport==="kite")
+    ? kiteRec(dayData.midW,dayData.midG,dayData.win,kiteRider.kiteModel,kiteRider.kiteSize,kiteRider.skill,windUnit) : "";
 
   // ── Chart data ──────────────────────────────────────────────────────────────
   // Real measured series for THIS day (only when the feed's date matches the
@@ -3052,34 +3001,45 @@ function App() {
           const pri = inOpt ? 2 : inRange ? 1 : 0;
           if (pri > bestPri) { bestPri = pri; best = { m: s.m, pri }; }
         }
-        return best && best.pri > 0 ? { label: `${best.m}m`, score: best.pri === 2 ? 88 : 50 } : null;
+        return best && best.pri > 0 ? { label: String(best.m), score: best.pri === 2 ? 88 : 50 } : null;
       }
-      if (quiver) {
-        const b = bestWingForWind(quiver, w);
-        if (!b || !carries(b.win, w)) return null;
-        return { label: `${b.wing}m`, score: b.score };
-      }
-      return null;
+      const hw = dayData.hourWings[i];
+      return hw ? { label: String(hw.wing), score: hw.score } : null;
     });
   })();
-  // Custom XAxis tick: 3h time labels top row; wing/kite size shown as text on first
-  // occurrence of a size, as a dot for consecutive same-size hours — no overlap.
+  // Custom XAxis tick: 3h time labels top row; wing/kite size as a number in every
+  // hour that has one. Hours without a carrying size show nothing.
   const FensterTick = ({x, y, payload, ghour, lbls}) => {
     const i = (lbls??[]).indexOf(payload?.value);
     const g = i >= 0 ? ghour?.[i] : null;
     const show3h = i >= 0 && i % 3 === 0;
     if (!show3h && !g) return null;
-    const col = !g ? null : g.score >= 75 ? C.go : C.caution;
-    const prev = i > 0 ? ghour?.[i - 1] : null;
-    const sizeChanged = !prev || prev.label !== g?.label;
     return (
       <g transform={`translate(${x},${y})`}>
         {show3h && <text textAnchor="middle" fill={ax.tick.fill} fontSize={9} fontFamily="monospace" dy={11}>{payload?.value}</text>}
-        {g && sizeChanged && <text textAnchor="middle" fill={col} fontSize={8} fontFamily="monospace" fontWeight="bold" dy={22}>{g.label}</text>}
-        {g && !sizeChanged && <circle cx={0} cy={19} r={2.5} fill={col} />}
+        {g && <text textAnchor="middle" fill={g.score >= 75 ? C.goText : C.cautionText} fontSize={String(g.label).length > 1 ? 9 : 10} fontFamily="monospace" fontWeight="bold" dy={23}>{g.label}</text>}
       </g>
     );
   };
+
+  const sizesAria = (() => {
+    if (!dayData || !gearByHour) return undefined;
+    const runs = [];
+    dayData.labels.forEach((l, i) => {
+      const hh = parseInt(l.slice(0,2), 10);
+      const g = gearByHour[i];
+      if (hh < 6 || hh > 23 || !g) return;
+      const last = runs[runs.length - 1];
+      if (last && last.s === g.label && last.to === hh - 1) last.to = hh;
+      else runs.push({ from: hh, to: hh, s: g.label });
+    });
+    if (!runs.length) return t('chart_sizes_none');
+    const seq = runs.map(r => r.from === r.to
+      ? t('chart_sizes_one', { h: r.from, s: r.s })
+      : t('chart_sizes_run', { from: r.from, to: r.to, s: r.s }));
+    const wind = t('chart_sizes_wind', { w: fmtW(Math.max(...dayData.wins), windUnit), g: fmtW(dayData.maxG, windUnit) });
+    return `${t('chart_sizes_aria')} ${seq.join(', ')}. ${wind}`;
+  })();
 
   const dirData   = dayData?dayData.labels.map((l,i)=>({idx:i,dir:dayData.dirs[i]})):[];
   const tempData  = dayData?dayData.labels.map((l,i)=>({h:l,temp:dayData.temp[i]})):[];
@@ -3515,16 +3475,26 @@ function App() {
               const cc = classifyConfidence(conf);
               const scoreColor = sc2col(adj.score);
               return (
-                <div style={{...S.card,marginBottom:12,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",borderLeft:`3px solid ${scoreColor}`,background:`linear-gradient(90deg,${scoreColor}12 0%,${C.panel} 40%)`}}>
+                <section aria-labelledby="score-card-title" style={{...S.card,marginBottom:12,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",borderLeft:`3px solid ${scoreColor}`,background:`linear-gradient(90deg,${scoreColor}12 0%,${C.panel} 40%)`}}>
                   <div style={{textAlign:"center",minWidth:100}}>
                     <div style={{fontFamily:"monospace",fontWeight:900,fontSize:56,color:scoreColor,lineHeight:1}}>{adj.score}</div>
-                    <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>{sport==="kite"?t('score_kite'):t('score_foil')}</div>
+                    <h2 id="score-card-title" style={{fontFamily:"monospace",fontSize:11,fontWeight:400,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",margin:"4px 0 0"}}>{sport==="kite"?t('score_kite'):t('score_foil')}</h2>
                     {adj.adjusted && <div style={{fontSize:9,color:C.caution,marginTop:3}}>{t('score_raw_adj',{raw:dayData.dayScore})}</div>}
                   </div>
                   <div style={{flex:1,minWidth:160}}>
                     {dayData.session && dayData.session.startHour!=null && dayData.dayScore>0 && (
                       <div style={{fontSize:14,color:C.go,fontFamily:"monospace",fontWeight:700,marginBottom:4}}>
                         {t('score_best_time',{from:String(dayData.session.startHour).padStart(2,"0"),to:String(dayData.session.endHour).padStart(2,"0")})}
+                      </div>
+                    )}
+                    {sport!=="kite" && dayData.wingPlan && (
+                      <div style={{fontSize:18,color:C.text,fontFamily:"monospace",fontWeight:700,marginBottom:6}}>
+                        {t('score_wing_size',{plan:dayData.wingPlan})}
+                      </div>
+                    )}
+                    {sport!=="kite" && dayData.wingPlan && dayData.sessGust>dayData.win.optMax && (
+                      <div style={{fontSize:14,color:C.cautionText,marginBottom:6}}>
+                        {t('score_gust_cap',{g:fmtW(dayData.sessGust,windUnit)})}
                       </div>
                     )}
                     {dayData.pickedGear ? (
@@ -3536,6 +3506,9 @@ function App() {
                       </div>
                     ) : (
                       <div style={{fontSize:11,color:C.muted}}>{sport==="kite"?`${kiteRider.kiteModel} ${kiteRider.kiteSize}m · ${kiteRider.weight}kg · ${kiteRider.skill}`:`${rider.weight}kg · ${rider.wingSize}m²${rider.planeKn?` · ab ${rider.planeKn}kn`:""}`}</div>
+                    )}
+                    {sport==="kite" && kiteHint && (
+                      <div style={{marginTop:8,fontSize:12,color:C.muted,lineHeight:1.7}} dangerouslySetInnerHTML={{__html:kiteHint}} />
                     )}
                     {conf!=null && (
                       <div style={{marginTop:6,fontSize:11,color:cc.color}}>{cc.icon} {confidenceLabel(cc)} ({conf}%)</div>
@@ -3572,18 +3545,9 @@ function App() {
                       </div>
                     )}
                   </div>
-                </div>
+                </section>
               );
             })()}
-
-            {/* RECOMMENDATION */}
-            <div style={{...S.card,borderLeft:`3px solid ${C.go}`}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                <span>🎯</span>
-                <strong style={{color:C.go,fontSize:13}}>{t('equip_rec_title')}</strong>
-              </div>
-              <div style={{fontSize:12,color:C.muted,lineHeight:1.9}} dangerouslySetInnerHTML={{__html:rec}} />
-            </div>
 
             {/* FOIL WINDOW */}
             <div style={S.card}>
@@ -3605,7 +3569,7 @@ function App() {
                   {live.source}{live.time?` · ${live.time}`:""}{live.sensorOk?"":t('live_sensor_lost')}
                 </span>
               </div>}
-              <div style={S.cwL}>
+              <div style={S.cwL} role="img" aria-label={sizesAria}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={windData} margin={{top:5,right:5,bottom:gearByHour&&gearByHour.some(g=>g)?20:5,left:5}}>
                     {/* Zuerst gerendert ⇒ liegt unter allen Linien. */}
@@ -3616,8 +3580,6 @@ function App() {
                     <YAxis yAxisId="r" orientation="right" domain={[0,100]} {...ax} tick={{...ax.tick,fill:C.go}} />
                     <Tooltip {...TT} />
                     <Legend verticalAlign="top" wrapperStyle={{fontSize:10,fontFamily:"monospace",color:C.muted,paddingBottom:4}} />
-                    <ReferenceArea yAxisId="l" y1={cvt(dayData.win.optMin,windUnit)} y2={cvt(dayData.win.optMax,windUnit)} fill="rgba(61,220,132,0.10)" stroke="rgba(61,220,132,0.3)" />
-                    <ReferenceLine yAxisId="l" y={cvt(dayData.win.minWind,windUnit)} stroke={C.caution} strokeDasharray="4 3" />
                     <Line yAxisId="l" type="monotone" dataKey="wind" name={t('wind_label',{u:unitLabel(windUnit)})} stroke={C.sky} strokeWidth={2} dot={false} />
                     <Line yAxisId="l" type="monotone" dataKey="gust" name={t('gust_label',{u:unitLabel(windUnit)})} stroke={C.signal} strokeDasharray="4 3" strokeWidth={1.5} dot={false} />
                     {meas && windData.some(d=>d.mwind!=null) && <Line yAxisId="l" type="monotone" dataKey="mwind" name={t('mwind_label',{u:unitLabel(windUnit)})} stroke={C.text} strokeWidth={2} dot={false} connectNulls />}
@@ -4123,7 +4085,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.43.6</span>
+        <span>WindFoil Weather Intelligence v3.45.0</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>

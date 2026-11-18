@@ -231,3 +231,79 @@ test('ridingWind: baut der Wind nachmittags auf, wählt es das kleinere Wing als
   const newPick = WF.bestWingForWind(q, ride).wing;
   assert.ok(newPick < oldPick, `neu ${newPick} m² muss kleiner sein als alt ${oldPick} m²`);
 });
+
+const KN = kn => kn / 1.94384;
+
+test('bestWingForWind: Ammersee-Fall — Mittel 17,4 kn, Böen 28 kn, 78 kg → 5 m², nicht 6', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  assert.strictEqual(WF.bestWingForWind(q, KN(17.4)).wing, 6, 'ohne Böenangabe bleibt die Mittigkeit maßgeblich');
+  assert.strictEqual(WF.bestWingForWind(q, KN(17.4), KN(28)).wing, 5, 'Böen über dem Optimalband der 6 müssen auf die 5 führen');
+  assert.strictEqual(WF.bestWingForWind(q, KN(17.4), KN(22)).wing, 6, 'moderate Böen ändern die Wahl nicht');
+});
+
+test('bestWingForWind: Böen sind nur Tiebreak — sie heben nie ein schlechter bewertetes Wing', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  for (let kn = 8; kn <= 32; kn += 0.5) {
+    const calm = WF.bestWingForWind(q, KN(kn));
+    const gusty = WF.bestWingForWind(q, KN(kn), KN(kn * 1.8));
+    assert.strictEqual(gusty.score, calm.score, `${kn} kn: Böen haben den Score verändert`);
+  }
+});
+
+test('hourlyWings: Hysterese hält die Vorstunden-Größe, wenn sie höchstens 3 Punkte schlechter ist', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  const six = q.find(x => x.wing === 6).win;
+  assert.strictEqual(WF.bestWingForWind(q, KN(18)).wing, 6, 'Fixture: Stunde 1 muss 6 m² sein');
+  assert.strictEqual(WF.bestWingForWind(q, KN(22.7)).wing, 4, 'Fixture: Stunde 2 ohne Hysterese 4 m²');
+  assert.ok(WF.scoreHour(KN(22.7), six) >= 100 - WF.SIZE_HYSTERESIS, 'Fixture: 6 m² liegt innerhalb der Hysterese');
+  assert.deepStrictEqual(WF.hourlyWings([KN(18), KN(22.7)], q).map(h => h.wing), [6, 6]);
+});
+
+test('hourlyWings: stärkere Böen-Überschreitung hebelt die Hysterese aus', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  const seq = WF.hourlyWings([KN(18), KN(22.7)], q, [KN(20), KN(30)]).map(h => h.wing);
+  assert.strictEqual(seq[0], 6);
+  assert.notStrictEqual(seq[1], 6, 'Böen über dem Optimalband der 6 müssen den Wechsel erzwingen');
+});
+
+test('hourlyWings: eine Lücke (null) setzt die Hysterese zurück', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  const seq = WF.hourlyWings([KN(18), null, KN(22.7)], q).map(h => h && h.wing);
+  assert.deepStrictEqual(seq, [6, null, 4]);
+});
+
+test('hourlyWings: Böen-Tiebreak macht die Folge im Ammersee-Fall konstant 5', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  const winds = [17, 17.4, 17.6, 17.2].map(KN);
+  const gusts = [26, 28, 27, 27].map(KN);
+  assert.deepStrictEqual(WF.hourlyWings(winds, q, gusts).map(h => h.wing), [5, 5, 5, 5]);
+});
+
+test('hourlyWings: Stunden ohne tragenden Wind und fehlende Werte bleiben null', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  const out = WF.hourlyWings([KN(2), KN(17), null, NaN, KN(70)], q);
+  assert.strictEqual(out[0], null, 'Flaute');
+  assert.ok(out[1] && out[1].score >= 50);
+  assert.strictEqual(out[2], null);
+  assert.strictEqual(out[3], null);
+  assert.strictEqual(out[4], null, 'Sturm');
+});
+
+test('sessionWings und dominantWing leiten sich aus hourlyWings ab', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  const day = Array.from({ length: 24 }, (_, h) => KN(h >= 10 && h < 14 ? 17.4 : 2));
+  const gust = day.map(w => w * 1.6);
+  const wings = WF.sessionWings(day, q, 9, 15, 0, gust);
+  assert.deepStrictEqual(wings.map(w => w.hour), [10, 11, 12, 13]);
+  assert.strictEqual(WF.dominantWing(wings), 5);
+  assert.strictEqual(WF.dominantWing([]), null);
+});
+
+test('sessionWings: startIdx verschiebt in den richtigen Tag', () => {
+  const q = WF.riderQuiver({ weight: 78, skill: 'intermediate' }, null);
+  const day1 = Array.from({ length: 24 }, () => KN(2));
+  const day2 = Array.from({ length: 24 }, (_, h) => KN(h >= 10 && h < 12 ? 17.4 : 2));
+  const winds = [...day1, ...day2];
+  assert.deepStrictEqual(WF.sessionWings(winds, q, 9, 14, 24).map(w => w.hour), [10, 11]);
+  assert.deepStrictEqual(WF.sessionWings(winds, q, 9, 14, 0), []);
+});

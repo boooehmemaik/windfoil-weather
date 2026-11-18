@@ -1,5 +1,13 @@
 # WindFoil — Version History
 
+## v3.45.0 (2026-11-18)
+**FEAT(gear): Wing-Größe je Stunde — Karten zusammengeführt, Böen-Tiebreak**
+- Wing-Größe gilt je Stunde: Chart zeigt in jeder tragenden Stunde die Größe als Zahl (statt Punkten), Stunden ohne Wind/zu niedrigem Score zeigen nichts; Tagesband und Mindestwind-Linie entfallen
+- Karte „Equipment-Empfehlung" in die Score-Karte integriert (Größenzeile + Böenhinweis, kein Details-Bereich)
+- Größe aus Stundenfolge abgeleitet (`hourlyWings`, Hysterese 3 Punkte, Böen-Tiebreak über Optimalband-Überschreitung) — Ammersee 17,4 kn / Böen 28 kn / 78 kg → 5 statt 6 m²
+- Vergleichsseite nutzt Böen; Hilfe aktualisiert
+- A11y: aria-Label mit Größenläufen, Light-Theme-Textfarben
+
 ## v3.44.3 (2026-11-16)
 **FIX(spots): Porto Pino — Nord/West abgedeckt, Ost/Süd bevorzugt**
 - `offshoreDir` 45 → 315 (`spots.json`, `vergleich.html`): Wind aus ca. W bis N (±45° um NW) setzt den Score auf 0, Ost und Süd bleiben frei. Die 45 waren aus Porto Botte geschätzt und falsch (hätten NE gesperrt)

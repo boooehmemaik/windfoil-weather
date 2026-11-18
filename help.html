@@ -506,18 +506,34 @@
         <li><strong>Ganze Tasche betrachten.</strong> Alle eingetragenen Wing-Größen werden herangezogen, nicht nur eine.</li>
         <li><strong>Windfenster je Größe berechnen.</strong> Für jede Größe ermittelt die App aus Gewicht, Können und Fläche drei Grenzwerte: <span class="chip chip-blue">Angleitschwelle</span> <span class="chip chip-green">Optimalband</span> <span class="chip chip-red">Obergrenze</span>.</li>
         <li><strong>Score je Stunde = bestes Ergebnis der Tasche.</strong> Jede Stunde bekommt den höchsten Score, den irgendeine Größe dort erreicht — das Maximum, nicht die Summe.</li>
-        <li><strong>Größe benennen.</strong> Erst danach nennt die App, welche Größe zu dieser Stunde passt.</li>
+        <li><strong>Größe benennen.</strong> Erst danach nennt die App, welche Größe zu dieser Stunde passt — die Empfehlung gilt pro Stunde, nicht pro Tag.</li>
       </ol>
+
+      <h3>Score-Karte oben</h3>
+      <p>Die Karte „Foil-Score" fasst den Tag zusammen:</p>
+      <ul>
+        <li>den <strong>Score</strong> und das <strong>beste Zeitfenster</strong></li>
+        <li>die <strong>Größe(n) der besten Session</strong> — z. B. „5 m²" oder bei einem Wechsel „5 → 6 m²". Es zählt die Größe, die in den Stunden des besten Fensters am häufigsten gefahren wird.</li>
+        <li>einen <strong>Böenhinweis</strong> („Größe nicht größer wählen"), wenn die Böen über den Optimalbereich der Größe hinausgehen</li>
+      </ul>
 
       <div class="tip blue">
         <strong>Größenwechsel über die Session</strong>
-        Wenn der Wind im Tagesverlauf aufbaut, kann die App jetzt einen Wechsel anzeigen — z. B. „6 → 3 m²". Das ist die Information, die du vor dem Packen brauchst, nicht eine einzige Größe für den ganzen Tag.
+        Wenn der Wind im Tagesverlauf aufbaut, zeigt die App einen Wechsel an — z. B. „6 → 3 m²". Das ist die Information, die du vor dem Packen brauchst, nicht eine einzige Größe für den ganzen Tag.
       </div>
 
       <div class="tip">
         <strong>Keine Größe bei zu wenig Wind</strong>
-        Wenn keine Größe der Tasche den Wind einer Stunde trägt, erscheint dort auch keine Empfehlung — nicht die kleinste Größe als Notnagel. Kein Symbol bedeutet: diese Stunde liegt außerhalb aller Fenster.
+        Wenn keine Größe der Tasche den Wind einer Stunde trägt oder der Score zu niedrig ist, erscheint dort keine Zahl — nicht die kleinste Größe als Notnagel. Keine Zahl bedeutet: diese Stunde liegt außerhalb aller Fenster.
       </div>
+
+      <h3>Wenn zwei Größen gleich gut sind</h3>
+      <p>Erreichen zwei Größen beide Score 100, entscheidet die App in dieser Reihenfolge:</p>
+      <ol class="steps">
+        <li><strong>Böen:</strong> Die Größe, die mit den Böen weniger über ihr Optimalband hinausschießt, gewinnt — an böigen Tagen also die kleinere.</li>
+        <li><strong>Mitte im Optimalband:</strong> Danach gewinnt die Größe, deren Optimalband den Wind besser trifft.</li>
+      </ol>
+      <p>Böen verändern den Score selbst nie, sie wirken nur auf diese Auswahl. Damit die Anzeige nicht zwischen 5-6-5 hin- und herspringt, bleibt die Größe der Vorstunde bestehen, solange sie höchstens 3 Punkte schlechter ist.</p>
 
       <h3>Charts im Foil-Modus</h3>
       <ul>
@@ -527,7 +543,7 @@
         <li><strong>Thermik-Index</strong> — CAPE und LI-Werte (Böenrisiko)</li>
         <li><strong>Luftdruck</strong> — Tendenz und absoluter Wert</li>
         <li><strong>Historischer Vergleich</strong> — ERA5-Klimadaten zum Vergleich</li>
-        <li><strong>Wing-Windranges</strong> — farblich markierte Windfenster je Größe; aktive Größe der Stunde ist hervorgehoben</li>
+        <li><strong>Foil-Fenster</strong> — unter jeder Stunde steht die empfohlene Größe in m². Grün ab Score 75, sonst gelb. Stunden ohne tragenden Wind oder mit zu niedrigem Score zeigen keine Zahl.</li>
       </ul>
     </section>
 
@@ -622,10 +638,10 @@
 
       <h3>Score-Logik</h3>
       <ul>
-        <li><strong>100</strong> = Wind liegt mitten im optimalen Fenster mindestens einer Wing-Größe, keine Böenspitzen, kein Thermikrisiko</li>
+        <li><strong>100</strong> = Wind liegt mitten im optimalen Fenster mindestens einer Wing-Größe, kein Thermikrisiko</li>
         <li>Jede Stunde bekommt den <strong>besten</strong> Score, den irgendeine Größe der Tasche dort erreicht</li>
         <li>Score sinkt, wenn der Wind für alle Größen unter dem jeweiligen Min- oder über dem jeweiligen Max-Wert liegt</li>
-        <li>Böen und Thermik-Warnungen reduzieren den Score zusätzlich</li>
+        <li>Thermik-Warnungen reduzieren den Score zusätzlich · Böen beeinflussen nur die Größenwahl, nicht den Score</li>
         <li>Kein Wind = Score 0 · Zu viel Wind für die kleinste Größe = Score 0</li>
       </ul>
 
@@ -731,7 +747,7 @@
 
       <div class="panel">
         <div class="panel-title">Der Score wirkt zu niedrig, obwohl Wind da ist</div>
-        <p>Prüfe dein Rider-Profil: Möglicherweise liegt dein Windfenster (Min/Max) nicht gut zu den Prognosewerten. Böenspitzen oder Thermik-Warnungen können den Score zusätzlich drücken — auch wenn der Durchschnittwind passt.</p>
+        <p>Prüfe dein Rider-Profil: Möglicherweise liegt dein Windfenster (Min/Max) nicht gut zu den Prognosewerten. Thermik-Warnungen können den Score zusätzlich drücken — auch wenn der Durchschnittswind passt. Böenspitzen zeigt die Score-Karte als Hinweis zur Größe.</p>
       </div>
 
       <h3>Datenschutz</h3>

@@ -11,7 +11,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo\u2026",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence \xB7 v3.43.6",
+    version_label: "Weather Intelligence \xB7 v3.45.0",
     sport_foil: "\u{1F3C4} Wingfoiling",
     sport_kite: "\u{1FA81} Kitesurfing",
     // Loc bar
@@ -105,8 +105,14 @@ const TRANSLATIONS = {
     stat_kite_window: "Kite-Fenster",
     // Details divider
     more_details: "Weitere Details",
-    // Equipment rec section
-    equip_rec_title: "Equipment-Empfehlung",
+    // Wing-Größe in der Score-Karte und im Chart
+    score_wing_size: "Wing {plan}",
+    score_gust_cap: "B\xF6en bis {g} \u2014 Gr\xF6\xDFe nicht gr\xF6\xDFer w\xE4hlen",
+    chart_sizes_aria: "Foil-Fenster, Gr\xF6\xDFen:",
+    chart_sizes_run: "{from}\u2013{to} Uhr {s} m\xB2",
+    chart_sizes_one: "{h} Uhr {s} m\xB2",
+    chart_sizes_none: "Foil-Fenster, keine tragende Stunde.",
+    chart_sizes_wind: "Maximal {w} Wind, {g} B\xF6en.",
     foil_window_title: "Wingfoil-Fenster Analyse \u2014 Rider-spezifisch + Foil-Score",
     kite_window_title: "Kite-Fenster Analyse \u2014 Rider-spezifisch + Kite-Score",
     foil_window_ref: "\u{1F3C4} Wing-Windranges",
@@ -114,19 +120,6 @@ const TRANSLATIONS = {
     ref_weight_adj: "Herstellerangaben (Referenzgewicht {ref} kg). Die zweite Spalte zeigt dein angepasstes Fenster f\xFCr {weight} kg \xB7 {skill}.",
     ref_weight_adj_kite: "Herstellerangaben (Referenzgewicht ~80 kg). Die zweite Spalte zeigt dein angepasstes Fenster f\xFCr {weight} kg \xB7 {skill}.",
     // Recommendation lines
-    rec_too_little: "\u26A0\uFE0F <b>Zu wenig Wind</b> \u2014 {w}, ben\xF6tigt \u2265{min}",
-    rec_too_little_tip: "\u{1F4A1} Gr\xF6\xDFeren Wing w\xE4hlen oder auf Nachmittags-Thermik warten.",
-    rec_optimal: "\u2705 <b>Optimale Bedingungen</b> \u2014 {w} im Fenster ({optMin}\u2013{optMax})",
-    rec_optimal_rider: "\u{1F3C4} Wing {sz} m\xB2 \u2014 ideal f\xFCr {kg} kg \xB7 {skill}",
-    rec_overpowered: "\u26A0\uFE0F <b>Overpowered-Zone</b> \u2014 {w} an der Obergrenze",
-    rec_overpowered_tip: "\u{1F4A1} Kleineren Wing: {x} m\xB2 erw\xE4gen",
-    rec_too_much: "\u{1F6A8} <b>Zu viel Wind</b> \u2014 {w} > Max {max}",
-    rec_too_much_tip: "\u26D4 Sitzung abbrechen oder deutlich kleineres Equipment",
-    rec_gust_delta: "\u{1F4A8} <b>B\xF6en-\u0394 {dw}</b> \u2014 Erh\xF6hte Kontrollbelastung!",
-    rec_window: "<br>\u{1F4D0} <b>Dein Fenster:</b> Abheben {min} \xB7 Optimal {optMin}\u2013{optMax} \xB7 Max {max}",
-    rec_setup: "\u{1F392} <b>Empfohlenes Setup aus deinem Material:</b> {name} \u2014 Wing {wing} m\xB2{plane}",
-    rec_setup_plane: " \xB7 ab {kn} kn",
-    rec_wing_plan: "\u{1F504} <b>Gr\xF6\xDFenwechsel \xFCber die Session:</b> {plan}",
     // Kite rec
     kite_rec_too_little: "\u26A0\uFE0F <b>Zu wenig Wind</b> \u2014 {w}, Kite braucht \u2265{min}",
     kite_rec_too_little_tip: "\u{1F4A1} Gr\xF6\xDFeren Kite w\xE4hlen oder auf Wind-Zunahme warten.",
@@ -325,7 +318,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo\u2026",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence \xB7 v3.43.6",
+    version_label: "Weather Intelligence \xB7 v3.45.0",
     sport_foil: "\u{1F3C4} Wingfoiling",
     sport_kite: "\u{1FA81} Kitesurfing",
     // Loc bar
@@ -419,8 +412,14 @@ const TRANSLATIONS = {
     stat_kite_window: "Kite window",
     // Details divider
     more_details: "More details",
-    // Equipment rec section
-    equip_rec_title: "Equipment recommendation",
+    // Wing size in the score card and chart
+    score_wing_size: "Wing {plan}",
+    score_gust_cap: "Gusts up to {g} \u2014 do not go bigger",
+    chart_sizes_aria: "Foil window, sizes:",
+    chart_sizes_run: "{from}\u2013{to}h {s} m\xB2",
+    chart_sizes_one: "{h}h {s} m\xB2",
+    chart_sizes_none: "Foil window, no carrying hour.",
+    chart_sizes_wind: "Peak {w} wind, {g} gusts.",
     foil_window_title: "Wingfoil window analysis \u2014 rider-specific + foil score",
     kite_window_title: "Kite window analysis \u2014 rider-specific + kite score",
     foil_window_ref: "\u{1F3C4} Wing wind ranges",
@@ -428,19 +427,6 @@ const TRANSLATIONS = {
     ref_weight_adj: "Manufacturer specs (reference weight {ref} kg). Second column shows your adjusted window for {weight} kg \xB7 {skill}.",
     ref_weight_adj_kite: "Manufacturer specs (reference weight ~80 kg). Second column shows your adjusted window for {weight} kg \xB7 {skill}.",
     // Recommendation lines
-    rec_too_little: "\u26A0\uFE0F <b>Too little wind</b> \u2014 {w}, needs \u2265{min}",
-    rec_too_little_tip: "\u{1F4A1} Choose a larger wing or wait for afternoon thermals.",
-    rec_optimal: "\u2705 <b>Optimal conditions</b> \u2014 {w} in window ({optMin}\u2013{optMax})",
-    rec_optimal_rider: "\u{1F3C4} Wing {sz} m\xB2 \u2014 ideal for {kg} kg \xB7 {skill}",
-    rec_overpowered: "\u26A0\uFE0F <b>Overpowered zone</b> \u2014 {w} at upper limit",
-    rec_overpowered_tip: "\u{1F4A1} Consider a smaller wing: {x} m\xB2",
-    rec_too_much: "\u{1F6A8} <b>Too much wind</b> \u2014 {w} > max {max}",
-    rec_too_much_tip: "\u26D4 Abort session or use significantly smaller equipment",
-    rec_gust_delta: "\u{1F4A8} <b>Gust-\u0394 {dw}</b> \u2014 Increased control load!",
-    rec_window: "<br>\u{1F4D0} <b>Your window:</b> Takeoff {min} \xB7 Optimal {optMin}\u2013{optMax} \xB7 Max {max}",
-    rec_setup: "\u{1F392} <b>Recommended setup from your gear:</b> {name} \u2014 Wing {wing} m\xB2{plane}",
-    rec_setup_plane: " \xB7 from {kn} kn",
-    rec_wing_plan: "\u{1F504} <b>Size change over the session:</b> {plan}",
     // Kite rec
     kite_rec_too_little: "\u26A0\uFE0F <b>Too little wind</b> \u2014 {w}, kite needs \u2265{min}",
     kite_rec_too_little_tip: "\u{1F4A1} Choose a larger kite or wait for more wind.",
@@ -726,6 +712,8 @@ const THEMES = {
     caution: "#f5b942",
     go: "#3ddc84",
     stop: "#e84040",
+    goText: "#3ddc84",
+    cautionText: "#f5b942",
     text: "#d8e4f0",
     muted: "#7fa0be",
     dim: "#2a3d52",
@@ -743,6 +731,8 @@ const THEMES = {
     caution: "#b07d10",
     go: "#149048",
     stop: "#d62828",
+    goText: "#0b6b30",
+    cautionText: "#8a5f00",
     text: "#13202e",
     muted: "#5b7186",
     dim: "#9fb1c2",
@@ -1357,6 +1347,8 @@ var ridingWind = WF.ridingWind;
 var scorerFor = WF.scorerFor;
 var carries = WF.carries;
 var sessionWings = WF.sessionWings;
+var hourlyWings = WF.hourlyWings;
+var dominantWing = WF.dominantWing;
 var wingAdvice = WF.wingAdvice;
 var scoreDay = (winds, win, start = 0) => WF.scoreDay(winds, win, { start });
 var bestSession = (winds, win, start = 0) => WF.bestSession(winds, win, { start });
@@ -2605,35 +2597,29 @@ function App() {
     const midDir = dirs[14] ?? dirs[12] ?? 180;
     const tcPeak = thermalCorrection(regime?.peakHour ?? 14, midDir, month_n, regime, mos, activeDay, activeDateStr2);
     const sb = tcPeak.sb;
-    const rideW = ridingWind(winsEff) ?? midW;
-    const rideG = ridingWind(gustEff) ?? midG;
-    const foilRide = sport === "foil";
-    const effW = foilRide ? rideW : midW;
-    const effG = foilRide ? rideG : midG;
-    let win, pickedGear = null, pickedWing = null;
-    if (quiver) {
-      const best = bestWingForWind(quiver, rideW);
-      if (best) {
-        win = best.win;
-        pickedWing = best.wing;
-        if (useGear && gear.length) pickedGear = gear.find((g) => parseFloat(g.wing) === best.wing) || null;
-      }
+    const winsEffBoosted = winsEff;
+    const hourWings = quiver ? hourlyWings(winsEffBoosted, quiver, gustEff) : [];
+    const scoreSrc = quiver || getActiveWin();
+    const session = bestSession(winsEffBoosted, scoreSrc);
+    const sessWings = quiver && session.startHour != null ? sessionWings(winsEffBoosted, quiver, session.startHour, session.endHour, 0, gustEff) : [];
+    const pickedWing = dominantWing(sessWings);
+    let win, pickedGear = null;
+    if (quiver && pickedWing != null) {
+      win = (quiver.find((q) => q.wing === pickedWing) || {}).win;
+      if (useGear && gear.length) pickedGear = gear.find((g) => parseFloat(g.wing) === pickedWing) || null;
     }
     if (!win) win = getActiveWin();
-    const winsEffBoosted = winsEff;
-    const scoreSrc = quiver || win;
     const scores = winsEffBoosted.map(scorerFor(scoreSrc));
     const avgW = winsEffBoosted.reduce((a, b) => a + b, 0) / winsEffBoosted.length;
     const maxG = Math.max(...gustEff);
     const maxT = Math.max(...temp);
     const maxTh = Math.max(...thermik);
     const dayScore = scoreDay(winsEffBoosted, scoreSrc);
-    const session = bestSession(winsEffBoosted, scoreSrc);
-    const sessWings = quiver && session.startHour != null ? sessionWings(winsEffBoosted, quiver, session.startHour, session.endHour, 0) : [];
+    const sessGust = session.startHour != null ? Math.max(0, ...gustEff.slice(session.startHour, session.endHour).filter((g) => typeof g === "number" && isFinite(g))) : 0;
     const wingPlan = wingAdvice(sessWings);
     const wingPlanChanges = new Set(sessWings.map((w) => w.wing)).size > 1;
     const thInfo = classifyThermik(maxTh);
-    return { wins, gust, dirs, temp, pres, labels, thermik, win, scores, avgW, maxG, maxT, maxTh, midW, midG, sb, regime, effW, effG, rideW, winsEffBoosted, dayScore, thInfo, pickedGear, pickedWing, session, wingPlan, wingPlanChanges, liveBoost: lb, measuredCorr: mc, ens: ensD, carrierWins, thermal: tcPeak, thermalHours: tcs };
+    return { wins, gust, dirs, temp, pres, labels, thermik, win, scores, avgW, maxG, maxT, maxTh, midW, midG, sb, regime, hourWings, sessGust, winsEffBoosted, dayScore, thInfo, pickedGear, pickedWing, session, wingPlan, wingPlanChanges, liveBoost: lb, measuredCorr: mc, ens: ensD, carrierWins, thermal: tcPeak, thermalHours: tcs };
   })();
   const dayScores = forecast ? Array.from({ length: 7 }, (_, d) => {
     const start = dayStartIndices[d] ?? d * 24;
@@ -2694,35 +2680,7 @@ function App() {
     res.push({ label: t("day_heute"), era5: null, prog: Math.round(cvt(dayData.avgW, windUnit) * 10) / 10 });
     return res.map((r) => ({ ...r, era5: r.era5 != null ? Math.round(cvt(r.era5, windUnit) * 10) / 10 : null }));
   })();
-  const rec = (() => {
-    if (!dayData) return "";
-    const { effW, effG: midG, win, pickedGear, wingPlan, wingPlanChanges } = dayData;
-    if (sport === "kite") return kiteRec(effW, midG, win, kiteRider.kiteModel, kiteRider.kiteSize, kiteRider.skill, windUnit);
-    const { weight, wingSize, skill } = rider;
-    const lines = [];
-    if (pickedGear) {
-      const gname = pickedGear.name ? `<b>${pickedGear.name}</b>` : "Setup";
-      const planePart = pickedGear.planeKn ? t("rec_setup_plane", { kn: pickedGear.planeKn }) : "";
-      lines.push(t("rec_setup", { name: gname, wing: pickedGear.wing, plane: planePart }));
-    }
-    if (effW < win.minWind) {
-      lines.push(t("rec_too_little", { w: fmtW(effW, windUnit), min: fmtW(win.minWind, windUnit) }));
-      lines.push(t("rec_too_little_tip"));
-    } else if (effW <= win.optMax) {
-      lines.push(t("rec_optimal", { w: fmtW(effW, windUnit), optMin: fmtW(win.optMin, windUnit), optMax: fmtW(win.optMax, windUnit) }));
-      if (!pickedGear) lines.push(t("rec_optimal_rider", { sz: wingSize, kg: weight, skill }));
-    } else if (effW <= win.maxWind) {
-      lines.push(t("rec_overpowered", { w: fmtW(effW, windUnit) }));
-      lines.push(t("rec_overpowered_tip", { x: (wingSize - 0.5).toFixed(1) }));
-    } else {
-      lines.push(t("rec_too_much", { w: fmtW(effW, windUnit), max: fmtW(win.maxWind, windUnit) }));
-      lines.push(t("rec_too_much_tip"));
-    }
-    if (midG - effW > 4) lines.push(t("rec_gust_delta", { dw: fmtW(midG - effW, windUnit) }));
-    if (wingPlanChanges) lines.push(t("rec_wing_plan", { plan: wingPlan }));
-    lines.push(t("rec_window", { min: fmtW(win.minWind, windUnit), optMin: fmtW(win.optMin, windUnit), optMax: fmtW(win.optMax, windUnit), max: fmtW(win.maxWind, windUnit) }));
-    return lines.join("<br>");
-  })();
+  const kiteHint = dayData && sport === "kite" ? kiteRec(dayData.midW, dayData.midG, dayData.win, kiteRider.kiteModel, kiteRider.kiteSize, kiteRider.skill, windUnit) : "";
   const activeDateStr = forecast ? (forecast.hourly.time[dayStartIndices[activeDay]] || "").slice(0, 10) : null;
   const meas = measured && measured.ok && measured.date === activeDateStr ? measured.hourly : null;
   const windData = dayData ? dayData.labels.map((l, i) => {
@@ -2752,14 +2710,10 @@ function App() {
             best = { m: s.m, pri };
           }
         }
-        return best && best.pri > 0 ? { label: `${best.m}m`, score: best.pri === 2 ? 88 : 50 } : null;
+        return best && best.pri > 0 ? { label: String(best.m), score: best.pri === 2 ? 88 : 50 } : null;
       }
-      if (quiver) {
-        const b = bestWingForWind(quiver, w);
-        if (!b || !carries(b.win, w)) return null;
-        return { label: `${b.wing}m`, score: b.score };
-      }
-      return null;
+      const hw = dayData.hourWings[i];
+      return hw ? { label: String(hw.wing), score: hw.score } : null;
     });
   })();
   const FensterTick = ({ x, y, payload, ghour, lbls }) => {
@@ -2767,11 +2721,24 @@ function App() {
     const g = i >= 0 ? ghour?.[i] : null;
     const show3h = i >= 0 && i % 3 === 0;
     if (!show3h && !g) return null;
-    const col = !g ? null : g.score >= 75 ? C.go : C.caution;
-    const prev = i > 0 ? ghour?.[i - 1] : null;
-    const sizeChanged = !prev || prev.label !== g?.label;
-    return /* @__PURE__ */ React.createElement("g", { transform: `translate(${x},${y})` }, show3h && /* @__PURE__ */ React.createElement("text", { textAnchor: "middle", fill: ax.tick.fill, fontSize: 9, fontFamily: "monospace", dy: 11 }, payload?.value), g && sizeChanged && /* @__PURE__ */ React.createElement("text", { textAnchor: "middle", fill: col, fontSize: 8, fontFamily: "monospace", fontWeight: "bold", dy: 22 }, g.label), g && !sizeChanged && /* @__PURE__ */ React.createElement("circle", { cx: 0, cy: 19, r: 2.5, fill: col }));
+    return /* @__PURE__ */ React.createElement("g", { transform: `translate(${x},${y})` }, show3h && /* @__PURE__ */ React.createElement("text", { textAnchor: "middle", fill: ax.tick.fill, fontSize: 9, fontFamily: "monospace", dy: 11 }, payload?.value), g && /* @__PURE__ */ React.createElement("text", { textAnchor: "middle", fill: g.score >= 75 ? C.goText : C.cautionText, fontSize: String(g.label).length > 1 ? 9 : 10, fontFamily: "monospace", fontWeight: "bold", dy: 23 }, g.label));
   };
+  const sizesAria = (() => {
+    if (!dayData || !gearByHour) return void 0;
+    const runs = [];
+    dayData.labels.forEach((l, i) => {
+      const hh = parseInt(l.slice(0, 2), 10);
+      const g = gearByHour[i];
+      if (hh < 6 || hh > 23 || !g) return;
+      const last = runs[runs.length - 1];
+      if (last && last.s === g.label && last.to === hh - 1) last.to = hh;
+      else runs.push({ from: hh, to: hh, s: g.label });
+    });
+    if (!runs.length) return t("chart_sizes_none");
+    const seq = runs.map((r) => r.from === r.to ? t("chart_sizes_one", { h: r.from, s: r.s }) : t("chart_sizes_run", { from: r.from, to: r.to, s: r.s }));
+    const wind = t("chart_sizes_wind", { w: fmtW(Math.max(...dayData.wins), windUnit), g: fmtW(dayData.maxG, windUnit) });
+    return `${t("chart_sizes_aria")} ${seq.join(", ")}. ${wind}`;
+  })();
   const dirData = dayData ? dayData.labels.map((l, i) => ({ idx: i, dir: dayData.dirs[i] })) : [];
   const tempData = dayData ? dayData.labels.map((l, i) => ({ h: l, temp: dayData.temp[i] })) : [];
   const presData = dayData ? dayData.labels.map((l, i) => ({ h: l, pres: Math.round(dayData.pres[i]) })) : [];
@@ -3170,13 +3137,13 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     const adj = applyConfidence(dayData.dayScore, conf);
     const cc = classifyConfidence(conf);
     const scoreColor = sc2col(adj.score);
-    return /* @__PURE__ */ React.createElement("div", { style: { ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", borderLeft: `3px solid ${scoreColor}`, background: `linear-gradient(90deg,${scoreColor}12 0%,${C.panel} 40%)` } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", minWidth: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontWeight: 900, fontSize: 56, color: scoreColor, lineHeight: 1 } }, adj.score), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 } }, sport === "kite" ? t("score_kite") : t("score_foil")), adj.adjusted && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.caution, marginTop: 3 } }, t("score_raw_adj", { raw: dayData.dayScore }))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 160 } }, dayData.session && dayData.session.startHour != null && dayData.dayScore > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: C.go, fontFamily: "monospace", fontWeight: 700, marginBottom: 4 } }, t("score_best_time", { from: String(dayData.session.startHour).padStart(2, "0"), to: String(dayData.session.endHour).padStart(2, "0") })), dayData.pickedGear ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: `${C.go}1e`, border: `1px solid ${C.go}`, borderRadius: 8, padding: "7px 12px" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F392}"), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em" } }, t("score_auto_rec")), /* @__PURE__ */ React.createElement("b", { style: { fontSize: 15, color: C.go, fontFamily: "monospace" } }, dayData.pickedGear.name || `${dayData.pickedGear.wing} m\xB2`), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted } }, "\xB7 ", dayData.pickedGear.wing, " m\xB2 \xB7 ", rider.weight, " kg")) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, sport === "kite" ? `${kiteRider.kiteModel} ${kiteRider.kiteSize}m \xB7 ${kiteRider.weight}kg \xB7 ${kiteRider.skill}` : `${rider.weight}kg \xB7 ${rider.wingSize}m\xB2${rider.planeKn ? ` \xB7 ab ${rider.planeKn}kn` : ""}`), conf != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: cc.color } }, cc.icon, " ", confidenceLabel(cc), " (", conf, "%)"), dayData.liveBoost?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, dayData.liveBoost.nowKn != null ? `\u2191 Live-Station ${dayData.liveBoost.station}: jetzt ~${dayData.liveBoost.nowKn} kn` : `\u2191 an Live-Station ${dayData.liveBoost.station} angepasst (\xD7${dayData.liveBoost.k})`), dayData.measuredCorr?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, "\u2191 an Station ", dayData.measuredCorr.station, dayData.measuredCorr.km >= 2 ? ` (~${dayData.measuredCorr.km} km)` : "", " angepasst"), forecast?.__model && MODEL_LABELS[forecast.__model] && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.muted, fontFamily: "monospace" } }, t("source_label"), " ", MODEL_LABELS[forecast.__model], dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" ? ` + ${t("neural_mos")}${dayData.thermal.subtype === "situativ" ? " (situativ)" : dayData.thermal.subtype === "table" ? " (Tabelle)" : ""}` : dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend" ? ` + ${t("mos_label")}` : "", dayData.thermal?.stationKey && (dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" || dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend") ? ` \xB7 ${dayData.thermal.stationKey}${dayData.thermal.stationKm != null ? ` ${dayData.thermal.stationKm} km` : ""}` : "", dayData.liveBoost?.applied ? ` + ${t("live_station")}` : dayData.measuredCorr?.applied ? ` + ${t("meas_station")}` : ""), mos?.meltemProb != null && /* @__PURE__ */ React.createElement("div", { style: {
+    return /* @__PURE__ */ React.createElement("section", { "aria-labelledby": "score-card-title", style: { ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", borderLeft: `3px solid ${scoreColor}`, background: `linear-gradient(90deg,${scoreColor}12 0%,${C.panel} 40%)` } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", minWidth: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontWeight: 900, fontSize: 56, color: scoreColor, lineHeight: 1 } }, adj.score), /* @__PURE__ */ React.createElement("h2", { id: "score-card-title", style: { fontFamily: "monospace", fontSize: 11, fontWeight: 400, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "4px 0 0" } }, sport === "kite" ? t("score_kite") : t("score_foil")), adj.adjusted && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.caution, marginTop: 3 } }, t("score_raw_adj", { raw: dayData.dayScore }))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 160 } }, dayData.session && dayData.session.startHour != null && dayData.dayScore > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: C.go, fontFamily: "monospace", fontWeight: 700, marginBottom: 4 } }, t("score_best_time", { from: String(dayData.session.startHour).padStart(2, "0"), to: String(dayData.session.endHour).padStart(2, "0") })), sport !== "kite" && dayData.wingPlan && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, color: C.text, fontFamily: "monospace", fontWeight: 700, marginBottom: 6 } }, t("score_wing_size", { plan: dayData.wingPlan })), sport !== "kite" && dayData.wingPlan && dayData.sessGust > dayData.win.optMax && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: C.cautionText, marginBottom: 6 } }, t("score_gust_cap", { g: fmtW(dayData.sessGust, windUnit) })), dayData.pickedGear ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: `${C.go}1e`, border: `1px solid ${C.go}`, borderRadius: 8, padding: "7px 12px" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F392}"), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em" } }, t("score_auto_rec")), /* @__PURE__ */ React.createElement("b", { style: { fontSize: 15, color: C.go, fontFamily: "monospace" } }, dayData.pickedGear.name || `${dayData.pickedGear.wing} m\xB2`), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted } }, "\xB7 ", dayData.pickedGear.wing, " m\xB2 \xB7 ", rider.weight, " kg")) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, sport === "kite" ? `${kiteRider.kiteModel} ${kiteRider.kiteSize}m \xB7 ${kiteRider.weight}kg \xB7 ${kiteRider.skill}` : `${rider.weight}kg \xB7 ${rider.wingSize}m\xB2${rider.planeKn ? ` \xB7 ab ${rider.planeKn}kn` : ""}`), sport === "kite" && kiteHint && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, fontSize: 12, color: C.muted, lineHeight: 1.7 }, dangerouslySetInnerHTML: { __html: kiteHint } }), conf != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: cc.color } }, cc.icon, " ", confidenceLabel(cc), " (", conf, "%)"), dayData.liveBoost?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, dayData.liveBoost.nowKn != null ? `\u2191 Live-Station ${dayData.liveBoost.station}: jetzt ~${dayData.liveBoost.nowKn} kn` : `\u2191 an Live-Station ${dayData.liveBoost.station} angepasst (\xD7${dayData.liveBoost.k})`), dayData.measuredCorr?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, "\u2191 an Station ", dayData.measuredCorr.station, dayData.measuredCorr.km >= 2 ? ` (~${dayData.measuredCorr.km} km)` : "", " angepasst"), forecast?.__model && MODEL_LABELS[forecast.__model] && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.muted, fontFamily: "monospace" } }, t("source_label"), " ", MODEL_LABELS[forecast.__model], dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" ? ` + ${t("neural_mos")}${dayData.thermal.subtype === "situativ" ? " (situativ)" : dayData.thermal.subtype === "table" ? " (Tabelle)" : ""}` : dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend" ? ` + ${t("mos_label")}` : "", dayData.thermal?.stationKey && (dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" || dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend") ? ` \xB7 ${dayData.thermal.stationKey}${dayData.thermal.stationKm != null ? ` ${dayData.thermal.stationKm} km` : ""}` : "", dayData.liveBoost?.applied ? ` + ${t("live_station")}` : dayData.measuredCorr?.applied ? ` + ${t("meas_station")}` : ""), mos?.meltemProb != null && /* @__PURE__ */ React.createElement("div", { style: {
       marginTop: 6,
       fontSize: 10,
       fontFamily: "monospace",
       color: mos.meltemProb >= 0.6 ? C.go : mos.meltemProb >= 0.35 ? C.caution : C.muted
     } }, t("foil_info_meltemi", { pct: Math.round(mos.meltemProb * 100) }), mos.neuralActive ? t("foil_info_neural") : "")));
-  })(), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, borderLeft: `3px solid ${C.go}` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 } }, /* @__PURE__ */ React.createElement("span", null, "\u{1F3AF}"), /* @__PURE__ */ React.createElement("strong", { style: { color: C.go, fontSize: 13 } }, t("equip_rec_title"))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, lineHeight: 1.9 }, dangerouslySetInnerHTML: { __html: rec } })), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, sport === "kite" ? t("kite_window_title") : t("foil_window_title")), meas && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, fontFamily: "monospace", marginBottom: 6 } }, "Wei\xDF/rot = echte Station (", measured.source, measured.km >= 2 ? `, ~${measured.km} km entfernt` : "", measured.latest ? `, zuletzt ${measured.latest}` : "", ") vs. Forecast (blau/orange)"), live && live.wind != null && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "2px 0 8px", padding: "6px 10px", borderRadius: 8, background: "rgba(61,220,132,0.08)", border: `1px solid ${C.go}44`, fontSize: 11 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 5, color: C.go, fontWeight: 600, whiteSpace: "nowrap" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 7, height: 7, borderRadius: "50%", background: live.sensorOk ? C.go : C.stop, boxShadow: `0 0 6px ${live.sensorOk ? C.go : C.stop}` } }), t("live_now_label")), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontFamily: "monospace" } }, fmtW(live.wind, windUnit), " ", unitLabel(windUnit), live.gust != null && /* @__PURE__ */ React.createElement(React.Fragment, null, " \xB7 B\xF6e ", fmtW(live.gust, windUnit)), live.dir != null && /* @__PURE__ */ React.createElement(React.Fragment, null, " \xB7 ", compass(live.dir), " ", Math.round(live.dir), "\xB0")), /* @__PURE__ */ React.createElement("span", { style: { color: C.muted, fontFamily: "monospace", fontSize: 10 } }, live.source, live.time ? ` \xB7 ${live.time}` : "", live.sensorOk ? "" : t("live_sensor_lost"))), /* @__PURE__ */ React.createElement("div", { style: S.cwL }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(ComposedChart, { data: windData, margin: { top: 5, right: 5, bottom: gearByHour && gearByHour.some((g) => g) ? 20 : 5, left: 5 } }, dayData.ens && /* @__PURE__ */ React.createElement(Area, { yAxisId: "l", dataKey: "band", name: "Modell-Streuung", stroke: "none", fill: C.sky, fillOpacity: 0.12, isAnimationActive: false, legendType: "none" }), /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: gearByHour ? 0 : 3, tick: gearByHour ? /* @__PURE__ */ React.createElement(FensterTick, { ghour: gearByHour.slice(6), lbls: dayData.labels.slice(6) }) : void 0 }), /* @__PURE__ */ React.createElement(YAxis, { yAxisId: "l", ...ax }), /* @__PURE__ */ React.createElement(YAxis, { yAxisId: "r", orientation: "right", domain: [0, 100], ...ax, tick: { ...ax.tick, fill: C.go } }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Legend, { verticalAlign: "top", wrapperStyle: { fontSize: 10, fontFamily: "monospace", color: C.muted, paddingBottom: 4 } }), /* @__PURE__ */ React.createElement(ReferenceArea, { yAxisId: "l", y1: cvt(dayData.win.optMin, windUnit), y2: cvt(dayData.win.optMax, windUnit), fill: "rgba(61,220,132,0.10)", stroke: "rgba(61,220,132,0.3)" }), /* @__PURE__ */ React.createElement(ReferenceLine, { yAxisId: "l", y: cvt(dayData.win.minWind, windUnit), stroke: C.caution, strokeDasharray: "4 3" }), /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "wind", name: t("wind_label", { u: unitLabel(windUnit) }), stroke: C.sky, strokeWidth: 2, dot: false }), /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "gust", name: t("gust_label", { u: unitLabel(windUnit) }), stroke: C.signal, strokeDasharray: "4 3", strokeWidth: 1.5, dot: false }), meas && windData.some((d) => d.mwind != null) && /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "mwind", name: t("mwind_label", { u: unitLabel(windUnit) }), stroke: C.text, strokeWidth: 2, dot: false, connectNulls: true }), meas && windData.some((d) => d.mgust != null) && /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "mgust", name: t("mgust_label", { u: unitLabel(windUnit) }), stroke: C.stop, strokeDasharray: "2 2", strokeWidth: 1.5, dot: false, connectNulls: true }), (() => {
+  })(), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, sport === "kite" ? t("kite_window_title") : t("foil_window_title")), meas && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, fontFamily: "monospace", marginBottom: 6 } }, "Wei\xDF/rot = echte Station (", measured.source, measured.km >= 2 ? `, ~${measured.km} km entfernt` : "", measured.latest ? `, zuletzt ${measured.latest}` : "", ") vs. Forecast (blau/orange)"), live && live.wind != null && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "2px 0 8px", padding: "6px 10px", borderRadius: 8, background: "rgba(61,220,132,0.08)", border: `1px solid ${C.go}44`, fontSize: 11 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 5, color: C.go, fontWeight: 600, whiteSpace: "nowrap" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 7, height: 7, borderRadius: "50%", background: live.sensorOk ? C.go : C.stop, boxShadow: `0 0 6px ${live.sensorOk ? C.go : C.stop}` } }), t("live_now_label")), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontFamily: "monospace" } }, fmtW(live.wind, windUnit), " ", unitLabel(windUnit), live.gust != null && /* @__PURE__ */ React.createElement(React.Fragment, null, " \xB7 B\xF6e ", fmtW(live.gust, windUnit)), live.dir != null && /* @__PURE__ */ React.createElement(React.Fragment, null, " \xB7 ", compass(live.dir), " ", Math.round(live.dir), "\xB0")), /* @__PURE__ */ React.createElement("span", { style: { color: C.muted, fontFamily: "monospace", fontSize: 10 } }, live.source, live.time ? ` \xB7 ${live.time}` : "", live.sensorOk ? "" : t("live_sensor_lost"))), /* @__PURE__ */ React.createElement("div", { style: S.cwL, role: "img", "aria-label": sizesAria }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(ComposedChart, { data: windData, margin: { top: 5, right: 5, bottom: gearByHour && gearByHour.some((g) => g) ? 20 : 5, left: 5 } }, dayData.ens && /* @__PURE__ */ React.createElement(Area, { yAxisId: "l", dataKey: "band", name: "Modell-Streuung", stroke: "none", fill: C.sky, fillOpacity: 0.12, isAnimationActive: false, legendType: "none" }), /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: gearByHour ? 0 : 3, tick: gearByHour ? /* @__PURE__ */ React.createElement(FensterTick, { ghour: gearByHour.slice(6), lbls: dayData.labels.slice(6) }) : void 0 }), /* @__PURE__ */ React.createElement(YAxis, { yAxisId: "l", ...ax }), /* @__PURE__ */ React.createElement(YAxis, { yAxisId: "r", orientation: "right", domain: [0, 100], ...ax, tick: { ...ax.tick, fill: C.go } }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Legend, { verticalAlign: "top", wrapperStyle: { fontSize: 10, fontFamily: "monospace", color: C.muted, paddingBottom: 4 } }), /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "wind", name: t("wind_label", { u: unitLabel(windUnit) }), stroke: C.sky, strokeWidth: 2, dot: false }), /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "gust", name: t("gust_label", { u: unitLabel(windUnit) }), stroke: C.signal, strokeDasharray: "4 3", strokeWidth: 1.5, dot: false }), meas && windData.some((d) => d.mwind != null) && /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "mwind", name: t("mwind_label", { u: unitLabel(windUnit) }), stroke: C.text, strokeWidth: 2, dot: false, connectNulls: true }), meas && windData.some((d) => d.mgust != null) && /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "mgust", name: t("mgust_label", { u: unitLabel(windUnit) }), stroke: C.stop, strokeDasharray: "2 2", strokeWidth: 1.5, dot: false, connectNulls: true }), (() => {
     if (!(live && activeDay === 0 && live.wind != null && live.time)) return null;
     const lh = `${live.time.slice(0, 2)}:00`;
     if (!windData.some((d) => d.h === lh)) return null;
@@ -3389,7 +3356,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     setCustom({ link: "", name: "" });
     setLinkError("");
     setShowLoc(false);
-  } }, t("loc_add_btn")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.dim, lineHeight: 1.5 } }, t("loc_add_hint")))))), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderTop: `1px solid ${C.border}`, padding: "8px 20px calc(14px + env(safe-area-inset-bottom))", textAlign: "center", fontFamily: "monospace", fontSize: 9, color: C.muted, display: "flex", justifyContent: "center", alignItems: "center", gap: 24, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", null, "WindFoil Weather Intelligence v3.43.6"), userEmail && /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, t("auth_logged_as"), ": ", userEmail), /* @__PURE__ */ React.createElement("span", null, "Open-Meteo \xB7 ERA5 ECMWF \xB7 Rider-Input"), /* @__PURE__ */ React.createElement("span", null, t("footer_loc", { name: loc.name })), /* @__PURE__ */ React.createElement("a", { href: "/sardinia.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sardinien"), /* @__PURE__ */ React.createElement("a", { href: "/sizilien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sizilien"), /* @__PURE__ */ React.createElement("a", { href: "/spanien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F1EA}\u{1F1F8} Spanien"), /* @__PURE__ */ React.createElement("a", { href: "/vergleich.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F4CA} Vergleich"), /* @__PURE__ */ React.createElement("a", { href: "/watcher.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F52D} Watcher"), /* @__PURE__ */ React.createElement("a", { href: "/alarm.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F514} Windalarm"), /* @__PURE__ */ React.createElement("a", { href: "/logbuch.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F6F6} Logbuch"), /* @__PURE__ */ React.createElement("a", { href: "/reise.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F9ED} Reiseplaner"), /* @__PURE__ */ React.createElement("a", { href: "/help.html", style: { color: C.sky, textDecoration: "none" } }, t("footer_help")), /* @__PURE__ */ React.createElement(
+  } }, t("loc_add_btn")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.dim, lineHeight: 1.5 } }, t("loc_add_hint")))))), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderTop: `1px solid ${C.border}`, padding: "8px 20px calc(14px + env(safe-area-inset-bottom))", textAlign: "center", fontFamily: "monospace", fontSize: 9, color: C.muted, display: "flex", justifyContent: "center", alignItems: "center", gap: 24, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", null, "WindFoil Weather Intelligence v3.45.0"), userEmail && /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, t("auth_logged_as"), ": ", userEmail), /* @__PURE__ */ React.createElement("span", null, "Open-Meteo \xB7 ERA5 ECMWF \xB7 Rider-Input"), /* @__PURE__ */ React.createElement("span", null, t("footer_loc", { name: loc.name })), /* @__PURE__ */ React.createElement("a", { href: "/sardinia.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sardinien"), /* @__PURE__ */ React.createElement("a", { href: "/sizilien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sizilien"), /* @__PURE__ */ React.createElement("a", { href: "/spanien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F1EA}\u{1F1F8} Spanien"), /* @__PURE__ */ React.createElement("a", { href: "/vergleich.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F4CA} Vergleich"), /* @__PURE__ */ React.createElement("a", { href: "/watcher.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F52D} Watcher"), /* @__PURE__ */ React.createElement("a", { href: "/alarm.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F514} Windalarm"), /* @__PURE__ */ React.createElement("a", { href: "/logbuch.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F6F6} Logbuch"), /* @__PURE__ */ React.createElement("a", { href: "/reise.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F9ED} Reiseplaner"), /* @__PURE__ */ React.createElement("a", { href: "/help.html", style: { color: C.sky, textDecoration: "none" } }, t("footer_help")), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => {

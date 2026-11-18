@@ -190,15 +190,23 @@
    *  der Quiver eine Lücke hat (3 + 9 m²). Das Maximum über die Einzelfenster
    *  kann das per Konstruktion nicht.
    *
-   *  Gleichstand bei 100 entscheidet die Mittigkeit im Optimalband — sonst
-   *  entschiede die Reihenfolge der Liste, und das ist keine Entscheidung. */
-  function bestWingForWind(quiver, windMs) {
+   *  Gleichstand bei 100 entscheidet zuerst, welches Wing mit den Böen weniger
+   *  über sein Optimalband hinausschießt, danach die Mittigkeit im Optimalband — sonst entschiede die
+   *  Reihenfolge der Liste, und das ist keine Entscheidung. Die Böe ist bewusst
+   *  nur Tiebreak und kein Abschlag im Score: die Herstellerbereiche gelten für
+   *  den Mittelwind und rechnen Böigkeit schon ein. */
+  const GUST_TIE_SPAN_MS = 5;
+  function gustOvershoot(win, gustMs) {
+    return Number.isFinite(gustMs) ? Math.max(0, gustMs - win.optMax) : 0;
+  }
+  function bestWingForWind(quiver, windMs, gustMs) {
     let best = null;
     for (const q of quiver || []) {
       const score = scoreHour(windMs, q.win);
       const mid = (q.win.optMin + q.win.optMax) / 2;
       const center = 1 - Math.min(1, Math.abs(windMs - mid) / (q.win.optMax - q.win.optMin + 0.01));
-      const rank = score * 100 + center * 10;
+      const gustTerm = 1 - Math.min(1, gustOvershoot(q.win, gustMs) / GUST_TIE_SPAN_MS);
+      const rank = score * 100 + gustTerm * 50 + center * 10;
       if (!best || rank > best.rank) best = { wing: q.wing, win: q.win, score, rank };
     }
     return best;
@@ -298,20 +306,57 @@
     return !!win && windMs >= win.minWind && windMs <= win.maxWind;
   }
 
+  /** Wing-Größe je Stunde → Array gleicher Länge: { wing, score } oder null.
+   *
+   *  Das ist die einzige Quelle für „welche Größe wann": Chart, Session-Plan und
+   *  Tagesempfehlung leiten sich daraus ab. Null heißt: kein Wing der Tasche trägt
+   *  diesen Wind (carries ⇒ Score ≥ 50) oder es fehlt der Wert.
+   *
+   *  Hysterese: die Größe der Vorstunde bleibt, solange sie höchstens
+   *  SIZE_HYSTERESIS Punkte unter dem Besten liegt und die Böen nicht stärker
+   *  überschreitet — sonst wechselt die Anzeige bei Gleichständen 5-6-5-6. */
+  const SIZE_HYSTERESIS = 3;
+  function hourlyWings(winds, quiver, gusts) {
+    let prev = null;
+    return (winds || []).map((v, i) => {
+      if (typeof v !== 'number' || !isFinite(v)) { prev = null; return null; }
+      const g = gusts ? gusts[i] : undefined;
+      const best = bestWingForWind(quiver, v, g);
+      if (!best || !carries(best.win, v)) { prev = null; return null; }
+      let pick = best;
+      const old = prev && (quiver || []).find(q => q.wing === prev);
+      if (old && carries(old.win, v)
+          && scoreHour(v, old.win) >= best.score - SIZE_HYSTERESIS
+          && gustOvershoot(old.win, g) <= gustOvershoot(best.win, g)) {
+        pick = { wing: old.wing, win: old.win, score: scoreHour(v, old.win) };
+      }
+      prev = pick.wing;
+      return { wing: pick.wing, score: pick.score };
+    });
+  }
+
   /** Welche Wing-Größe je Stunde einer Session? → [{ hour, wing, score }]
    *  „6 m² morgens, 4 m² ab 15 Uhr" ist die Information, die eine
    *  Tagesempfehlung verschweigt — und die man vor dem Packen braucht.
    *  Stunden, die kein Wing der Tasche trägt, bleiben ohne Eintrag. */
-  function sessionWings(winds, quiver, fromHour, toHour, startIdx) {
+  function sessionWings(winds, quiver, fromHour, toHour, startIdx, gusts) {
     const start = startIdx || 0;
+    const day = hourlyWings(winds.slice(start, start + 24), quiver, gusts ? gusts.slice(start, start + 24) : null);
     const out = [];
     for (let h = fromHour; h < toHour; h++) {
-      const v = winds[start + h];
-      if (v === undefined || v === null) continue;
-      const best = bestWingForWind(quiver, v);
-      if (best && carries(best.win, v)) out.push({ hour: h, wing: best.wing, score: best.score });
+      if (day[h]) out.push({ hour: h, wing: day[h].wing, score: day[h].score });
     }
     return out;
+  }
+
+  /** Die Größe, die in einer Session die meisten Stunden gefahren wird;
+   *  bei Gleichstand die frühere. Leere Session → null. */
+  function dominantWing(wings) {
+    const n = new Map();
+    for (const w of wings || []) n.set(w.wing, (n.get(w.wing) || 0) + 1);
+    let best = null;
+    for (const [wing, c] of n) if (!best || c > best.c) best = { wing, c };
+    return best ? best.wing : null;
   }
 
   /** Die Wing-Größen einer Session, zusammengefasst und in Fahrreihenfolge.
@@ -441,6 +486,7 @@
            scoreHour, offshoreMultiplier, meanDirection, bestSession, scoreDay,
            hourlyScores, bestBlock, defaultQuiver, riderQuiver, bestWingForWind,
            ridingWind, RIDE_PERCENTILE,
-           scoreHourQuiver, scorerFor, carries, sessionWings, wingAdvice,
+           scoreHourQuiver, scorerFor, carries, sessionWings, hourlyWings, dominantWing, wingAdvice,
+           SIZE_HYSTERESIS,
            guestWindow, guestQuiver, windowFromRider, loadRider, describeRider };
 });

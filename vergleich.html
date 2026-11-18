@@ -362,7 +362,7 @@ function dayStats5(fc, dayIdx, spot) {
     // Die Größe für die beste Session, nicht für den ganzen Tag: die Stunden
     // davor und danach fährt niemand, ihre Größe wäre eine Falschauskunft.
     wingPlan:(quiver&&session.startHour!=null)
-      ? WF.wingAdvice(WF.sessionWings(h.windspeed_10m,quiver,session.startHour,session.endHour,start))
+      ? WF.wingAdvice(WF.sessionWings(h.windspeed_10m,quiver,session.startHour,session.endHour,start,h.windgusts_10m))
       : null,
   };
 }
