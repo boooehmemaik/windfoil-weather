@@ -133,6 +133,17 @@ test('Eval-Gate: richtungsabhängige Thermik ⇒ situatives Neural schlägt line
   assert.equal(r.active, ev.maeTable <= ev.maeLinear && ev.skillTable >= 0.03);
 });
 
+test('Eval-Record trägt Validierungs-Tier; Gate schaltet nichts ab', () => {
+  const db = freshDb();
+  seedHistory(db, 'ms:16716', { days: 240 });
+  const r = trainNeuralMos(db, 'ms:16716', { now: new Date('2025-10-15T12:00:00Z') });
+  const ev = getNeuralEval(db, 'ms:16716');
+  assert.equal(ev.tier, ev.reasons.length ? 'provisional' : 'validated', JSON.stringify(ev));
+  assert.ok(Array.isArray(ev.reasons));
+  assert.ok(ev.testDays > 0 && ev.tailN >= 0);
+  assert.equal(r.activeFc, true);
+});
+
 test('predictSituational: gleiche Stunde, SW-Lage vs. NE-Lage ⇒ unterschiedliche Korrektur', () => {
   const db = freshDb();
   seedHistory(db, 'ms:16716', { days: 240 });

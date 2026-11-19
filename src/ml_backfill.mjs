@@ -532,6 +532,14 @@ export async function backfillStation(db, st, {
   return result;
 }
 
+export const DEFAULT_PRIORITY_KEYS = ['LIEO', 'LIEA', 'LIEE', 'LIEC'];
+
+export function prioritizeStations(stations, keys = DEFAULT_PRIORITY_KEYS) {
+  const rank = new Map(keys.map((k, i) => [k, i]));
+  const r = s => (rank.has(s.key) ? rank.get(s.key) : keys.length);
+  return stations.map((s, i) => ({ s, i })).sort((a, b) => r(a.s) - r(b.s) || a.i - b.i).map(x => x.s);
+}
+
 export async function runBackfill(db, stations, { onProgress = () => {}, budget = null, ...opts } = {}) {
   opts.budget = budget ?? createBudget(db);
   const results = [];

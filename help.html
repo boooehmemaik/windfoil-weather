@@ -1006,6 +1006,15 @@
       <h3>Neue Spots starten sofort</h3>
       <p>Ein neuer Spot muss nicht Monate warten, bis er genug Daten hat. WindFoil lädt im Hintergrund automatisch bis zu <strong>24 Monate historische Daten</strong> nach (Backfill). Die passende Wetterstation wird aus dem globalen Katalog zugeordnet — ohne manuellen Eingriff.</p>
 
+      <h3>Wie verlässlich ist die Korrektur? (Badges in der Quellen-Zeile)</h3>
+      <p>Neben der Lernmethode zeigt die Quellen-Zeile, wie gut die Stationskorrektur für deinen Spot abgesichert ist. Dafür gibt es drei Kennzeichnungen:</p>
+      <ul>
+        <li><span class="chip chip-gray">Rohprognose – kein Stationsmodell</span> — Für diesen Spot gibt es keine geeignete Wetterstation in Reichweite (höchstens <strong>40 km</strong> entfernt, mit aktueller Messreihe). Die Zahlen sind die <strong>unkorrigierte Modellprognose</strong>.</li>
+        <li><span class="chip chip-yellow">Stationsmodell vorläufig (wenig Daten)</span> — Die Korrektur ist aktiv, wurde aber noch nicht streng genug überprüft. Zum Beispiel gibt es weniger als <strong>150 Teststunden</strong> bzw. weniger als <strong>14 Tage</strong> Testdaten, kaum Starkwind-Stunden (<strong>ab 8 m/s</strong>) im Test, oder die Korrektur ist bei Starkwind noch nicht besser als die Rohprognose.</li>
+        <li><span class="chip chip-green">Stationsmodell validiert</span> — Es liegen genug Testdaten über mindestens <strong>14 Tage</strong> vor, und auch bei starkem Wind ist die korrigierte Prognose <strong>nicht schlechter</strong> als die Rohprognose.</li>
+      </ul>
+      <p>Die Korrektur wird bei „vorläufig“ <strong>nicht abgeschaltet</strong> — sie wird nur ehrlich gekennzeichnet, damit du weißt, wie sehr du ihr trauen kannst. Die Zuordnung der Stationen wird jede Nacht neu geprüft; dabei werden die Stationen, die deinem Spot am nächsten liegen, bevorzugt nachgelernt.</p>
+
       <div class="panel">
         <div class="panel-title">Die drei Lernmethoden im Überblick</div>
         <table>

@@ -1,5 +1,12 @@
 # WindFoil — Version History
 
+## v3.46.0 (2026-11-19)
+**FEAT(ml): Validierungs-Gate mit Tier, Badge, Nightly-Discovery, Backfill-Priorität, Drift-Monitor**
+- ML-Validierungs-Gate: jede Stations-Korrektur bekommt einen Tier (`validated` / `provisional`) samt `tierReasons` — das Gate schaltet nichts ab, es kennzeichnet nur; `/api/station/mos` liefert `neuralEval.tier` (Altbestand: `provisional` / `not_assessed` bis zum nächsten Training), Spots ohne Station `no_mos_station`
+- Badge in der Quellen-Zeile: „Stationsmodell validiert“, „Stationsmodell vorläufig (wenig Daten)“ (Gründe im Tooltip) oder „Rohprognose – kein Stationsmodell“
+- Nightly-Discovery und Backfill-Priorität: LIEO, LIEA, LIEE, LIEC zuerst (überschreibbar über `ML_PRIORITY_STATIONS`)
+- Report-only Live-Drift-Monitor (greift nicht in die Prognose ein)
+- Hilfe: neuer Abschnitt „Wie verlässlich ist die Korrektur?“
 ## v3.45.2 (2026-11-18)
 **FIX(ui): Wing-Windranges — Harlem-Wing-Zeilen ohne weißen Button-Hintergrund**
 - Größenzeilen der Harlem-Wings hatten als Buttons den weißen Browser-Standardhintergrund — jetzt transparent und passend zum Rest der Karte (Rahmen/Schrift zurückgesetzt, aktive Größe mit `goText` im hellen Theme)

@@ -15,7 +15,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.45.2",
+    version_label: "Weather Intelligence · v3.46.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -281,6 +281,14 @@ const TRANSLATIONS = {
     // Model source badge
     source_label: "📡 Quelle:",
     neural_mos: "Neural-MOS",
+    mos_tier_none: "Rohprognose – kein Stationsmodell",
+    mos_tier_provisional: "Stationsmodell vorläufig (wenig Daten)",
+    mos_tier_validated: "Stationsmodell validiert",
+    mos_reason_few_samples: "wenige Testdaten",
+    mos_reason_few_days: "kurzer Testzeitraum",
+    mos_reason_tail_untested: "Starkwind ungetestet",
+    mos_reason_tail_worse: "im Starkwind nicht besser als Rohprognose",
+    mos_reason_not_assessed: "noch nicht bewertet",
     mos_label: "MOS",
     live_station: "Live-Station",
     meas_station: "Messstation",
@@ -322,7 +330,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.45.2",
+    version_label: "Weather Intelligence · v3.46.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -588,6 +596,14 @@ const TRANSLATIONS = {
     // Model source badge
     source_label: "📡 Source:",
     neural_mos: "Neural-MOS",
+    mos_tier_none: "Raw forecast – no station model",
+    mos_tier_provisional: "Station model provisional (limited data)",
+    mos_tier_validated: "Station model validated",
+    mos_reason_few_samples: "few test samples",
+    mos_reason_few_days: "short test period",
+    mos_reason_tail_untested: "strong wind untested",
+    mos_reason_tail_worse: "not better than raw forecast in strong wind",
+    mos_reason_not_assessed: "not yet assessed",
     mos_label: "MOS",
     live_station: "Live station",
     meas_station: "Obs station",
@@ -632,8 +648,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.45.2
-// Changelog v3.45.2: Harlem-Wing-Größenzeilen (Buttons) ohne weißen Browser-Standardhintergrund; aktive Größe mit goText
+// WindFoil Weather Intelligence v3.46.0
+// Changelog v3.46.0: Harlem-Wing-Größenzeilen (Buttons) ohne weißen Browser-Standardhintergrund; aktive Größe mit goText
 // Changelog v3.45.1: Böenhinweis nur mit kleinerer Quiver-Größe; Kite-Größe je Stunde mit Hysterese (prevKite); ReferenceArea-Import und Alias ridingWind entfernt
 // Changelog v3.45.0: Wing-Größe je Stunde (hourlyWings), Karten zusammengeführt, Böen-Tiebreak; Größe je Stunde aus WF.hourlyWings, Tagesgröße = dominante Größe der besten Session
 // Changelog v3.43.6: nur Versionsanzeige — Bayern-Seen (vergleich.html) ohne Änderung an der Hauptapp
@@ -2427,6 +2443,7 @@ function App() {
   const [activeDay,setActiveDay]= useState(0);
   const [measured,setMeasured] = useState(null); // real station feed for the active day (null = none)
   const [live,setLive] = useState(null); // current-only real station snapshot (null = none)
+  const [mosNoStation,setMosNoStation] = useState(false);
   const [mos,setMos] = useState(null); // gelernte Stunden-Bias-Korrektur (null = keine Station/keine Daten)
   const [clock,setClock]       = useState("");
   const [activeUsers,setActiveUsers] = useState(null);
@@ -2649,6 +2666,7 @@ function App() {
       // mos aus einem eigenen useEffect, entschiede ein Race, ob der Guard greift.
       const mosData = (mosRes && mosRes.ok) ? mosRes : null;
       setMos(mosData);
+      setMosNoStation(mosRes?.error === "no_mos_station");
       attachEnsemble(fc, ensRes);
       applyPelerBoost(fc, l.lat, l.lon, mosData);   // lift the under-forecast channeled N-wind at Garda
       applyMeltemBoost(fc, l.lat, l.lon, mosData);  // lift the under-forecast Meltemi/Eric at Lefkada
@@ -3541,6 +3559,13 @@ function App() {
                           ? ` · ${dayData.thermal.stationKey}${dayData.thermal.stationKm != null ? ` ${dayData.thermal.stationKm} km` : ""}`
                           : ""}
                         {dayData.liveBoost?.applied ? ` + ${t('live_station')}` : dayData.measuredCorr?.applied ? ` + ${t('meas_station')}` : ""}
+                        {mosNoStation
+                          ? ` · ${t('mos_tier_none')}`
+                          : mos?.neuralEval
+                            ? (mos.neuralEval.tier === 'validated'
+                              ? ` · ${t('mos_tier_validated')}`
+                              : <span title={(mos.neuralEval.tierReasons||[]).map(r=>t(`mos_reason_${r}`)).join(", ") || undefined}>{` · ${t('mos_tier_provisional')}`}</span>)
+                            : ""}
                       </div>
                     )}
                     {mos?.meltemProb != null && (
@@ -4093,7 +4118,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.45.2</span>
+        <span>WindFoil Weather Intelligence v3.46.0</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>

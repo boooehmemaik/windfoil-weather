@@ -733,13 +733,13 @@ app.get("/api/station/mos", async (req, res) => {
 
       // Situativ: Netz × echte Prognose-Features der nächsten 72 h an der Station.
       // Nur wenn das Eval-Gate es freigegeben hat (activeFc); sonst bleibt es weg.
-      const { predictSituational, loadFc72, getNeuralEval } = await import("./src/neural_mos.mjs");
+      const { predictSituational, loadFc72, getNeuralEval, validationTier } = await import("./src/neural_mos.mjs");
       const sit = predictSituational(db, key, loadFc72(db, key), { tz: st.tz || "UTC" });
       if (sit) { m.neuralFc = sit; m.neuralActive = true; }
       const ev = getNeuralEval(db, key);
       if (ev) m.neuralEval = { skill: ev.skill ?? null, maeRaw: ev.maeRaw ?? null, maeModel: ev.maeModel ?? null,
                                maeLinear: ev.maeLinear ?? null, active: !!ev.active, activeFc: !!ev.activeFc,
-                               n: ev.n, trainedAt: ev.trainedAt };
+                               n: ev.n, trainedAt: ev.trainedAt, ...validationTier(ev) };
 
       // Meltemi-Wahrscheinlichkeit: live aus latestFcFeatures wenn vorhanden,
       // sonst aus app_meta (letzter Nightly-Job-Wert)
@@ -1526,7 +1526,7 @@ async function runMosOnce(reason) {
   // Nightly backfill continuation — läuft im Hintergrund, nur wenn kein anderer
   // ML-Job aktiv ist. runMlBackfill ruft seinerseits runMos("post-backfill") auf,
   // aber nur wenn rows > 0, sodass kein Endlos-Ping-Pong entsteht.
-  startMlJob('nightly-backfill', runMlBackfill);
+  startMlJob('nightly-backfill', () => runMlBackfill({ discover: true }));
 
   return out;
 }
@@ -1632,10 +1632,28 @@ async function runMlExclusive(kind, fn) {
   finally { releaseMlJob(); }
 }
 
-async function runMlBackfill({ months = 24, station = null } = {}) {
-  const { runBackfill } = await import("./src/ml_backfill.mjs");
+function logLiveDrift(stations) {
+  import("./src/neural_mos.mjs").then(({ liveDrift }) => {
+    for (const s of stations) {
+      try {
+        const d = liveDrift(getObsDb(), s.key);
+        if (d.status === "drifting") console.warn(`[ml-drift] ${s.key}: Korrektur schlechter als Rohprognose`, JSON.stringify(d));
+      } catch (e) { console.warn(`[ml-drift] ${s.key}:`, e.message); }
+    }
+  }).catch(e => console.warn("[ml-drift]", e.message));
+}
+
+async function runMlBackfill({ months = 24, station = null, discover = false } = {}) {
+  const { runBackfill, prioritizeStations } = await import("./src/ml_backfill.mjs");
+  if (discover) {
+    try { await discoverMlStations(); }
+    catch (e) { console.warn("[ml-discover] nightly:", e.message); }
+  }
   let stations = (await getMlStations({ fresh: true })).filter(s => s.enabled);
   if (station) stations = stations.filter(s => s.key === station);
+  const priority = process.env.ML_PRIORITY_STATIONS?.split(",").map(s => s.trim()).filter(Boolean);
+  stations = prioritizeStations(stations, priority?.length ? priority : undefined);
+  logLiveDrift(stations);
   const out = await runBackfill(getObsDb(), stations, {
     months, fetchImpl: fetch,
     log: msg => console.log(msg),
@@ -1665,7 +1683,7 @@ function mlStationStats(db) {
 
 async function mlStatus() {
   const db = getObsDb();
-  const { getNeuralEval } = await import("./src/neural_mos.mjs");
+  const { getNeuralEval, liveDrift, validationTier } = await import("./src/neural_mos.mjs");
   const ml = await getMlStations({ fresh: true });
   const { hist, live } = mlStationStats(db);
   const mlKeys = new Set(ml.map(s => s.key));
@@ -1673,11 +1691,13 @@ async function mlStatus() {
     .map(s => ({ key: s.key, label: s.label, icao: null, tz: s.tz, liveSource: "fest", km: null, spots: [] }));
   const stations = [...legacy, ...ml].map(s => {
     const h = hist.get(s.key);
+    const ev = getNeuralEval(db, s.key);
     return {
       station_key: s.key, label: s.label, icao: s.icao || null, tz: s.tz,
       live_source: s.liveSource || null, km: s.km, spots: s.spots || [],
       hist_rows: h ? h.n : 0, hist_from: h ? h.t0 : null, hist_to: h ? h.t1 : null,
-      live_rows: live.get(s.key) || 0, eval: getNeuralEval(db, s.key),
+      live_rows: live.get(s.key) || 0, eval: ev,
+      tier: validationTier(ev).tier, drift: liveDrift(db, s.key),
     };
   });
   return { ok: true, job: { ...mlJob }, stations };

@@ -350,6 +350,39 @@ function hourlyLinearBaseline(train) {
   return s => med.get(`${s.row.fc_lead_hours}|${s.row.hour_local}`) ?? 0;
 }
 
+// ── Gestuftes Gate ──────────────────────────────────────────────────────────
+// Aktiv bleibt, was den Skill-Test besteht (nichts wird abgeschaltet). 'validated'
+// braucht zusätzlich genug UNABHÄNGIGE Tage (Stundenwerte sind autokorreliert) und
+// darf im Starkwind-Bereich nicht schlechter sein als die Rohprognose.
+export const VALIDATED_MIN_TEST = 150;
+export const VALIDATED_MIN_DAYS = 14;
+export const TAIL_MIN_MS = 8;
+export const TAIL_MIN_N = 10;
+export const TAIL_MIN_DAYS = 3;
+
+const distinct = (samples, len) => new Set(samples.map(s => String(s.row.ts).slice(0, len))).size;
+
+// predict: eine Funktion oder eine Liste — je ausgelieferter Pfad (Netz, Stunden-Tabelle) eine.
+// Lead 0/24/48 teilen sich Zeitpunkt und Beobachtung, gezählt werden deshalb eindeutige Stunden/Tage.
+export function assessValidation(test, predict) {
+  const predictors = [].concat(predict);
+  const days = distinct(test, 10);
+  const tail = test.filter(s => s.row.fc_wind_ms >= TAIL_MIN_MS);
+  const tailHours = distinct(tail, 13), tailDays = distinct(tail, 10);
+  const maeTail = f => (tail.length ? mean(tail.map(s => Math.abs(f(s)))) : null);
+  const rawTail = maeTail(s => s.y);
+  const modelTails = predictors.map(p => maeTail(s => s.y - p(s)));
+  const modelTail = modelTails.includes(null) ? null : Math.max(...modelTails);
+  const reasons = [];
+  if (distinct(test, 13) < VALIDATED_MIN_TEST) reasons.push('few_samples');
+  if (days < VALIDATED_MIN_DAYS) reasons.push('few_days');
+  if (tailHours < TAIL_MIN_N || tailDays < TAIL_MIN_DAYS) reasons.push('tail_untested');
+  else if (!(modelTail <= rawTail)) reasons.push('tail_worse');
+  const r = v => (v == null || !Number.isFinite(v) ? null : Math.round(v * 1000) / 1000);
+  return { tier: reasons.length ? 'provisional' : 'validated', reasons, testDays: days,
+           tailN: tailHours, maeRawTail: r(rawTail), maeModelTail: r(modelTail) };
+}
+
 export function evaluateModel(model, train, test) {
   const lin = hourlyLinearBaseline(train);
   const r3 = v => Math.round(v * 1000) / 1000;
@@ -394,6 +427,10 @@ export function getNeuralEval(db, stationKey) {
   const row = db.prepare('SELECT value FROM app_meta WHERE key=?').get(`ml_eval:${stationKey}`);
   if (!row) return null;
   try { return JSON.parse(row.value); } catch { return null; }
+}
+
+export function validationTier(ev) {
+  return { tier: ev?.tier ?? 'provisional', tierReasons: ev?.reasons ?? ['not_assessed'] };
 }
 
 // ── Neuronales MOS: Training ─────────────────────────────────────────────────
@@ -463,8 +500,12 @@ export function trainNeuralMos(db, stationKey, { now = new Date() } = {}) {
   const model = new MLP(16, seededRng(best.seed));
   model.train(samples.slice(), { epochs, batchSize: 32, task: 'reg' });
 
+  const viaModel = s => best.model.predict(s.x, 'reg');
+  const viaTable = s => tables[s.row.fc_lead_hours]?.[s.row.hour_local] ?? 0;
+  const shipped = [activeFc && viaModel, activeTable && viaTable].filter(Boolean);
+  const validation = assessValidation(test, shipped.length ? shipped : viaModel);
   const evalRec = { ...base, epochs, ...ev, maeTable: r3(maeTable), skillTable: r3(skillTable),
-                    active: activeTable, activeFc };
+                    active: activeTable, activeFc, ...validation };
   savePred(db, `ml_eval:${stationKey}`, evalRec);
   saveModel(db, `neural_mos:${stationKey}`, model);
 
@@ -559,6 +600,26 @@ export function getNeuralHourlyBias(db, stationKey, leadHours = 0) {
   const row = db.prepare("SELECT value FROM app_meta WHERE key=?").get(key);
   if (!row) return null;
   try { return JSON.parse(row.value); } catch { return null; }
+}
+
+export const DRIFT_WINDOW_DAYS = 14;
+export const DRIFT_MIN_N = 30;
+
+export function computeDrift(rows, table, { now = Date.now(), days = DRIFT_WINDOW_DAYS, minN = DRIFT_MIN_N } = {}) {
+  const since = new Date(now - days * 86400000).toISOString();
+  const recent = rows.filter(r => r.fc_lead_hours === 0 && r.ts >= since && Number.isFinite(table?.[r.hour_local]));
+  if (recent.length < minN) return { status: 'insufficient', n: recent.length, days };
+  const maeRaw = mean(recent.map(r => Math.abs(r.bias_ms)));
+  const maeCorrected = mean(recent.map(r => Math.abs(r.bias_ms - table[r.hour_local])));
+  return { status: maeCorrected > maeRaw ? 'drifting' : 'ok', n: recent.length, days,
+           maeRaw: r3(maeRaw), maeCorrected: r3(maeCorrected) };
+}
+
+export function liveDrift(db, stationKey, opts = {}) {
+  const table = getNeuralHourlyBias(db, stationKey, 0);
+  if (!table) return { status: 'no_table' };
+  try { return computeDrift(loadLiveRows(db, stationKey), table, opts); }
+  catch { return { status: 'unavailable' }; }
 }
 
 export function getMeltemProb(db, fcFeatures, stationKey = MELTEMI_STATION_KEY) {
