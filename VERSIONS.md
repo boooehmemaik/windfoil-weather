@@ -1,5 +1,10 @@
 # WindFoil — Version History
 
+## v3.46.1 (2026-11-19)
+**CHORE(logs): obs-poller-Erfolgszeilen entfernt, Backfill meldet Rate-Limit-Abbruch**
+- obs-poller: keine Pro-Lauf-Zeilen mehr für „polling N live…“, `wind=… gust=…` (Live und Measured) und „pruned N obs older than 14d“; Skip-/Fehlerzeilen und die 90d-Prune-Zeilen bleiben
+- ml-backfill: Abbruch durch Rate-Limit/Budget wird als `console.warn` gemeldet („Abbruch bei <Station>: <Grund> (Budget <n>), Rest beim nächsten Lauf“)
+
 ## v3.46.0 (2026-11-19)
 **FEAT(ml): Validierungs-Gate mit Tier, Badge, Nightly-Discovery, Backfill-Priorität, Drift-Monitor**
 - ML-Validierungs-Gate: jede Stations-Korrektur bekommt einen Tier (`validated` / `provisional`) samt `tierReasons` — das Gate schaltet nichts ab, es kennzeichnet nur; `/api/station/mos` liefert `neuralEval.tier` (Altbestand: `provisional` / `not_assessed` bis zum nächsten Training), Spots ohne Station `no_mos_station`

@@ -1263,7 +1263,6 @@ function storeFc72(stKey, hourly) {
 async function pollStationObs() {
   const ts = new Date().toISOString();
   const prune14d = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-  console.log(`[obs-poller] polling ${LIVE_STATIONS.length} live + ${MEASURED_STATIONS.length} measured stations`);
 
   // Erster Lauf DIESES (gefixten) Pollers setzt die MOS-Epoche auf `ts` — genau
   // den Zeitstempel, den die gleich folgenden Inserts tragen. INSERT OR IGNORE:
@@ -1289,7 +1288,6 @@ async function pollStationObs() {
         continue;
       }
       getObsDb()._insertObs.run(st.key, ts, snap.wind, snap.gust ?? null, st.lat, st.lon);
-      console.log(`[obs-poller] ${st.key}: wind=${snap.wind} m/s gust=${snap.gust ?? "n/a"}`);
       // ML-Sample + Forecast-Archive: Forecast-Features parallel holen
       fetchCurrentFcFeatures(st.lat, st.lon).then(fcResult => {
         if (!fcResult?.now) return;
@@ -1356,7 +1354,6 @@ async function pollStationObs() {
         continue;
       }
       getObsDb()._insertObs.run(stKey, ts, wind, gust ?? null, st.lat, st.lon);
-      console.log(`[obs-poller] ${stKey}: wind=${wind} m/s gust=${gust ?? "n/a"} (localHour=${localHour} ${st.tz})`);
       // ML-Sample + Forecast-Archive: Forecast-Features parallel holen
       fetchCurrentFcFeatures(st.lat, st.lon).then(fcResult => {
         if (!fcResult?.now) return;
@@ -1390,9 +1387,7 @@ async function pollStationObs() {
 
   // ── Prune: station_obs älter 14 Tage, ml_samples älter 90 Tage ───────────
   try {
-    const pruneResult = getObsDb()._pruneObs.run(prune14d);
-    if (pruneResult.changes > 0)
-      console.log(`[obs-poller] pruned ${pruneResult.changes} obs older than 14d`);
+    getObsDb()._pruneObs.run(prune14d);
   } catch (e) {
     console.warn("[obs-poller] prune error:", e.message);
   }
@@ -1659,6 +1654,7 @@ async function runMlBackfill({ months = 24, station = null, discover = false } =
     log: msg => console.log(msg),
     onProgress: p => { mlJob.progress = p; },
   });
+  if (out.rateLimited) console.warn(`[ml-backfill] Abbruch bei ${out.stoppedAt}: ${out.reason} (Budget ${out.budgetUsed}), Rest beim nächsten Lauf`);
   mlJob.rateLimited = !!out.rateLimited;
   mlJob.result = { rows: out.rows ?? null, reason: out.reason ?? null, budgetUsed: out.budgetUsed ?? null };
   // Frisch gelernt → Bias + Netze sofort neu, nicht erst in der Nacht. Nach einem
