@@ -4132,6 +4132,7 @@ function App() {
         <a href="/logbuch.html" style={{color:C.sky,textDecoration:"none"}}>🛶 Logbuch</a>
         <a href="/reise.html" style={{color:C.sky,textDecoration:"none"}}>🧭 Reiseplaner</a>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>{t('footer_help')}</a>
+        <a href="/impressum.html" style={{color:C.sky,textDecoration:"none"}}>Impressum</a>
         <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
           title="Admin"
           style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:12,padding:0}}>⚙</button>

@@ -33,7 +33,6 @@ async function mountWindfoil(app) {
     { requireAuth },
     { runMigrations },
     { feedbackRouter },
-    { profileRouter },
     { equipmentRouter },
     { analyticsRouter },
     { locationRouter },
@@ -51,7 +50,6 @@ async function mountWindfoil(app) {
     import('./auth.middleware.mjs'),
     import('./db.mjs'),
     import('./feedback.routes.mjs'),
-    import('./profile.routes.mjs'),
     import('./equipment.routes.mjs'),
     import('./analytics.routes.mjs'),
     import('./locations.routes.mjs'),
@@ -95,7 +93,6 @@ async function mountWindfoil(app) {
 
   // v2.5.0 API — all behind requireAuth.
   app.use('/api/feedback',  requireAuth, feedbackRouter);
-  app.use('/api/profile',   requireAuth, profileRouter);
   app.use('/api/equipment', requireAuth, equipmentRouter);
   app.use('/api/analytics', requireAuth, analyticsRouter);
   app.use('/api/locations', requireAuth, locationRouter);

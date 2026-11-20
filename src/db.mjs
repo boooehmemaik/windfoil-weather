@@ -72,30 +72,6 @@ export function hasEntitlement(userId, featureKey) {
   return !!row;
 }
 
-// DEPRECATED for the feedback loop: this aggregated ALL of a rider's sessions
-// across EVERY spot into one global threshold, so a gusty spot skewed the score
-// everywhere. The loop now calibrates per spot (see recalibrateSpotPlaningThreshold).
-// Kept only for any out-of-band/global use; the feedback route no longer calls it.
-export function recalibratePlaningThreshold(userId) {
-  const agg = db.prepare(`
-    SELECT AVG(planing_wind_kt) AS rolling, COUNT(*) AS samples
-    FROM sessions
-    WHERE user_id = ? AND planed = 1 AND planing_wind_kt IS NOT NULL`).get(userId);
-  if (!agg.samples) return { rolling: null, samples: 0, applied: false };
-
-  const rolling = Math.round(agg.rolling * 10) / 10;
-  const profile = db.prepare(
-    'SELECT planing_threshold_source FROM rider_profiles WHERE user_id = ?').get(userId);
-
-  const applied = !profile || profile.planing_threshold_source !== 'manual';
-  if (applied) {
-    db.prepare(`UPDATE rider_profiles
-                SET planing_threshold_kt = ?, planing_threshold_source = 'calibrated',
-                    updated_at = ?
-                WHERE user_id = ?`).run(rolling, new Date().toISOString(), userId);
-  }
-  return { rolling, samples: agg.samples, applied };
-}
 
 // Per-spot feedback loop: recompute the rolling planing threshold from the
 // rider's real lift-offs AT THIS SPOT ONLY, and persist it per (user, spot).

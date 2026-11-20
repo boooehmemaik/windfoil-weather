@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Impressum & Datenschutz – WindFoil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0a0e14;
+      --panel:      #151d28;
+      --panel2:     #1a2535;
+      --border:     #1e2d3d;
+      --border2:    #263a50;
+      --text:       #d8e4f0;
+      --text-muted: #5a7a96;
+      --accent:     #f07820;
+      --sky:        #7fa0be;
+    }
+
+    body {
+      font-family: 'Barlow', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo { font-size: 20px; font-weight: 700; letter-spacing: .05em; color: var(--accent); }
+    header .subtitle { font-size: 13px; color: var(--text-muted); }
+
+    main {
+      flex: 1;
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+
+    h1 { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+    h2 { font-size: 16px; font-weight: 700; color: var(--sky); margin: 32px 0 10px; }
+
+    p  { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 10px; }
+    ul { font-size: 14px; line-height: 1.7; color: var(--text); padding-left: 20px; margin-bottom: 10px; }
+    li { margin-bottom: 4px; }
+
+    a  { color: var(--sky); text-decoration: none; }
+    a:hover { color: var(--accent); }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    .info-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    footer {
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      padding: 14px 24px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+    }
+    footer a { color: var(--text-muted); }
+    footer a:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">⟁ WINDFOIL</div>
+    <div class="subtitle">Weather Intelligence</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ══════════════════════════════════════════════
+       IMPRESSUM
+  ═══════════════════════════════════════════════ -->
+  <h1>Impressum</h1>
+  <p>Angaben gemäß § 5 TMG</p>
+
+  <div class="info-box">
+    <strong>Maik Boooehme</strong><br>
+    <!-- Bitte vollständige Postanschrift eintragen: -->
+    [Straße und Hausnummer]<br>
+    [PLZ Ort]<br>
+    Deutschland<br><br>
+    E-Mail: <a href="mailto:boooehmemaik@gmail.com">boooehmemaik@gmail.com</a>
+  </div>
+
+  <h2>Haftungsausschluss</h2>
+  <p>Die Wetterdaten dieser App stammen von Open-Meteo (open-meteo.com) und werden ohne Gewähr bereitgestellt. Für Entscheidungen am Wasser – insbesondere im Hinblick auf Sicherheit – liegt die Verantwortung stets beim Nutzer. Stets offizielle Wetterberichte und lokale Bedingungen prüfen.</p>
+
+  <hr class="divider">
+
+  <!-- ══════════════════════════════════════════════
+       DATENSCHUTZERKLÄRUNG
+  ═══════════════════════════════════════════════ -->
+  <h1>Datenschutzerklärung</h1>
+  <p>Zuletzt aktualisiert: November 2026</p>
+
+  <h2>1. Verantwortliche Stelle</h2>
+  <p>Verantwortlich im Sinne der DSGVO ist Maik Boooehme (Kontakt siehe Impressum oben).</p>
+
+  <h2>2. Welche Daten werden erhoben?</h2>
+  <ul>
+    <li><strong>Konto:</strong> E-Mail-Adresse und Passwort-Hash bei Registrierung. Passwörter werden ausschließlich als bcrypt-Hash gespeichert, nie im Klartext.</li>
+    <li><strong>Sessions:</strong> Freiwillig eingetragene Surf-Sessions (Spot, Windstärke, Ausrüstung, Bewertung) zur persönlichen Auswertung.</li>
+    <li><strong>Einstellungen:</strong> Reiter-Gewicht, Skill-Level, bevorzugte Ausrüstung sowie App-Einstellungen werden serverseitig gespeichert, damit sie geräteübergreifend verfügbar sind.</li>
+    <li><strong>Windalarm:</strong> Web-Push-Abonnement (Push-Endpoint, Auth- und P256DH-Schlüssel) zur Zustellung von Windalarmen. Keine Zuordnung zu Drittanbietern.</li>
+    <li><strong>Server-Logs:</strong> Standard-HTTP-Zugriffslogs (IP-Adresse, Zeitstempel, angefragte URL) für Fehleranalyse und Betriebssicherheit.</li>
+  </ul>
+
+  <h2>3. Wofür werden die Daten verwendet?</h2>
+  <ul>
+    <li>Betrieb und Personalisierung der App (Spot-Score, Gear-Empfehlung, Reiseplaner)</li>
+    <li>Zustellung von Windalarmen per Web-Push</li>
+    <li>Kalibrierung des persönlichen Angleitschwellenwerts aus eigenen Sessions</li>
+    <li>Keine Weitergabe an Dritte, kein Verkauf, kein Tracking</li>
+  </ul>
+
+  <h2>4. Externe Dienste</h2>
+  <ul>
+    <li><strong>Open-Meteo</strong> (open-meteo.com): Wetterdaten werden serverseitig abgerufen. Dein Browser hat keinen direkten Kontakt. Keine persönlichen Daten werden übermittelt.</li>
+    <li><strong>Weatherbit / Meteostat:</strong> Wetterstationsdaten, ebenfalls serverseitig. Kein Personenbezug.</li>
+    <li><strong>Google Fonts:</strong> Diese Seite lädt Schriftarten von Google-Servern. Dabei wird die IP-Adresse übertragen. Alternativ kannst du die Seite mit blockierten Google-Fonts nutzen (funktional, aber ohne Schriftartoptimierung).</li>
+  </ul>
+
+  <h2>5. Cookies und lokaler Speicher</h2>
+  <p>Die App verwendet ein HTTP-only Session-Cookie zur Authentifizierung. Kein Tracking-Cookie, kein Analytics-Cookie. Zusätzlich werden Einstellungen im localStorage des Browsers gespeichert (automatisch gelöscht beim Löschen von Browser-Daten).</p>
+
+  <h2>6. Datenlöschung</h2>
+  <p>Du kannst dein Konto samt aller gespeicherten Daten jederzeit per E-Mail an <a href="mailto:boooehmemaik@gmail.com">boooehmemaik@gmail.com</a> löschen lassen. Server-Logs werden nach 30 Tagen automatisch rotiert.</p>
+
+  <h2>7. Deine Rechte (DSGVO Art. 15–21)</h2>
+  <ul>
+    <li>Auskunft über gespeicherte Daten</li>
+    <li>Berichtigung unrichtiger Daten</li>
+    <li>Löschung</li>
+    <li>Einschränkung der Verarbeitung</li>
+    <li>Datenübertragbarkeit</li>
+    <li>Widerspruch</li>
+  </ul>
+  <p>Anfragen an: <a href="mailto:boooehmemaik@gmail.com">boooehmemaik@gmail.com</a></p>
+
+  <h2>8. Beschwerderecht</h2>
+  <p>Du hast das Recht, Beschwerde bei einer Datenschutzaufsichtsbehörde einzulegen. Zuständige Behörde richtet sich nach deinem Wohnsitz in Deutschland.</p>
+
+</main>
+
+<footer>
+  <span>⟁ WindFoil Weather Intelligence</span>
+  <a href="/index.html">← Zurück zur App</a>
+  <a href="/help.html">❓ Hilfe</a>
+  <a href="/alarm.html">🔔 Windalarm</a>
+  <a href="/logbuch.html">🛶 Logbuch</a>
+  <a href="/reise.html">🧭 Reiseplaner</a>
+</footer>
+
+</body>
+</html>
