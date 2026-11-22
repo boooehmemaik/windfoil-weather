@@ -8,6 +8,14 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
+// iOS PWA shell caches HTML independently of HTTP headers. This ensures the
+// app always gets a fresh HTML document from the network.
+self.addEventListener('fetch', e => {
+  if (e.request.destination === 'document') {
+    e.respondWith(fetch(e.request));
+  }
+});
+
 self.addEventListener('push', event => {
   // Kein oder kaputtes Payload: lieber eine neutrale Meldung als nichts — ohne
   // showNotification() entzieht der Browser die Push-Berechtigung.

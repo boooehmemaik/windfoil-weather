@@ -91,8 +91,8 @@ fi
 #      Ohne diesen Schritt liefert nginx das alte app.js aus dem Browser-Cache, wenn
 #      die Datei mit max-age=immutable ausgeliefert wurde.
 if APP_VER=$(grep -oP 'v\K[0-9]+\.[0-9]+\.[0-9]+' js/app.js | head -1) && [ -n "$APP_VER" ]; then
-  sed -i "s|?v=[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*|?v=${APP_VER}|g" index.html
-  log "Cache-busting: index.html → ?v=${APP_VER}"
+  sed -i "s|?v=[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*|?v=${APP_VER}|g" index.html sardinia.html sizilien.html spanien.html skandinavien.html
+  log "Cache-busting: index.html + region pages → ?v=${APP_VER}"
 fi
 
 # 4c) Ensure daily backup cron exists (once-per-server, idempotent).
