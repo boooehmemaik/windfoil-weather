@@ -15,7 +15,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.47.1",
+    version_label: "Weather Intelligence · v3.48.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -330,7 +330,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.47.1",
+    version_label: "Weather Intelligence · v3.48.0",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -648,8 +648,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.47.1
-// Changelog v3.47.1: Adresse im Impressum eingetragen
+// WindFoil Weather Intelligence v3.48.0
+// Changelog v3.48.0: Adresse im Impressum eingetragen
 // Changelog v3.47.0: Impressum + Datenschutz, toten profile-Router entfernt (src/profile.routes.mjs + recalibratePlaningThreshold)
 // Changelog v3.46.0: Harlem-Wing-Größenzeilen (Buttons) ohne weißen Browser-Standardhintergrund; aktive Größe mit goText
 // Changelog v3.45.1: Böenhinweis nur mit kleinerer Quiver-Größe; Kite-Größe je Stunde mit Hysterese (prevKite); ReferenceArea-Import und Alias ridingWind entfernt
@@ -4120,7 +4120,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.47.1</span>
+        <span>WindFoil Weather Intelligence v3.48.0</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
