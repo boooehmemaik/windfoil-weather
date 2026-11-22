@@ -562,6 +562,16 @@
       if (spot.id === bestId) markers[spot.id].openPopup();
     });
 
+    if (typeof WindParticles !== 'undefined') {
+      const particleSpots = SPOTS
+        .filter(s => results[s.id])
+        .map(s => {
+          const ds = dayStats(results[s.id], 0, s, win);
+          return { lat: s.lat, lon: s.lon, dir: ds.avgDir, speedKn: ds.avgWindKn };
+        });
+      new WindParticles(map).setSpots(particleSpots);
+    }
+
     grid.innerHTML = SPOTS.map(spot => buildCard(spot, results, bestId, ctx)).join('');
 
     document.getElementById('rec-loading').style.display = 'none';
