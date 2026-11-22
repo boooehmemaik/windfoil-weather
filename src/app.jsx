@@ -15,7 +15,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.48.3",
+    version_label: "Weather Intelligence · v3.48.4",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -330,7 +330,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.48.3",
+    version_label: "Weather Intelligence · v3.48.4",
     sport_foil: "🏄 Wingfoiling",
     sport_kite: "🪁 Kitesurfing",
     // Loc bar
@@ -648,8 +648,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.48.3
-// Changelog v3.48.3: PWA Safe-Area-Inset Header-Fix fuer iPhone-Notch
+// WindFoil Weather Intelligence v3.48.4
+// Changelog v3.48.4: PWA Safe-Area-Inset Header-Fix fuer iPhone-Notch
 // Changelog v3.48.1: Adresse im Impressum eingetragen
 // Changelog v3.47.0: Impressum + Datenschutz, toten profile-Router entfernt (src/profile.routes.mjs + recalibratePlaningThreshold)
 // Changelog v3.46.0: Harlem-Wing-Größenzeilen (Buttons) ohne weißen Browser-Standardhintergrund; aktive Größe mit goText
@@ -2135,7 +2135,10 @@ function AuthGate({children}){
     <AuthCtx.Provider value={sess.user?.email||null}>
     <div>
       <div style={{display:'flex',alignItems:'center',gap:8,
-          padding:'8px 16px',background:CA.deep,borderBottom:`1px solid ${CA.line}`,minWidth:0}}>
+          padding:'8px 16px',paddingTop:'calc(8px + env(safe-area-inset-top))',
+          background:CA.deep,borderBottom:`1px solid ${CA.line}`,minWidth:0,
+          position:'sticky',top:0,zIndex:201,
+          backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
         <div className="wf-hdr-nav" style={{display:'flex',gap:6,alignItems:'center',flexWrap:'nowrap',flex:1,minWidth:0}}>
           {[
             {href:'/sardinia.html',    label:'Sardinien'},
@@ -3184,7 +3187,7 @@ function App() {
 
   const S={
     wrap:{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",background:C.bg,color:C.text,minHeight:"100vh",fontSize:14},
-    hdr:{background:C.headerBg,borderBottom:`1px solid ${C.border}`,padding:"10px 16px",paddingTop:"calc(10px + env(safe-area-inset-top))",backdropFilter:"blur(20px)",display:"flex",flexDirection:"column",gap:4,position:"sticky",top:0,zIndex:100},
+    hdr:{background:C.headerBg,borderBottom:`1px solid ${C.border}`,padding:"10px 16px",backdropFilter:"blur(20px)",display:"flex",flexDirection:"column",gap:4,position:"sticky",top:"calc(env(safe-area-inset-top) + 48px)",zIndex:100},
     hdrRow1:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8},
     hdrRow2:{display:"flex",alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap",gap:6},
     locBar:{background:C.panel,borderBottom:`2px solid ${C.sky}`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8},
@@ -4121,7 +4124,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.48.3</span>
+        <span>WindFoil Weather Intelligence v3.48.4</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
