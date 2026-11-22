@@ -1,6 +1,7 @@
 /* WindFoil — Wind-Partikel-Animation (Canvas-Overlay über Leaflet-Karte)
  * Jeder Spot spawnt Partikel, die in Windrichtung fließen (TO-Richtung).
- * Konvention: `dir` = meteorologische VON-Richtung (z. B. WSW = 247°) */
+ * Konvention: `dir` = meteorologische VON-Richtung (z. B. WSW = 247°)
+ * Toggle-Button wird als natives Leaflet-Control unten links eingebunden. */
 (function (root) {
   'use strict';
 
@@ -12,20 +13,20 @@
   }
 
   function WindParticles(map) {
-    this.map      = map;
-    this.spots    = [];
+    this.map       = map;
+    this.spots     = [];
     this.particles = [];
-    this.raf      = null;
-    this.enabled  = true;
+    this.raf       = null;
+    this.enabled   = true;
     this._prevProj = null;
-    this._canvas  = null;
-    this._ctx     = null;
-    this._btn     = null;
+    this._canvas   = null;
+    this._ctx      = null;
+    this._btn      = null;
     this._attach();
   }
 
   WindParticles.prototype._attach = function () {
-    // Canvas overlay
+    // ── Canvas overlay ──────────────────────────────────────────────────────
     var canvas = document.createElement('canvas');
     canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:649';
     this.map.getContainer().appendChild(canvas);
@@ -33,24 +34,55 @@
     this._ctx    = canvas.getContext('2d');
     this._resize();
 
-    // Toggle-Button (Leaflet-Style, unten rechts)
-    var btn = document.createElement('button');
-    btn.setAttribute('title', 'Windanimation ein/aus');
-    btn.setAttribute('aria-label', 'Windanimation ein/aus');
-    btn.innerHTML = '💨';
-    btn.style.cssText = [
-      'position:absolute', 'bottom:88px', 'right:10px', 'z-index:1000',
-      'background:#1a2535', 'border:1px solid #2a3f5a', 'border-radius:6px',
-      'padding:5px 7px', 'cursor:pointer', 'font-size:16px',
-      'color:#3a9ad9', 'line-height:1', 'opacity:0.85',
-      'transition:opacity .2s,color .2s',
-    ].join(';');
+    // ── Toggle als Leaflet-Control (bottom-left, nativ integriert) ──────────
     var self = this;
-    btn.addEventListener('click', function () { self.toggle(); });
-    this.map.getContainer().appendChild(btn);
-    this._btn = btn;
+    if (typeof L !== 'undefined' && L.Control) {
+      var Ctrl = L.Control.extend({
+        options: { position: 'bottomleft' },
+        onAdd: function () {
+          var wrap = L.DomUtil.create('div', 'leaflet-bar leaflet-control wp-ctrl');
+          wrap.style.cssText = 'background:#1a2535;border:1px solid #2a3f5a;border-radius:8px;overflow:hidden';
+          var a = L.DomUtil.create('a', '', wrap);
+          a.href  = '#';
+          a.title = 'Windanimation ein/aus';
+          a.setAttribute('role', 'button');
+          a.setAttribute('aria-label', 'Windanimation ein/aus');
+          a.style.cssText = [
+            'display:flex', 'align-items:center', 'gap:5px',
+            'padding:6px 10px', 'font-size:13px', 'font-weight:600',
+            'color:#3a9ad9', 'text-decoration:none', 'white-space:nowrap',
+            'font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif',
+          ].join(';');
+          a.innerHTML = '💨 Wind';
+          L.DomEvent.disableClickPropagation(wrap);
+          L.DomEvent.on(a, 'click', function (e) {
+            L.DomEvent.preventDefault(e);
+            self.toggle();
+          });
+          self._btn = a;
+          return wrap;
+        },
+        onRemove: function () {}
+      });
+      new Ctrl().addTo(this.map);
+    } else {
+      // Fallback: absolut positioniert, knapp über der Leaflet-Attribution
+      var btn = document.createElement('button');
+      btn.setAttribute('title', 'Windanimation ein/aus');
+      btn.setAttribute('aria-label', 'Windanimation ein/aus');
+      btn.innerHTML = '💨 Wind';
+      btn.style.cssText = [
+        'position:absolute', 'bottom:34px', 'left:10px', 'z-index:1000',
+        'background:#1a2535', 'border:1px solid #2a3f5a', 'border-radius:8px',
+        'padding:6px 10px', 'cursor:pointer', 'font-size:13px', 'font-weight:600',
+        'color:#3a9ad9', 'line-height:1.2',
+      ].join(';');
+      btn.addEventListener('click', function () { self.toggle(); });
+      this.map.getContainer().appendChild(btn);
+      this._btn = btn;
+    }
 
-    // Map-Events
+    // ── Map-Events ──────────────────────────────────────────────────────────
     this.map.on('resize',    this._resize.bind(this));
     this.map.on('movestart', this._onMoveStart.bind(this));
     this.map.on('move',      this._onMove.bind(this));
@@ -69,7 +101,7 @@
 
   WindParticles.prototype._onMove = function () {
     if (!this._prevProj) return;
-    var zoom   = this.map.getZoom();
+    var zoom    = this.map.getZoom();
     var newProj = this.map.project(this.map.getCenter(), zoom);
     var dx = this._prevProj.x - newProj.x;
     var dy = this._prevProj.y - newProj.y;
@@ -119,7 +151,6 @@
   WindParticles.prototype._step = function () {
     for (var i = 0; i < this.particles.length; i++) {
       var p = this.particles[i];
-      // Partikel bewegen sich in TO-Richtung (dir + 180°)
       var toRad = ((p.spot.dir + 180) % 360) * Math.PI / 180;
       var vel   = Math.max(0.5, p.spot.speedKn) * 0.1;
       p.x  += Math.sin(toRad) * vel;
@@ -127,7 +158,7 @@
       p.age++;
 
       if (p.age >= p.life) {
-        var pt = this.map.latLngToContainerPoint([p.spot.lat, p.spot.lon]);
+        var pt     = this.map.latLngToContainerPoint([p.spot.lat, p.spot.lon]);
         var spread = 60;
         p.x    = pt.x + (Math.random() - 0.5) * spread * 2;
         p.y    = pt.y + (Math.random() - 0.5) * spread * 2;
@@ -142,14 +173,12 @@
     ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
 
     for (var i = 0; i < this.particles.length; i++) {
-      var p     = this.particles[i];
-      var t     = p.age / p.life;
-      // Sanftes Fade-in (0–15 %) und Fade-out (80–100 %)
+      var p   = this.particles[i];
+      var t   = p.age / p.life;
       var alpha = t < 0.15 ? t / 0.15 : (t > 0.80 ? (1 - t) / 0.20 : 1);
       alpha *= 0.70;
 
       var spd = p.spot.speedKn;
-      // Farbe: blau (schwach) → cyan (mittel) → gelb (stark)
       var r, g, b;
       if (spd < 12)      { r = 58;  g = 154; b = 217; }
       else if (spd < 22) { r = 61;  g = 210; b = 190; }
@@ -174,15 +203,15 @@
 
   WindParticles.prototype.toggle = function () {
     this.enabled = !this.enabled;
+    if (this._btn) {
+      this._btn.style.color   = this.enabled ? '#3a9ad9' : '#5a7a96';
+      this._btn.style.opacity = this.enabled ? '1'       : '0.5';
+    }
     if (this.enabled) {
-      this._btn.style.opacity = '0.85';
-      this._btn.style.color   = '#3a9ad9';
       this._loop();
     } else {
       if (this.raf) { cancelAnimationFrame(this.raf); this.raf = null; }
       this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
-      this._btn.style.opacity = '0.4';
-      this._btn.style.color   = '#5a7a96';
     }
   };
 
@@ -193,7 +222,7 @@
     this.map.off('move',      this._onMove.bind(this));
     this.map.off('zoomend',   this._onZoomEnd.bind(this));
     if (this._canvas) this._canvas.remove();
-    if (this._btn)    this._btn.remove();
+    if (this._btn)    this._btn.closest('.wp-ctrl') && this._btn.closest('.wp-ctrl').remove();
   };
 
   root.WindParticles = WindParticles;
