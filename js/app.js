@@ -12,17 +12,17 @@ const TRANSLATIONS = {
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
     version_label: "Weather Intelligence \xB7 v3.48.4",
-    sport_foil: "\u{1F3C4} Wingfoiling",
-    sport_kite: "\u{1FA81} Kitesurfing",
+    sport_foil: "Wingfoiling",
+    sport_kite: "Kitesurfing",
     // Loc bar
-    loc_remember: "\u2605 merken",
-    loc_remembered: "\u2713 gemerkt",
+    loc_remember: "Merken",
+    loc_remembered: "Gemerkt",
     loc_change: "Ort \xE4ndern",
-    loc_feedback: "\u{1F4E3} Feedback",
-    loc_calibrated: "\u{1F4CD} lokal kalibriert \xB7 ab {kn} kn",
+    loc_feedback: "Feedback",
+    loc_calibrated: "lokal kalibriert \xB7 ab {kn} kn",
     // Rider bar
-    profile_foil: "\u{1F3C4} Wingfoil-Profil",
-    profile_kite: "\u{1FA81} Kite-Profil",
+    profile_foil: "Wingfoil-Profil",
+    profile_kite: "Kite-Profil",
     profile_and_equip: "& Equipment",
     field_weight: "Gewicht (kg)",
     field_wing: "Wing (m\xB2)",
@@ -34,11 +34,11 @@ const TRANSLATIONS = {
     skill_intermediate: "Fortgeschritten",
     skill_advanced: "Fortgeschritten+",
     skill_pro: "Experte",
-    btn_analyse: "ANALYSE STARTEN \u2192",
-    btn_save_profile: "PROFIL SPEICHERN",
-    btn_profile_saved: "\u2713 GESPEICHERT",
+    btn_analyse: "Analyse starten",
+    btn_save_profile: "Profil speichern",
+    btn_profile_saved: "Gespeichert",
     // Equipment
-    equip_title: "\u{1F392} Mein Equipment",
+    equip_title: "Mein Equipment",
     equip_auto_select: "Automatische Setup-Wahl",
     equip_name: "Name",
     equip_wing: "Wing (m\xB2)",
@@ -53,14 +53,14 @@ const TRANSLATIONS = {
     score_foil: "Wingfoil-Score",
     score_kite: "Kite-Score",
     score_raw_adj: "roh {raw} \xB7 justiert",
-    score_best_time: "\u23F1 Beste Zeit: {from}\u2013{to} Uhr",
+    score_best_time: "Beste Zeit: {from}\u2013{to} Uhr",
     score_auto_rec: "Auto-Empfehlung",
     // Badges
     badge_avg: "\xD8 {w}",
     badge_max_gust: "Max B\xF6e {w}",
     badge_max_temp: "{t}\xB0C max",
     badge_mos_corr: "MOS-Korrektur {sign}{w} \xB7 {n} Tage",
-    badge_mos_blend: "MOS {pct}% / \u{1F30A} Brise {rest}%",
+    badge_mos_blend: "MOS {pct}% / Brise {rest}%",
     badge_seabreeze: "Meeresbrise +{w}",
     // Thermik
     th_none: "Kaum Thermik",
@@ -115,34 +115,34 @@ const TRANSLATIONS = {
     chart_sizes_wind: "Maximal {w} Wind, {g} B\xF6en.",
     foil_window_title: "Wingfoil-Fenster Analyse \u2014 Rider-spezifisch + Foil-Score",
     kite_window_title: "Kite-Fenster Analyse \u2014 Rider-spezifisch + Kite-Score",
-    foil_window_ref: "\u{1F3C4} Wing-Windranges",
-    kite_window_ref: "\u{1FA81} Crazyfly Kite-Windranges",
+    foil_window_ref: "Wing-Windranges",
+    kite_window_ref: "Crazyfly Kite-Windranges",
     ref_weight_adj: "Herstellerangaben (Referenzgewicht {ref} kg). Die zweite Spalte zeigt dein angepasstes Fenster f\xFCr {weight} kg \xB7 {skill}.",
     ref_weight_adj_kite: "Herstellerangaben (Referenzgewicht ~80 kg). Die zweite Spalte zeigt dein angepasstes Fenster f\xFCr {weight} kg \xB7 {skill}.",
     // Recommendation lines
     // Kite rec
-    kite_rec_too_little: "\u26A0\uFE0F <b>Zu wenig Wind</b> \u2014 {w}, Kite braucht \u2265{min}",
-    kite_rec_too_little_tip: "\u{1F4A1} Gr\xF6\xDFeren Kite w\xE4hlen oder auf Wind-Zunahme warten.",
-    kite_rec_optimal: "\u2705 <b>Optimale Bedingungen</b> \u2014 {w} im Fenster ({optMin}\u2013{optMax})",
-    kite_rec_optimal_rider: "\u{1FA81} {model} {size}m \u2014 ideal f\xFCr {skill}",
-    kite_rec_overpowered: "\u26A0\uFE0F <b>Overpowered-Zone</b> \u2014 {w} an der Obergrenze",
-    kite_rec_overpowered_tip: "\u{1F4A1} Kite zu gro\xDF \u2014 kleinere Gr\xF6\xDFe oder Bar depower erw\xE4gen",
-    kite_rec_too_much: "\u{1F6A8} <b>Kite zu klein / zu viel Wind</b> \u2014 {w} > Max {max}",
-    kite_rec_too_much_tip: "\u26D4 Session abbrechen oder deutlich kleineren Kite",
-    kite_rec_gust: "\u{1F4A8} <b>B\xF6en-\u0394 {dw}</b> \u2014 Erh\xF6hte Leinenspannung!",
-    kite_rec_window: "<br>\u{1F4D0} <b>Dein Kite-Fenster:</b> Start {min} \xB7 Optimal {optMin}\u2013{optMax} \xB7 Max {max}",
+    kite_rec_too_little: "<b>Zu wenig Wind</b> \u2014 {w}, Kite braucht \u2265{min}",
+    kite_rec_too_little_tip: "Gr\xF6\xDFeren Kite w\xE4hlen oder auf Wind-Zunahme warten.",
+    kite_rec_optimal: "<b>Optimale Bedingungen</b> \u2014 {w} im Fenster ({optMin}\u2013{optMax})",
+    kite_rec_optimal_rider: "{model} {size}m \u2014 ideal f\xFCr {skill}",
+    kite_rec_overpowered: "<b>Overpowered-Zone</b> \u2014 {w} an der Obergrenze",
+    kite_rec_overpowered_tip: "Kite zu gro\xDF \u2014 kleinere Gr\xF6\xDFe oder Bar depower erw\xE4gen",
+    kite_rec_too_much: "<b>Kite zu klein / zu viel Wind</b> \u2014 {w} > Max {max}",
+    kite_rec_too_much_tip: "Session abbrechen oder deutlich kleineren Kite",
+    kite_rec_gust: "<b>B\xF6en-\u0394 {dw}</b> \u2014 Erh\xF6hte Leinenspannung",
+    kite_rec_window: "<br><b>Kite-Fenster:</b> Start {min} \xB7 Optimal {optMin}\u2013{optMax} \xB7 Max {max}",
     // Station / model comparison
-    station_cmp_title: "\u{1F6F0} Station \u2194 Modell Abgleich \u2192 Vertrauens-Score",
+    station_cmp_title: "Station \u2194 Modell \xB7 Vertrauens-Score",
     station_cmp_loading: "Echte Stationsdaten werden mit dem Modell verglichen\u2026",
     station_cmp_unavail: "Kein Stations-Backend erreichbar. Der Vertrauens-Score ben\xF6tigt den Proxy ({proxy}) mit g\xFCltigem Weatherbit-API-Key auf deinem Host. Bis dahin basiert die Bewertung allein auf Modell + Rider-Angaben.",
     station_cmp_detail: "Gro\xDFer Unterschied zwischen Station und Modell \u21D2 niedriger Vertrauens-Score \u21D2 der Foil-Score (heute) wird Richtung neutral ged\xE4mpft. Aktuell: {src}. Hist. Bias: Meteostat-Station vs. Open-Meteo-Archiv (gleiches Zeitfenster).",
     p10_p90_around: "p10\u2013p90 um {h}:00",
     n_member: "{n} Member",
     // Nearby stations
-    nearby_title: "\u{1F4E1} Echte Wetterstationen{radius}",
+    nearby_title: "Wetterstationen{radius}",
     nearby_radius: " (Umkreis {r} km)",
-    nearby_loading: "\u23F3 l\xE4dt\u2026",
-    nearby_live: "\u2705 Messung+Modell",
+    nearby_loading: "l\xE4dt\u2026",
+    nearby_live: "Messung + Modell",
     nearby_model: "\u2248 Modellwind",
     nearby_meta: "\u25CB nur Stationsinfo",
     nearby_unavail: "\u2013 keine Stationen",
@@ -152,14 +152,14 @@ const TRANSLATIONS = {
     nearby_mod: "\u2248 Modell",
     nearby_footer: "Echte Messstationen im Umkreis (Quelle: Meteostat). Windwerte: Standard ist aktueller Modellwind am Stationsstandort (Open-Meteo, \u2248 Modell); die n\xE4chstgelegenen Stationen zeigen echte Messungen (\u25CF Messung, Weatherbit), solange das Tageskontingent reicht.",
     // Manual station
-    manual_station_title: "\u{1F517} Eigene Wetterstation hinzuf\xFCgen",
+    manual_station_title: "Eigene Wetterstation hinzuf\xFCgen",
     manual_station_add: "Hinzuf\xFCgen",
     manual_station_cors: "CORS-eingeschr\xE4nkt im Browser \u2014 Daten bitte direkt auf der Seite pr\xFCfen.",
     manual_station_none: "Noch keine eigenen Stationen konfiguriert.",
     // Location modal
     loc_modal_title: "Standort konfigurieren",
     loc_gps_loading: "Standort wird ermittelt\u2026",
-    loc_gps_use: "\u{1F4CD} Meinen aktuellen Standort verwenden",
+    loc_gps_use: "Meinen aktuellen Standort verwenden",
     loc_spots_section: "Spots",
     loc_recent_section: "Zuletzt verwendet",
     loc_add_section: "Ort hinzuf\xFCgen",
@@ -167,9 +167,9 @@ const TRANSLATIONS = {
     loc_add_name_label: "Ortsname (optional)",
     loc_add_name_placeholder: "z.B. Mein Spot",
     loc_add_btn: "Hinzuf\xFCgen & w\xE4hlen",
-    loc_add_hint: '\u{1F4A1} In Google Maps auf den Ort tippen \u2192 URL kopieren (Koordinaten stehen nach dem @). Oder direkt "lat, lon" eingeben.',
+    loc_add_hint: 'In Google Maps auf den Ort tippen \u2192 URL kopieren (Koordinaten stehen nach dem @). Oder direkt "lat, lon" eingeben.',
     loc_link_error_empty: "Bitte einen Link oder Koordinaten eingeben.",
-    loc_parsed_ok: "\u2705 Erkannt: {lat}\xB0N, {lon}\xB0E",
+    loc_parsed_ok: "Erkannt: {lat}\xB0N, {lon}\xB0E",
     // Geo errors
     geo_not_supported: "Geolocation wird von diesem Ger\xE4t/Browser nicht unterst\xFCtzt.",
     geo_denied: "Standortzugriff verweigert. Bitte in den Browser-Einstellungen erlauben.",
@@ -240,7 +240,7 @@ const TRANSLATIONS = {
     fb_err_server: "Server nicht erreichbar.",
     // History view
     hist_title: "History & MOS-Performance",
-    hist_close: "\u2715 Schlie\xDFen",
+    hist_close: "Schlie\xDFen",
     hist_busy: "Lade Daten\u2026",
     hist_err: "Fehler beim Laden.",
     hist_obs_title: "Beobachteter Wind \u2014 letzte {days} Tage",
@@ -260,13 +260,13 @@ const TRANSLATIONS = {
     hist_bias_legend_raw: "Roher Bias",
     hist_ml_pairs: "ml_samples lead=0: {n} Paare f\xFCr diese Station im Zeitfenster",
     hist_ml_missing: "(Neural MOS ben\xF6tigt \u226560 \u2014 noch {n} fehlend)",
-    hist_ml_ok: "\u2713 genug f\xFCr Neural MOS",
+    hist_ml_ok: "genug f\xFCr Neural MOS",
     hist_hour_local: "Stunde (lokal)",
     // Footer
-    footer_donate: "\u2665 Spenden",
+    footer_donate: "Spenden",
     footer_support_title: "App unterst\xFCtzen",
     footer_loc: "Standort: {name}",
-    footer_help: "\u2753 Hilfe",
+    footer_help: "Hilfe",
     // Chart tooltip labels
     tooltip_forecast: "Forecast",
     tooltip_observed: "Beobachtet",
@@ -275,7 +275,7 @@ const TRANSLATIONS = {
     tooltip_pres: "Luftdruck",
     tooltip_th: "Thermik-Index",
     // Model source badge
-    source_label: "\u{1F4E1} Quelle:",
+    source_label: "Quelle:",
     neural_mos: "Neural-MOS",
     mos_tier_none: "Rohprognose \u2013 kein Stationsmodell",
     mos_tier_provisional: "Stationsmodell vorl\xE4ufig (wenig Daten)",
@@ -309,7 +309,7 @@ const TRANSLATIONS = {
     kite_model_label: "Kite Modell",
     kite_size_label: "Kite Gr\xF6\xDFe",
     // Foil score card info
-    foil_info_meltemi: "\u{1F30A} Meltemi-Wahrscheinlichkeit: {pct}%",
+    foil_info_meltemi: "Meltemi-Wahrscheinlichkeit: {pct}%",
     foil_info_neural: " (Neural)",
     // Foil window ref table
     ref_manufacturer: "Hersteller",
@@ -327,17 +327,17 @@ const TRANSLATIONS = {
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
     version_label: "Weather Intelligence \xB7 v3.48.4",
-    sport_foil: "\u{1F3C4} Wingfoiling",
-    sport_kite: "\u{1FA81} Kitesurfing",
+    sport_foil: "Wingfoiling",
+    sport_kite: "Kitesurfing",
     // Loc bar
-    loc_remember: "\u2605 save",
-    loc_remembered: "\u2713 saved",
+    loc_remember: "Save",
+    loc_remembered: "Saved",
     loc_change: "Change location",
-    loc_feedback: "\u{1F4E3} Feedback",
-    loc_calibrated: "\u{1F4CD} locally calibrated \xB7 from {kn} kn",
+    loc_feedback: "Feedback",
+    loc_calibrated: "locally calibrated \xB7 from {kn} kn",
     // Rider bar
-    profile_foil: "\u{1F3C4} Wingfoil Profile",
-    profile_kite: "\u{1FA81} Kite Profile",
+    profile_foil: "Wingfoil Profile",
+    profile_kite: "Kite Profile",
     profile_and_equip: "& Equipment",
     field_weight: "Weight (kg)",
     field_wing: "Wing (m\xB2)",
@@ -349,11 +349,11 @@ const TRANSLATIONS = {
     skill_intermediate: "Intermediate",
     skill_advanced: "Advanced",
     skill_pro: "Pro",
-    btn_analyse: "RUN ANALYSIS \u2192",
-    btn_save_profile: "SAVE PROFILE",
-    btn_profile_saved: "\u2713 SAVED",
+    btn_analyse: "Run analysis",
+    btn_save_profile: "Save profile",
+    btn_profile_saved: "Saved",
     // Equipment
-    equip_title: "\u{1F392} My Equipment",
+    equip_title: "My Equipment",
     equip_auto_select: "Auto setup selection",
     equip_name: "Name",
     equip_wing: "Wing (m\xB2)",
@@ -368,14 +368,14 @@ const TRANSLATIONS = {
     score_foil: "Wingfoil Score",
     score_kite: "Kite Score",
     score_raw_adj: "raw {raw} \xB7 adjusted",
-    score_best_time: "\u23F1 Best window: {from}\u2013{to}",
+    score_best_time: "Best window: {from}\u2013{to}",
     score_auto_rec: "Auto recommendation",
     // Badges
     badge_avg: "Avg {w}",
     badge_max_gust: "Max gust {w}",
     badge_max_temp: "{t}\xB0C max",
     badge_mos_corr: "MOS correction {sign}{w} \xB7 {n} days",
-    badge_mos_blend: "MOS {pct}% / \u{1F30A} Breeze {rest}%",
+    badge_mos_blend: "MOS {pct}% / Breeze {rest}%",
     badge_seabreeze: "Sea breeze +{w}",
     // Thermik
     th_none: "Minimal thermals",
@@ -430,34 +430,34 @@ const TRANSLATIONS = {
     chart_sizes_wind: "Peak {w} wind, {g} gusts.",
     foil_window_title: "Wingfoil window analysis \u2014 rider-specific + foil score",
     kite_window_title: "Kite window analysis \u2014 rider-specific + kite score",
-    foil_window_ref: "\u{1F3C4} Wing wind ranges",
-    kite_window_ref: "\u{1FA81} Crazyfly kite wind ranges",
+    foil_window_ref: "Wing wind ranges",
+    kite_window_ref: "Crazyfly kite wind ranges",
     ref_weight_adj: "Manufacturer specs (reference weight {ref} kg). Second column shows your adjusted window for {weight} kg \xB7 {skill}.",
     ref_weight_adj_kite: "Manufacturer specs (reference weight ~80 kg). Second column shows your adjusted window for {weight} kg \xB7 {skill}.",
     // Recommendation lines
     // Kite rec
-    kite_rec_too_little: "\u26A0\uFE0F <b>Too little wind</b> \u2014 {w}, kite needs \u2265{min}",
-    kite_rec_too_little_tip: "\u{1F4A1} Choose a larger kite or wait for more wind.",
-    kite_rec_optimal: "\u2705 <b>Optimal conditions</b> \u2014 {w} in window ({optMin}\u2013{optMax})",
-    kite_rec_optimal_rider: "\u{1FA81} {model} {size}m \u2014 ideal for {skill}",
-    kite_rec_overpowered: "\u26A0\uFE0F <b>Overpowered zone</b> \u2014 {w} at upper limit",
-    kite_rec_overpowered_tip: "\u{1F4A1} Kite too large \u2014 consider smaller size or bar depower",
-    kite_rec_too_much: "\u{1F6A8} <b>Kite too small / too much wind</b> \u2014 {w} > max {max}",
-    kite_rec_too_much_tip: "\u26D4 Abort session or use a significantly smaller kite",
-    kite_rec_gust: "\u{1F4A8} <b>Gust-\u0394 {dw}</b> \u2014 Increased line tension!",
-    kite_rec_window: "<br>\u{1F4D0} <b>Your kite window:</b> Start {min} \xB7 Optimal {optMin}\u2013{optMax} \xB7 Max {max}",
+    kite_rec_too_little: "<b>Too little wind</b> \u2014 {w}, kite needs \u2265{min}",
+    kite_rec_too_little_tip: "Choose a larger kite or wait for more wind.",
+    kite_rec_optimal: "<b>Optimal conditions</b> \u2014 {w} in window ({optMin}\u2013{optMax})",
+    kite_rec_optimal_rider: "{model} {size}m \u2014 ideal for {skill}",
+    kite_rec_overpowered: "<b>Overpowered zone</b> \u2014 {w} at upper limit",
+    kite_rec_overpowered_tip: "Kite too large \u2014 consider smaller size or bar depower",
+    kite_rec_too_much: "<b>Kite too small / too much wind</b> \u2014 {w} > max {max}",
+    kite_rec_too_much_tip: "Abort session or use a significantly smaller kite",
+    kite_rec_gust: "<b>Gust-\u0394 {dw}</b> \u2014 Increased line tension",
+    kite_rec_window: "<br><b>Kite window:</b> Start {min} \xB7 Optimal {optMin}\u2013{optMax} \xB7 Max {max}",
     // Station / model comparison
-    station_cmp_title: "\u{1F6F0} Station \u2194 Model comparison \u2192 confidence score",
+    station_cmp_title: "Station \u2194 Model \xB7 Confidence score",
     station_cmp_loading: "Comparing real station data with model\u2026",
     station_cmp_unavail: "No station backend available. The confidence score requires the proxy ({proxy}) with a valid Weatherbit API key on your host. Until then, the rating is based solely on model + rider inputs.",
     station_cmp_detail: "Large difference between station and model \u21D2 low confidence score \u21D2 foil score (today) is pulled toward neutral. Source: {src}. Historical bias: Meteostat station vs. Open-Meteo archive (same time window).",
     p10_p90_around: "p10\u2013p90 at {h}:00",
     n_member: "{n} members",
     // Nearby stations
-    nearby_title: "\u{1F4E1} Real weather stations{radius}",
+    nearby_title: "Weather stations{radius}",
     nearby_radius: " ({r} km radius)",
-    nearby_loading: "\u23F3 loading\u2026",
-    nearby_live: "\u2705 Observation+Model",
+    nearby_loading: "loading\u2026",
+    nearby_live: "Observation + Model",
     nearby_model: "\u2248 Model wind",
     nearby_meta: "\u25CB station info only",
     nearby_unavail: "\u2013 no stations",
@@ -467,14 +467,14 @@ const TRANSLATIONS = {
     nearby_mod: "\u2248 Model",
     nearby_footer: "Real weather stations nearby (source: Meteostat). Wind values: default is current model wind at station location (Open-Meteo, \u2248 model); the nearest stations show real observations (\u25CF Obs, Weatherbit) while the daily quota lasts.",
     // Manual station
-    manual_station_title: "\u{1F517} Add your own weather station",
+    manual_station_title: "Add your own weather station",
     manual_station_add: "Add",
     manual_station_cors: "CORS-restricted in the browser \u2014 please check data directly on the site.",
     manual_station_none: "No custom stations configured yet.",
     // Location modal
     loc_modal_title: "Configure location",
     loc_gps_loading: "Locating\u2026",
-    loc_gps_use: "\u{1F4CD} Use my current location",
+    loc_gps_use: "Use my current location",
     loc_spots_section: "Spots",
     loc_recent_section: "Recently used",
     loc_add_section: "Add location",
@@ -482,9 +482,9 @@ const TRANSLATIONS = {
     loc_add_name_label: "Place name (optional)",
     loc_add_name_placeholder: "e.g. My spot",
     loc_add_btn: "Add & select",
-    loc_add_hint: '\u{1F4A1} In Google Maps, tap the location \u2192 copy URL (coordinates follow the @). Or enter "lat, lon" directly.',
+    loc_add_hint: 'In Google Maps, tap the location \u2192 copy URL (coordinates follow the @). Or enter "lat, lon" directly.',
     loc_link_error_empty: "Please enter a link or coordinates.",
-    loc_parsed_ok: "\u2705 Detected: {lat}\xB0N, {lon}\xB0E",
+    loc_parsed_ok: "Detected: {lat}\xB0N, {lon}\xB0E",
     // Geo errors
     geo_not_supported: "Geolocation is not supported by this device/browser.",
     geo_denied: "Location access denied. Please allow it in browser settings.",
@@ -555,7 +555,7 @@ const TRANSLATIONS = {
     fb_err_server: "Server unreachable.",
     // History view
     hist_title: "History & MOS performance",
-    hist_close: "\u2715 Close",
+    hist_close: "Close",
     hist_busy: "Loading data\u2026",
     hist_err: "Error loading data.",
     hist_obs_title: "Observed wind \u2014 last {days} days",
@@ -575,13 +575,13 @@ const TRANSLATIONS = {
     hist_bias_legend_raw: "Raw bias",
     hist_ml_pairs: "ml_samples lead=0: {n} pairs for this station in the time window",
     hist_ml_missing: "(Neural MOS needs \u226560 \u2014 {n} more needed)",
-    hist_ml_ok: "\u2713 enough for Neural MOS",
+    hist_ml_ok: "enough for Neural MOS",
     hist_hour_local: "Hour (local)",
     // Footer
-    footer_donate: "\u2665 Donate",
+    footer_donate: "Donate",
     footer_support_title: "Support the app",
     footer_loc: "Location: {name}",
-    footer_help: "\u2753 Help",
+    footer_help: "Help",
     // Chart tooltip labels
     tooltip_forecast: "Forecast",
     tooltip_observed: "Observed",
@@ -590,7 +590,7 @@ const TRANSLATIONS = {
     tooltip_pres: "Pressure",
     tooltip_th: "Thermal index",
     // Model source badge
-    source_label: "\u{1F4E1} Source:",
+    source_label: "Source:",
     neural_mos: "Neural-MOS",
     mos_tier_none: "Raw forecast \u2013 no station model",
     mos_tier_provisional: "Station model provisional (limited data)",
@@ -624,7 +624,7 @@ const TRANSLATIONS = {
     kite_model_label: "Kite model",
     kite_size_label: "Kite size",
     // Foil score card info
-    foil_info_meltemi: "\u{1F30A} Meltemi probability: {pct}%",
+    foil_info_meltemi: "Meltemi probability: {pct}%",
     foil_info_neural: " (Neural)",
     // Foil window ref table
     ref_manufacturer: "Manufacturer",
@@ -1326,10 +1326,10 @@ function computeThermik(h, idx, regime) {
   return Math.round(Math.max(0, Math.min(100, (capePts + liPts + tempPts) * solar * cloudF * humidF + breezePts)));
 }
 function classifyThermik(max) {
-  if (max < 10) return { icon: "\u{1F634}", labelKey: "th_none", descKey: "th_none_desc", color: C.go };
-  if (max < 30) return { icon: "\u{1F324}", labelKey: "th_light", descKey: "th_light_desc", color: C.caution };
-  if (max < 60) return { icon: "\u26C5", labelKey: "th_moderate", descKey: "th_moderate_desc", color: C.caution };
-  return { icon: "\u26C8", labelKey: "th_strong", descKey: "th_strong_desc", color: C.stop };
+  if (max < 10) return { icon: "", labelKey: "th_none", descKey: "th_none_desc", color: C.go };
+  if (max < 30) return { icon: "", labelKey: "th_light", descKey: "th_light_desc", color: C.caution };
+  if (max < 60) return { icon: "", labelKey: "th_moderate", descKey: "th_moderate_desc", color: C.caution };
+  return { icon: "", labelKey: "th_strong", descKey: "th_strong_desc", color: C.stop };
 }
 function thermikLabel(info) {
   return t(info.labelKey);
@@ -1720,7 +1720,7 @@ function AuthGate({ children }) {
     display: "grid",
     placeItems: "center",
     boxSizing: "border-box",
-    background: `radial-gradient(120% 90% at 50% -10%,${C.surface},${C.bg})`,
+    background: C.bg,
     padding: "max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom))"
   } }, /* @__PURE__ */ React.createElement("div", { style: {
     width: "100%",
@@ -1731,11 +1731,10 @@ function AuthGate({ children }) {
     padding: 26,
     boxShadow: cardShadow
   } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 } }, /* @__PURE__ */ React.createElement("div", { style: {
-    fontSize: 11,
-    letterSpacing: ".2em",
-    textTransform: "uppercase",
+    fontSize: 13,
+    letterSpacing: ".05em",
     color: CA.lift,
-    fontWeight: 700
+    fontWeight: 600
   } }, "WindFoil"), /* @__PURE__ */ React.createElement(
     "button",
     {
@@ -1753,7 +1752,7 @@ function AuthGate({ children }) {
       }
     },
     agTheme === "light" ? "\u263E" : "\u2600"
-  )), /* @__PURE__ */ React.createElement("h1", { style: { fontSize: 21, fontWeight: 700, color: CA.foam, margin: "0 0 4px" } }, mode === "signup" ? t("auth_title_signup") : t("auth_title_signin")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: CA.haze, margin: "0 0 20px" } }, mode === "signup" ? t("auth_sub_signup") : t("auth_sub_signin")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, background: CA.p2, padding: 4, borderRadius: 11, marginBottom: 18 } }, ["signin", "signup"].map((m) => /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("h1", { style: { fontSize: 21, fontWeight: 600, color: CA.foam, margin: "0 0 4px" } }, mode === "signup" ? t("auth_title_signup") : t("auth_title_signin")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: CA.haze, margin: "0 0 20px" } }, mode === "signup" ? t("auth_sub_signup") : t("auth_sub_signin")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, background: CA.p2, padding: 4, borderRadius: 11, marginBottom: 18 } }, ["signin", "signup"].map((m) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: m,
@@ -1915,9 +1914,15 @@ function AuthGate({ children }) {
     alignItems: "center",
     gap: 8,
     padding: "8px 16px",
+    paddingTop: "calc(8px + env(safe-area-inset-top))",
     background: CA.deep,
     borderBottom: `1px solid ${CA.line}`,
-    minWidth: 0
+    minWidth: 0,
+    position: "sticky",
+    top: 0,
+    zIndex: 201,
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)"
   } }, /* @__PURE__ */ React.createElement("div", { className: "wf-hdr-nav", style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", flex: 1, minWidth: 0 } }, [
     { href: "/sardinia.html", label: "Sardinien" },
     { href: "/sizilien.html", label: "Sizilien" },
@@ -1925,9 +1930,9 @@ function AuthGate({ children }) {
     { href: "/skandinavien.html", label: "Skandinavien" },
     { href: "/vergleich.html", label: "Vergleich" },
     { href: "/watcher.html", label: "Watcher" },
-    { href: "/alarm.html", label: "\u{1F514} Windalarm" },
-    { href: "/logbuch.html", label: "\u{1F6F6} Logbuch" },
-    { href: "/reise.html", label: "\u{1F9ED} Reiseplaner" }
+    { href: "/alarm.html", label: "Windalarm" },
+    { href: "/logbuch.html", label: "Logbuch" },
+    { href: "/reise.html", label: "Reiseplaner" }
   ].map(({ href, label }) => /* @__PURE__ */ React.createElement(
     "a",
     {
@@ -2106,7 +2111,7 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
   const dateLabel = new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "2-digit", month: "short" }).format(/* @__PURE__ */ new Date());
   const lbl = { display: "block", fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 8 };
   const inputStyle = { background: C.bg, color: C.text, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "8px 10px", fontSize: 15, fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif" };
-  return /* @__PURE__ */ React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-labelledby": "fb-modal-title", style: { position: "fixed", top: 0, left: 0, right: 0, height: "100dvh", background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, paddingBottom: "max(16px, env(safe-area-inset-bottom))", boxSizing: "border-box", fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif" } }, /* @__PURE__ */ React.createElement("div", { ref: dialogRef, style: { background: C.panel, border: `1px solid ${C.border2}`, borderRadius: 20, width: "100%", maxWidth: 480, maxHeight: "100%", overflow: "auto", color: C.text } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: `1px solid ${C.border}` } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 10, color: C.signal, textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700 } }, t("fb_modal_label")), /* @__PURE__ */ React.createElement("strong", { id: "fb-modal-title", style: { fontSize: 14 } }, loc.name)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted } }, dateLabel), /* @__PURE__ */ React.createElement("button", { onClick: onClose, "aria-label": t("fb_close"), style: { background: "none", border: "none", color: C.muted, fontSize: 16, cursor: "pointer" } }, "\u2715"))), /* @__PURE__ */ React.createElement("div", { style: { padding: 16 } }, done ? /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "12px 4px" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 48, height: 48, borderRadius: "50%", margin: "0 auto 12px", display: "grid", placeItems: "center", background: "rgba(61,220,132,0.16)", border: `1px solid ${C.go}`, color: C.go, fontSize: 24 } }, "\u2713"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, fontWeight: 700, marginBottom: 6 } }, t("fb_done_title", { date: dateLabel })), /* @__PURE__ */ React.createElement("p", { style: { color: C.muted, fontSize: 13, margin: 0 } }, t("fb_done_sub", { name: loc.name })), done.observed && done.obsRange ? /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, padding: 12, borderRadius: 8, background: C.bg, border: `1px solid ${C.signal}`, textAlign: "left", fontSize: 13, color: C.text } }, /* @__PURE__ */ React.createElement("span", null, t("fb_cal_station", { wing: done._wingM2 || "?", lo: done.obsRange.lowKn, hi: done.obsRange.highKn, n: done.obsRange.samples, s: done.obsRange.samples === 1 ? "" : lang === "en" ? "s" : "en" }))) : /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, padding: 12, borderRadius: 8, background: C.bg, border: `1px solid ${C.border2}`, textAlign: "left", fontSize: 13, color: C.muted } }, /* @__PURE__ */ React.createElement("span", null, t("fb_cal_no_station"))), done.rolling != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, padding: 12, borderRadius: 8, background: C.bg, border: `1px solid ${C.border2}`, textAlign: "left", fontSize: 13, color: C.text } }, /* @__PURE__ */ React.createElement("span", null, t("fb_cal_threshold", { name: loc.name, kn: done.rolling, n: done.samples, sessions: done.samples === 1 ? t("fb_cal_session") : t("fb_cal_sessions") }))), (() => {
+  return /* @__PURE__ */ React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-labelledby": "fb-modal-title", style: { position: "fixed", top: 0, left: 0, right: 0, height: "100dvh", background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, paddingBottom: "max(16px, env(safe-area-inset-bottom))", boxSizing: "border-box", fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif" } }, /* @__PURE__ */ React.createElement("div", { ref: dialogRef, style: { background: C.panel, border: `1px solid ${C.border2}`, borderRadius: 20, width: "100%", maxWidth: 480, maxHeight: "100%", overflow: "auto", color: C.text } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: `1px solid ${C.border}` } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 12, color: C.signal, fontWeight: 600 } }, t("fb_modal_label")), /* @__PURE__ */ React.createElement("strong", { id: "fb-modal-title", style: { fontSize: 14 } }, loc.name)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted } }, dateLabel), /* @__PURE__ */ React.createElement("button", { onClick: onClose, "aria-label": t("fb_close"), style: { background: "none", border: "none", color: C.muted, fontSize: 16, cursor: "pointer" } }, "\u2715"))), /* @__PURE__ */ React.createElement("div", { style: { padding: 16 } }, done ? /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "12px 4px" } }, /* @__PURE__ */ React.createElement("div", { style: { width: 48, height: 48, borderRadius: "50%", margin: "0 auto 12px", display: "grid", placeItems: "center", background: "rgba(61,220,132,0.16)", border: `1px solid ${C.go}`, color: C.go, fontSize: 24 } }, "\u2713"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, fontWeight: 700, marginBottom: 6 } }, t("fb_done_title", { date: dateLabel })), /* @__PURE__ */ React.createElement("p", { style: { color: C.muted, fontSize: 13, margin: 0 } }, t("fb_done_sub", { name: loc.name })), done.observed && done.obsRange ? /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, padding: 12, borderRadius: 8, background: C.bg, border: `1px solid ${C.signal}`, textAlign: "left", fontSize: 13, color: C.text } }, /* @__PURE__ */ React.createElement("span", null, t("fb_cal_station", { wing: done._wingM2 || "?", lo: done.obsRange.lowKn, hi: done.obsRange.highKn, n: done.obsRange.samples, s: done.obsRange.samples === 1 ? "" : lang === "en" ? "s" : "en" }))) : /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, padding: 12, borderRadius: 8, background: C.bg, border: `1px solid ${C.border2}`, textAlign: "left", fontSize: 13, color: C.muted } }, /* @__PURE__ */ React.createElement("span", null, t("fb_cal_no_station"))), done.rolling != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, padding: 12, borderRadius: 8, background: C.bg, border: `1px solid ${C.border2}`, textAlign: "left", fontSize: 13, color: C.text } }, /* @__PURE__ */ React.createElement("span", null, t("fb_cal_threshold", { name: loc.name, kn: done.rolling, n: done.samples, sessions: done.samples === 1 ? t("fb_cal_session") : t("fb_cal_sessions") }))), (() => {
     const wc = done.wingCalibration;
     const wm = done._wingM2;
     if (!wm || !Array.isArray(wc)) return null;
@@ -2211,7 +2216,7 @@ function App() {
   const [historical, setHist] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadMsg, setLoadMsg] = useState(() => t("loading_connect"));
-  const [apiStatus, setApiStatus] = useState({ forecast: "\u23F3", historical: "\u23F3" });
+  const [apiStatus, setApiStatus] = useState({ forecast: "\u2026", historical: "\u2026" });
   const [activeDay, setActiveDay] = useState(0);
   const [measured, setMeasured] = useState(null);
   const [live, setLive] = useState(null);
@@ -2418,7 +2423,7 @@ function App() {
   }
   const loadData = useCallback(async (l) => {
     setLoading(true);
-    setApiStatus({ forecast: "\u23F3", historical: "\u23F3" });
+    setApiStatus({ forecast: "\u2026", historical: "\u2026" });
     setLoadMsg(t("loading_forecast"));
     let fc = null;
     try {
@@ -2437,10 +2442,10 @@ function App() {
       const ml = MODEL_LABELS[fc.__model];
       const ensTag = fc.__ens ? ` (${fc.__ens.members.length})` : "";
       const boostTag = fc.__pelerBoost ? " +Pel\xE8r" : fc.__meltemBoost ? ` +${fc.__meltemBoost}` : "";
-      setApiStatus((s) => ({ ...s, forecast: (ml ? `\u2705 ${ml}${ensTag}` : "\u2705 Live") + boostTag }));
+      setApiStatus((s) => ({ ...s, forecast: (ml ? `${ml}${ensTag}` : "Live") + boostTag }));
       setLoadMsg(t("loading_era5"));
     } catch (e) {
-      setApiStatus((s) => ({ ...s, forecast: "\u26A0\uFE0F Demo" }));
+      setApiStatus((s) => ({ ...s, forecast: "Demo" }));
       fc = buildDemoForecast(l.lat, l.lon);
       setLoadMsg(t("loading_demo_fc"));
     }
@@ -2448,9 +2453,9 @@ function App() {
     let hist = null;
     try {
       hist = await tryFetchHistorical(l.lat, l.lon);
-      setApiStatus((s) => ({ ...s, historical: "\u2705 Live" }));
+      setApiStatus((s) => ({ ...s, historical: "Live" }));
     } catch (e) {
-      setApiStatus((s) => ({ ...s, historical: "\u26A0\uFE0F Demo" }));
+      setApiStatus((s) => ({ ...s, historical: "Demo" }));
       hist = buildDemoHistorical(l.lat, l.lon);
     }
     setHist(hist);
@@ -2924,25 +2929,25 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
   }
   const S = {
     wrap: { fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", background: C.bg, color: C.text, minHeight: "100vh", fontSize: 14 },
-    hdr: { background: C.headerBg, borderBottom: `1px solid ${C.border}`, padding: "10px 16px", paddingTop: "calc(10px + env(safe-area-inset-top))", backdropFilter: "blur(20px)", display: "flex", flexDirection: "column", gap: 4, position: "sticky", top: 0, zIndex: 100 },
+    hdr: { background: C.headerBg, borderBottom: `1px solid ${C.border}`, padding: "10px 16px", backdropFilter: "blur(20px)", display: "flex", flexDirection: "column", gap: 4, position: "sticky", top: "calc(env(safe-area-inset-top) + 48px)", zIndex: 100 },
     hdrRow1: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
     hdrRow2: { display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 6 },
-    locBar: { background: C.panel, borderBottom: `2px solid ${C.sky}`, padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 },
-    riderBar: { background: C.panel, borderBottom: `1px solid ${C.border}`, borderTop: `2px solid ${C.signal}`, padding: "14px 20px" },
+    locBar: { background: C.panel, borderBottom: `1px solid ${C.border}`, padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 },
+    riderBar: { background: C.panel, borderBottom: `1px solid ${C.border}`, borderTop: `1px solid ${C.border}`, padding: "14px 20px" },
     main: { padding: "14px clamp(10px,3vw,18px) calc(40px + env(safe-area-inset-bottom))", maxWidth: 1200, margin: "0 auto" },
     card: { background: C.panel, border: `1px solid ${C.border2}`, borderRadius: 14, padding: "16px 20px", marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2)" },
-    sec: { fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, marginBottom: 8 },
+    sec: { fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontSize: 11, color: C.muted, letterSpacing: "0.01em", marginBottom: 8 },
     btn: { background: C.signal, color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, padding: "10px 20px", cursor: "pointer" },
     btnG: { background: "transparent", border: `1px solid ${C.border2}`, color: C.muted, borderRadius: 8, fontSize: 13, padding: "8px 14px", cursor: "pointer" },
     inp: { background: C.bg, border: `1px solid ${C.border2}`, color: C.text, borderRadius: 8, padding: "8px 12px", fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontSize: 12, outline: "none" },
-    fl: { fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 4 },
+    fl: { fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontSize: 11, color: C.muted, letterSpacing: "0", display: "block", marginBottom: 4 },
     fi: { background: C.bg, border: `1px solid ${C.border2}`, color: C.text, borderRadius: 8, padding: "0 10px", fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontSize: 14, outline: "none", height: 44, width: "100%", boxSizing: "border-box" },
     grid2: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 14, marginBottom: 12 },
     grid6: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10, marginBottom: 12 },
     cw: { height: 190 },
     cwL: { height: 210 }
   };
-  return /* @__PURE__ */ React.createElement("div", { style: S.wrap }, /* @__PURE__ */ React.createElement("header", { style: S.hdr }, /* @__PURE__ */ React.createElement("div", { style: S.hdrRow1 }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("svg", { width: "38", height: "38", viewBox: "0 0 32 32", fill: "none", style: { display: "block", flexShrink: 0 }, "aria-label": "WindFoil" }, /* @__PURE__ */ React.createElement("path", { d: "M5 11.5h11.5a2.7 2.7 0 1 0-2.7-2.7", stroke: C.signal, strokeWidth: "2.6", strokeLinecap: "round" }), /* @__PURE__ */ React.createElement("path", { d: "M5 20.5h15a2.7 2.7 0 1 1-2.7 2.7", stroke: C.signal, strokeWidth: "2.6", strokeLinecap: "round" }), /* @__PURE__ */ React.createElement("path", { d: "M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3", stroke: C.muted, strokeWidth: "2.4", strokeLinecap: "round" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontWeight: 900, fontSize: 15, letterSpacing: "0.15em", color: C.text } }, "WINDFOIL"), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontSize: 10, color: C.muted, letterSpacing: "0.1em" } }, t("version_label")))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { style: S.wrap }, /* @__PURE__ */ React.createElement("header", { style: S.hdr }, /* @__PURE__ */ React.createElement("div", { style: S.hdrRow1 }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("svg", { width: "38", height: "38", viewBox: "0 0 32 32", fill: "none", style: { display: "block", flexShrink: 0 }, "aria-label": "WindFoil" }, /* @__PURE__ */ React.createElement("path", { d: "M5 11.5h11.5a2.7 2.7 0 1 0-2.7-2.7", stroke: C.signal, strokeWidth: "2.6", strokeLinecap: "round" }), /* @__PURE__ */ React.createElement("path", { d: "M5 20.5h15a2.7 2.7 0 1 1-2.7 2.7", stroke: C.signal, strokeWidth: "2.6", strokeLinecap: "round" }), /* @__PURE__ */ React.createElement("path", { d: "M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3", stroke: C.muted, strokeWidth: "2.4", strokeLinecap: "round" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontWeight: 600, fontSize: 15, letterSpacing: "0.06em", color: C.text } }, "WindFoil"), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif", fontSize: 10, color: C.muted } }, t("version_label")))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement(
     "a",
     {
       href: "https://paypal.me/boehmemaik",
@@ -2971,7 +2976,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       style: { background: "transparent", border: `1px solid ${C.border2}`, color: C.muted, borderRadius: 8, padding: "5px 12px", fontSize: 10, cursor: "pointer" }
     },
     langState === "de" ? "EN" : "DE"
-  ), activeUsers != null && /* @__PURE__ */ React.createElement("span", { title: t("active_users_title"), style: { fontFamily: "monospace", fontSize: 10, color: C.muted, display: "flex", alignItems: "center", gap: 3 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.go, display: "inline-block" } }), activeUsers))), /* @__PURE__ */ React.createElement("div", { style: S.locBar }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, fontSize: 15 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 20 } }, "\u{1F4CD}"), /* @__PURE__ */ React.createElement("b", { style: { color: "#fff", fontSize: 16, letterSpacing: "0.02em" } }, loc.name), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 11, color: C.sky } }, loc.lat.toFixed(4), "\xB0N, ", loc.lon.toFixed(4), "\xB0E"), spotCal && spotCal.rolling != null && /* @__PURE__ */ React.createElement(
+  ), activeUsers != null && /* @__PURE__ */ React.createElement("span", { title: t("active_users_title"), style: { fontFamily: "monospace", fontSize: 10, color: C.muted, display: "flex", alignItems: "center", gap: 3 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: C.go, display: "inline-block" } }), activeUsers))), /* @__PURE__ */ React.createElement("div", { style: S.locBar }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, fontSize: 15 } }, /* @__PURE__ */ React.createElement("b", { style: { color: "#fff", fontSize: 16, letterSpacing: "0.02em" } }, loc.name), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 11, color: C.sky } }, loc.lat.toFixed(4), "\xB0N, ", loc.lon.toFixed(4), "\xB0E"), spotCal && spotCal.rolling != null && /* @__PURE__ */ React.createElement(
     "span",
     {
       title: `Abhebe-Schwellenwert aus ${spotCal.samples} Session(s) an diesem Spot \u2014 gilt nur lokal`,
@@ -2998,7 +3003,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       onClick: () => setShowFeedback(true)
     },
     t("loc_feedback")
-  ))), /* @__PURE__ */ React.createElement("div", { style: S.riderBar }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: C.signal, marginBottom: 12, fontWeight: 700 } }, sport === "kite" ? t("profile_kite") : t("profile_foil"), " & ", t("profile_and_equip")), sport === "foil" && /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 10, marginBottom: 10 } }, [
+  ))), /* @__PURE__ */ React.createElement("div", { style: S.riderBar }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 12, color: C.signal, marginBottom: 12, fontWeight: 600 } }, sport === "kite" ? t("profile_kite") : t("profile_foil"), " & ", t("profile_and_equip")), sport === "foil" && /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 10, marginBottom: 10 } }, [
     { lk: "field_weight", k: "weight", step: 1, min: 40, max: 150 },
     { lk: "field_wing", k: "wingSize", step: 0.5, min: 2, max: 12 }
   ].map((f) => /* @__PURE__ */ React.createElement("div", { key: f.k }, /* @__PURE__ */ React.createElement("label", { style: S.fl }, t(f.lk)), /* @__PURE__ */ React.createElement(
@@ -3024,7 +3029,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       onChange: (e) => setRi((r) => ({ ...r, planeKn: e.target.value })),
       style: S.fi
     }
-  ))), sport === "kite" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase" } }, t("field_weight")), /* @__PURE__ */ React.createElement(
+  ))), sport === "kite" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted } }, t("field_weight")), /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "number",
@@ -3035,7 +3040,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       onChange: (e) => setKiteRi((r) => ({ ...r, weight: parseFloat(e.target.value) })),
       style: { ...S.inp, width: 100, fontSize: 13 }
     }
-  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase" } }, t("kite_model_label")), /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted } }, t("kite_model_label")), /* @__PURE__ */ React.createElement(
     "select",
     {
       value: kiteRi.kiteModel,
@@ -3047,7 +3052,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       style: { ...S.inp, width: 120, fontSize: 13 }
     },
     CRAZYFLY_KITES.map((k) => /* @__PURE__ */ React.createElement("option", { key: k.model, value: k.model }, k.model))
-  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase" } }, t("kite_size_label")), /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted } }, t("kite_size_label")), /* @__PURE__ */ React.createElement(
     "select",
     {
       value: kiteRi.kiteSize,
@@ -3058,7 +3063,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       const adjW = calcKiteWindow(s.minKn, s.maxKn, "intermediate", kiteRi.weight);
       return /* @__PURE__ */ React.createElement("option", { key: s.m, value: s.m }, s.m, " m  \xB7  Hersteller ", s.minKn, "\u2013", s.maxKn, " kn  \xB7  f\xFCr ", kiteRi.weight, "kg ", Math.round(msToKn(adjW.minWind)), "\u2013", Math.round(msToKn(adjW.maxWind)), " kn");
     })
-  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase" } }, t("field_skill")), /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted } }, t("field_skill")), /* @__PURE__ */ React.createElement(
     "select",
     {
       value: kiteRi.skill,
@@ -3092,7 +3097,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       }
     },
     profileSaved ? t("btn_profile_saved") : t("btn_save_profile")
-  )), /* @__PURE__ */ React.createElement("div", { style: { paddingTop: 12, borderTop: `1px solid ${C.border}` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted } }, t("equip_title")), /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: useGear ? C.go : C.muted, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: useGear, onChange: (e) => {
+  )), /* @__PURE__ */ React.createElement("div", { style: { paddingTop: 12, borderTop: `1px solid ${C.border}` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 12, color: C.muted } }, t("equip_title")), /* @__PURE__ */ React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: useGear ? C.go : C.muted, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: useGear, onChange: (e) => {
     setUseGear(e.target.checked);
     savePref("wf_usegear", e.target.checked);
     setActiveDay(0);
@@ -3127,28 +3132,27 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     },
     t("equip_add")
   ))), useGear && gear.length === 0 && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 10, color: C.caution, marginTop: 8 } }, t("equip_none_hint")))), /* @__PURE__ */ React.createElement("div", { style: S.main }, loading && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "60px 0", color: C.muted } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40, marginBottom: 12, display: "inline-block", animation: "spin 1s linear infinite" } }, "\u27F3"), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: "monospace", fontSize: 13, marginBottom: 6 } }, loadMsg), /* @__PURE__ */ React.createElement("p", { style: { fontFamily: "monospace", fontSize: 10, color: C.dim } }, t("loading_demo_hint"))), !loading && forecast && dayData && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 12 } }, [
-    { icon: "\u{1F4A8}", label: t("badge_avg", { w: fmtW(dayData.avgW, windUnit) }), c: dayData.avgW >= dayData.win.optMin && dayData.avgW <= dayData.win.optMax ? C.go : dayData.avgW < dayData.win.minWind ? C.stop : C.caution },
-    { icon: "\u2B06", label: t("badge_max_gust", { w: fmtW(dayData.maxG, windUnit) }), c: dayData.maxG > dayData.win.maxWind ? C.stop : C.caution },
-    { icon: "\u{1F321}", label: t("badge_max_temp", { t: dayData.maxT.toFixed(0) }), c: C.sky },
+    { icon: "", label: t("badge_avg", { w: fmtW(dayData.avgW, windUnit) }), c: dayData.avgW >= dayData.win.optMin && dayData.avgW <= dayData.win.optMax ? C.go : dayData.avgW < dayData.win.minWind ? C.stop : C.caution },
+    { icon: "", label: t("badge_max_gust", { w: fmtW(dayData.maxG, windUnit) }), c: dayData.maxG > dayData.win.maxWind ? C.stop : C.caution },
+    { icon: "", label: t("badge_max_temp", { t: dayData.maxT.toFixed(0) }), c: C.sky },
     { icon: dayData.thInfo.icon, label: thermikLabel(dayData.thInfo), c: dayData.thInfo.color },
     ...(() => {
       const tc = dayData.thermal;
       if (tc && tc.source === "mos") {
         const sign = tc.addMs < 0 ? "\u2212" : "+";
-        return [{ icon: "\u{1F3AF}", label: t("badge_mos_corr", { sign, w: fmtW(Math.abs(tc.addMs), windUnit), n: tc.n }), c: C.signal }];
+        return [{ icon: "", label: t("badge_mos_corr", { sign, w: fmtW(Math.abs(tc.addMs), windUnit), n: tc.n }), c: C.signal }];
       }
       if (tc && tc.source === "blend") {
         const pct = Math.round(tc.mosWeight * 100);
-        return [{ icon: "\u{1F3AF}", label: t("badge_mos_blend", { pct, rest: 100 - pct }), c: C.signal }];
+        return [{ icon: "", label: t("badge_mos_blend", { pct, rest: 100 - pct }), c: C.signal }];
       }
-      return dayData.sb.active ? [{ icon: "\u{1F30A}", label: t("badge_seabreeze", { w: fmtW(dayData.sb.boost, windUnit) }), c: C.sky }] : [];
+      return dayData.sb.active ? [{ icon: "", label: t("badge_seabreeze", { w: fmtW(dayData.sb.boost, windUnit) }), c: C.sky }] : [];
     })()
-  ].map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { border: `1px solid ${b.c}`, borderRadius: 4, padding: "6px 10px", fontSize: 12, color: b.c, display: "flex", alignItems: "center", gap: 6, background: C.surface } }, b.icon, " ", b.label))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" } }, dayNames.map((name, d) => {
+  ].map((b, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { border: `1px solid ${b.c}`, borderRadius: 4, padding: "6px 10px", fontSize: 12, color: b.c, display: "flex", alignItems: "center", gap: 6, background: C.surface } }, b.label))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" } }, dayNames.map((name, d) => {
     const rawSc = dayScores[d];
     const tabConf = d === 0 && stationCmp?.available ? stationCmp.confidence : null;
     const sc = tabConf != null ? applyConfidence(rawSc, tabConf).score : rawSc;
     const active = d === activeDay;
-    const icon = sc >= 75 ? "\u2705" : sc >= 45 ? "\u26A0\uFE0F" : "\u274C";
     const uncertain = d >= 4;
     return /* @__PURE__ */ React.createElement("button", { key: d, onClick: () => setActiveDay(d), style: {
       background: active ? C.signal : C.surface,
@@ -3163,19 +3167,19 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       gap: 2,
       minWidth: 90,
       opacity: uncertain ? 0.72 : 1
-    } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14 } }, icon), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, textTransform: "uppercase" } }, name), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontWeight: 900, fontSize: 18, color: active ? "#fff" : sc2col(sc) } }, sc), uncertain && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 7, color: active ? "rgba(255,255,255,.6)" : C.caution, fontFamily: "monospace", letterSpacing: "0.05em" } }, t("day_uncertain")));
+    } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 10 } }, name), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontWeight: 600, fontSize: 18, color: active ? "#fff" : sc2col(sc) } }, sc), uncertain && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 7, color: active ? "rgba(255,255,255,.6)" : C.caution, fontFamily: "monospace", letterSpacing: "0.05em" } }, t("day_uncertain")));
   })), (() => {
     const conf = activeDay === 0 && stationCmp?.available ? stationCmp.confidence : null;
     const adj = applyConfidence(dayData.dayScore, conf);
     const cc = classifyConfidence(conf);
     const scoreColor = sc2col(adj.score);
-    return /* @__PURE__ */ React.createElement("section", { "aria-labelledby": "score-card-title", style: { ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", borderLeft: `3px solid ${scoreColor}`, background: `linear-gradient(90deg,${scoreColor}12 0%,${C.panel} 40%)` } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", minWidth: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontWeight: 900, fontSize: 56, color: scoreColor, lineHeight: 1 } }, adj.score), /* @__PURE__ */ React.createElement("h2", { id: "score-card-title", style: { fontFamily: "monospace", fontSize: 11, fontWeight: 400, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "4px 0 0" } }, sport === "kite" ? t("score_kite") : t("score_foil")), adj.adjusted && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.caution, marginTop: 3 } }, t("score_raw_adj", { raw: dayData.dayScore }))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 160 } }, dayData.session && dayData.session.startHour != null && dayData.dayScore > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: C.go, fontFamily: "monospace", fontWeight: 700, marginBottom: 4 } }, t("score_best_time", { from: String(dayData.session.startHour).padStart(2, "0"), to: String(dayData.session.endHour).padStart(2, "0") })), sport !== "kite" && dayData.wingPlan && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, color: C.text, fontFamily: "monospace", fontWeight: 700, marginBottom: 6 } }, t("score_wing_size", { plan: dayData.wingPlan })), sport !== "kite" && dayData.wingPlan && dayData.sessGust > dayData.win.optMax && quiver && quiver.some((q) => q.wing < dayData.pickedWing) && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: C.cautionText, marginBottom: 6 } }, t("score_gust_cap", { g: fmtW(dayData.sessGust, windUnit) })), dayData.pickedGear ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: `${C.go}1e`, border: `1px solid ${C.go}`, borderRadius: 8, padding: "7px 12px" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, "\u{1F392}"), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em" } }, t("score_auto_rec")), /* @__PURE__ */ React.createElement("b", { style: { fontSize: 15, color: C.go, fontFamily: "monospace" } }, dayData.pickedGear.name || `${dayData.pickedGear.wing} m\xB2`), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted } }, "\xB7 ", dayData.pickedGear.wing, " m\xB2 \xB7 ", rider.weight, " kg")) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, sport === "kite" ? `${kiteRider.kiteModel} ${kiteRider.kiteSize}m \xB7 ${kiteRider.weight}kg \xB7 ${kiteRider.skill}` : `${rider.weight}kg \xB7 ${rider.wingSize}m\xB2${rider.planeKn ? ` \xB7 ab ${rider.planeKn}kn` : ""}`), sport === "kite" && kiteHint && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, fontSize: 12, color: C.muted, lineHeight: 1.7 }, dangerouslySetInnerHTML: { __html: kiteHint } }), conf != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: cc.color } }, cc.icon, " ", confidenceLabel(cc), " (", conf, "%)"), dayData.liveBoost?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, dayData.liveBoost.nowKn != null ? `\u2191 Live-Station ${dayData.liveBoost.station}: jetzt ~${dayData.liveBoost.nowKn} kn` : `\u2191 an Live-Station ${dayData.liveBoost.station} angepasst (\xD7${dayData.liveBoost.k})`), dayData.measuredCorr?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, "\u2191 an Station ", dayData.measuredCorr.station, dayData.measuredCorr.km >= 2 ? ` (~${dayData.measuredCorr.km} km)` : "", " angepasst"), forecast?.__model && MODEL_LABELS[forecast.__model] && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.muted, fontFamily: "monospace" } }, t("source_label"), " ", MODEL_LABELS[forecast.__model], dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" ? ` + ${t("neural_mos")}${dayData.thermal.subtype === "situativ" ? " (situativ)" : dayData.thermal.subtype === "table" ? " (Tabelle)" : ""}` : dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend" ? ` + ${t("mos_label")}` : "", dayData.thermal?.stationKey && (dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" || dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend") ? ` \xB7 ${dayData.thermal.stationKey}${dayData.thermal.stationKm != null ? ` ${dayData.thermal.stationKm} km` : ""}` : "", dayData.liveBoost?.applied ? ` + ${t("live_station")}` : dayData.measuredCorr?.applied ? ` + ${t("meas_station")}` : "", mosNoStation ? ` \xB7 ${t("mos_tier_none")}` : mos?.neuralEval ? mos.neuralEval.tier === "validated" ? ` \xB7 ${t("mos_tier_validated")}` : /* @__PURE__ */ React.createElement("span", { title: (mos.neuralEval.tierReasons || []).map((r) => t(`mos_reason_${r}`)).join(", ") || void 0 }, ` \xB7 ${t("mos_tier_provisional")}`) : ""), mos?.meltemProb != null && /* @__PURE__ */ React.createElement("div", { style: {
+    return /* @__PURE__ */ React.createElement("section", { "aria-labelledby": "score-card-title", style: { ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", borderLeft: `3px solid ${scoreColor}` } }, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", minWidth: 100 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontWeight: 500, fontSize: 56, color: scoreColor, lineHeight: 1 } }, adj.score), /* @__PURE__ */ React.createElement("h2", { id: "score-card-title", style: { fontFamily: "monospace", fontSize: 11, fontWeight: 400, color: C.muted, margin: "4px 0 0" } }, sport === "kite" ? t("score_kite") : t("score_foil")), adj.adjusted && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.caution, marginTop: 3 } }, t("score_raw_adj", { raw: dayData.dayScore }))), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 160 } }, dayData.session && dayData.session.startHour != null && dayData.dayScore > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: C.go, fontFamily: "monospace", fontWeight: 700, marginBottom: 4 } }, t("score_best_time", { from: String(dayData.session.startHour).padStart(2, "0"), to: String(dayData.session.endHour).padStart(2, "0") })), sport !== "kite" && dayData.wingPlan && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 18, color: C.text, fontFamily: "monospace", fontWeight: 700, marginBottom: 6 } }, t("score_wing_size", { plan: dayData.wingPlan })), sport !== "kite" && dayData.wingPlan && dayData.sessGust > dayData.win.optMax && quiver && quiver.some((q) => q.wing < dayData.pickedWing) && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, color: C.cautionText, marginBottom: 6 } }, t("score_gust_cap", { g: fmtW(dayData.sessGust, windUnit) })), dayData.pickedGear ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: C.surface, border: `1px solid ${C.border2}`, borderRadius: 8, padding: "7px 12px" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted } }, t("score_auto_rec")), /* @__PURE__ */ React.createElement("b", { style: { fontSize: 15, color: C.go, fontFamily: "monospace" } }, dayData.pickedGear.name || `${dayData.pickedGear.wing} m\xB2`), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted } }, "\xB7 ", dayData.pickedGear.wing, " m\xB2 \xB7 ", rider.weight, " kg")) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, sport === "kite" ? `${kiteRider.kiteModel} ${kiteRider.kiteSize}m \xB7 ${kiteRider.weight}kg \xB7 ${kiteRider.skill}` : `${rider.weight}kg \xB7 ${rider.wingSize}m\xB2${rider.planeKn ? ` \xB7 ab ${rider.planeKn}kn` : ""}`), sport === "kite" && kiteHint && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8, fontSize: 12, color: C.muted, lineHeight: 1.7 }, dangerouslySetInnerHTML: { __html: kiteHint } }), conf != null && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 11, color: cc.color } }, cc.icon, " ", confidenceLabel(cc), " (", conf, "%)"), dayData.liveBoost?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, dayData.liveBoost.nowKn != null ? `\u2191 Live-Station ${dayData.liveBoost.station}: jetzt ~${dayData.liveBoost.nowKn} kn` : `\u2191 an Live-Station ${dayData.liveBoost.station} angepasst (\xD7${dayData.liveBoost.k})`), dayData.measuredCorr?.applied && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.signal, fontFamily: "monospace" } }, "\u2191 an Station ", dayData.measuredCorr.station, dayData.measuredCorr.km >= 2 ? ` (~${dayData.measuredCorr.km} km)` : "", " angepasst"), forecast?.__model && MODEL_LABELS[forecast.__model] && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 10, color: C.muted, fontFamily: "monospace" } }, t("source_label"), " ", MODEL_LABELS[forecast.__model], dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" ? ` + ${t("neural_mos")}${dayData.thermal.subtype === "situativ" ? " (situativ)" : dayData.thermal.subtype === "table" ? " (Tabelle)" : ""}` : dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend" ? ` + ${t("mos_label")}` : "", dayData.thermal?.stationKey && (dayData.thermal?.source === "neural_mos" || dayData.thermal?.source === "neural_blend" || dayData.thermal?.source === "mos" || dayData.thermal?.source === "blend") ? ` \xB7 ${dayData.thermal.stationKey}${dayData.thermal.stationKm != null ? ` ${dayData.thermal.stationKm} km` : ""}` : "", dayData.liveBoost?.applied ? ` + ${t("live_station")}` : dayData.measuredCorr?.applied ? ` + ${t("meas_station")}` : "", mosNoStation ? ` \xB7 ${t("mos_tier_none")}` : mos?.neuralEval ? mos.neuralEval.tier === "validated" ? ` \xB7 ${t("mos_tier_validated")}` : /* @__PURE__ */ React.createElement("span", { title: (mos.neuralEval.tierReasons || []).map((r) => t(`mos_reason_${r}`)).join(", ") || void 0 }, ` \xB7 ${t("mos_tier_provisional")}`) : ""), mos?.meltemProb != null && /* @__PURE__ */ React.createElement("div", { style: {
       marginTop: 6,
       fontSize: 10,
       fontFamily: "monospace",
       color: mos.meltemProb >= 0.6 ? C.go : mos.meltemProb >= 0.35 ? C.caution : C.muted
     } }, t("foil_info_meltemi", { pct: Math.round(mos.meltemProb * 100) }), mos.neuralActive ? t("foil_info_neural") : "")));
-  })(), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, sport === "kite" ? t("kite_window_title") : t("foil_window_title")), meas && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, fontFamily: "monospace", marginBottom: 6 } }, "Wei\xDF/rot = echte Station (", measured.source, measured.km >= 2 ? `, ~${measured.km} km entfernt` : "", measured.latest ? `, zuletzt ${measured.latest}` : "", ") vs. Forecast (blau/orange)"), live && live.wind != null && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "2px 0 8px", padding: "6px 10px", borderRadius: 8, background: "rgba(61,220,132,0.08)", border: `1px solid ${C.go}44`, fontSize: 11 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 5, color: C.go, fontWeight: 600, whiteSpace: "nowrap" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 7, height: 7, borderRadius: "50%", background: live.sensorOk ? C.go : C.stop, boxShadow: `0 0 6px ${live.sensorOk ? C.go : C.stop}` } }), t("live_now_label")), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontFamily: "monospace" } }, fmtW(live.wind, windUnit), " ", unitLabel(windUnit), live.gust != null && /* @__PURE__ */ React.createElement(React.Fragment, null, " \xB7 B\xF6e ", fmtW(live.gust, windUnit)), live.dir != null && /* @__PURE__ */ React.createElement(React.Fragment, null, " \xB7 ", compass(live.dir), " ", Math.round(live.dir), "\xB0")), /* @__PURE__ */ React.createElement("span", { style: { color: C.muted, fontFamily: "monospace", fontSize: 10 } }, live.source, live.time ? ` \xB7 ${live.time}` : "", live.sensorOk ? "" : t("live_sensor_lost"))), /* @__PURE__ */ React.createElement("div", { style: S.cwL, role: "img", "aria-label": sizesAria }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(ComposedChart, { data: windData, margin: { top: 5, right: 5, bottom: gearByHour && gearByHour.some((g) => g) ? 20 : 5, left: 5 } }, dayData.ens && /* @__PURE__ */ React.createElement(Area, { yAxisId: "l", dataKey: "band", name: "Modell-Streuung", stroke: "none", fill: C.sky, fillOpacity: 0.12, isAnimationActive: false, legendType: "none" }), /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: gearByHour ? 0 : 3, tick: gearByHour ? /* @__PURE__ */ React.createElement(FensterTick, { ghour: gearByHour.slice(6), lbls: dayData.labels.slice(6) }) : void 0 }), /* @__PURE__ */ React.createElement(YAxis, { yAxisId: "l", ...ax }), /* @__PURE__ */ React.createElement(YAxis, { yAxisId: "r", orientation: "right", domain: [0, 100], ...ax, tick: { ...ax.tick, fill: C.go } }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Legend, { verticalAlign: "top", wrapperStyle: { fontSize: 10, fontFamily: "monospace", color: C.muted, paddingBottom: 4 } }), /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "wind", name: t("wind_label", { u: unitLabel(windUnit) }), stroke: C.sky, strokeWidth: 2, dot: false }), /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "gust", name: t("gust_label", { u: unitLabel(windUnit) }), stroke: C.signal, strokeDasharray: "4 3", strokeWidth: 1.5, dot: false }), meas && windData.some((d) => d.mwind != null) && /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "mwind", name: t("mwind_label", { u: unitLabel(windUnit) }), stroke: C.text, strokeWidth: 2, dot: false, connectNulls: true }), meas && windData.some((d) => d.mgust != null) && /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "mgust", name: t("mgust_label", { u: unitLabel(windUnit) }), stroke: C.stop, strokeDasharray: "2 2", strokeWidth: 1.5, dot: false, connectNulls: true }), (() => {
+  })(), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, sport === "kite" ? t("kite_window_title") : t("foil_window_title")), meas && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.muted, fontFamily: "monospace", marginBottom: 6 } }, "Wei\xDF/rot = echte Station (", measured.source, measured.km >= 2 ? `, ~${measured.km} km entfernt` : "", measured.latest ? `, zuletzt ${measured.latest}` : "", ") vs. Forecast (blau/orange)"), live && live.wind != null && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "2px 0 8px", padding: "6px 10px", borderRadius: 8, background: "rgba(61,220,132,0.08)", border: `1px solid ${C.go}44`, fontSize: 11 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 5, color: C.go, fontWeight: 600, whiteSpace: "nowrap" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 7, height: 7, borderRadius: "50%", background: live.sensorOk ? C.go : C.stop } }), t("live_now_label")), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontFamily: "monospace" } }, fmtW(live.wind, windUnit), " ", unitLabel(windUnit), live.gust != null && /* @__PURE__ */ React.createElement(React.Fragment, null, " \xB7 B\xF6e ", fmtW(live.gust, windUnit)), live.dir != null && /* @__PURE__ */ React.createElement(React.Fragment, null, " \xB7 ", compass(live.dir), " ", Math.round(live.dir), "\xB0")), /* @__PURE__ */ React.createElement("span", { style: { color: C.muted, fontFamily: "monospace", fontSize: 10 } }, live.source, live.time ? ` \xB7 ${live.time}` : "", live.sensorOk ? "" : t("live_sensor_lost"))), /* @__PURE__ */ React.createElement("div", { style: S.cwL, role: "img", "aria-label": sizesAria }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(ComposedChart, { data: windData, margin: { top: 5, right: 5, bottom: gearByHour && gearByHour.some((g) => g) ? 20 : 5, left: 5 } }, dayData.ens && /* @__PURE__ */ React.createElement(Area, { yAxisId: "l", dataKey: "band", name: "Modell-Streuung", stroke: "none", fill: C.sky, fillOpacity: 0.12, isAnimationActive: false, legendType: "none" }), /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: gearByHour ? 0 : 3, tick: gearByHour ? /* @__PURE__ */ React.createElement(FensterTick, { ghour: gearByHour.slice(6), lbls: dayData.labels.slice(6) }) : void 0 }), /* @__PURE__ */ React.createElement(YAxis, { yAxisId: "l", ...ax }), /* @__PURE__ */ React.createElement(YAxis, { yAxisId: "r", orientation: "right", domain: [0, 100], ...ax, tick: { ...ax.tick, fill: C.go } }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Legend, { verticalAlign: "top", wrapperStyle: { fontSize: 10, fontFamily: "monospace", color: C.muted, paddingBottom: 4 } }), /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "wind", name: t("wind_label", { u: unitLabel(windUnit) }), stroke: C.sky, strokeWidth: 2, dot: false }), /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "gust", name: t("gust_label", { u: unitLabel(windUnit) }), stroke: C.signal, strokeDasharray: "4 3", strokeWidth: 1.5, dot: false }), meas && windData.some((d) => d.mwind != null) && /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "mwind", name: t("mwind_label", { u: unitLabel(windUnit) }), stroke: C.text, strokeWidth: 2, dot: false, connectNulls: true }), meas && windData.some((d) => d.mgust != null) && /* @__PURE__ */ React.createElement(Line, { yAxisId: "l", type: "monotone", dataKey: "mgust", name: t("mgust_label", { u: unitLabel(windUnit) }), stroke: C.stop, strokeDasharray: "2 2", strokeWidth: 1.5, dot: false, connectNulls: true }), (() => {
     if (!(live && activeDay === 0 && live.wind != null && live.time)) return null;
     const lh = `${live.time.slice(0, 2)}:00`;
     if (!windData.some((d) => d.h === lh)) return null;
@@ -3240,14 +3244,14 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     { v: Math.round(Math.max(...dayData.pres)), u: "hPa", l: t("stat_pres") },
     { v: dayData.maxTh, u: "", l: t("stat_therm_idx") },
     { v: `${cvt(dayData.win.optMin, windUnit).toFixed(windUnit === "bf" ? 0 : 1)}\u2013${cvt(dayData.win.optMax, windUnit).toFixed(windUnit === "bf" ? 0 : 1)}`, u: unitLabel(windUnit), l: sport === "kite" ? t("stat_kite_window") : t("stat_foil_window") }
-  ].map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { ...S.card, marginBottom: 0, padding: "10px 12px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontWeight: 700, fontSize: 19, color: "#fff" } }, s.v, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: C.muted, marginLeft: 3 } }, s.u)), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted, textTransform: "uppercase", marginTop: 2 } }, s.l)))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, margin: "20px 0 12px" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1, height: 1, background: C.border } }), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, letterSpacing: "0.14em", color: C.dim, textTransform: "uppercase" } }, t("more_details")), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, height: 1, background: C.border } })), /* @__PURE__ */ React.createElement("div", { style: S.grid2 }, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, t("wind_dir_chart")), /* @__PURE__ */ React.createElement("div", { style: S.cw }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(ScatterChart, null, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "idx", type: "number", domain: [0, 23], ...ax, tickFormatter: (v) => `${v}:00`, interval: 5 }), /* @__PURE__ */ React.createElement(YAxis, { dataKey: "dir", domain: [0, 360], ...ax, tickFormatter: (v) => ["N", "NE", "E", "SE", "S", "SW", "W", "NW", "N"][Math.round(v / 45)] || v }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT, formatter: (v) => [`${v}\xB0`, t("tooltip_dir")] }), /* @__PURE__ */ React.createElement(Scatter, { data: dirData, fill: C.caution, shape: /* @__PURE__ */ React.createElement(DirArrow, null) }))))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, t("temp_chart")), /* @__PURE__ */ React.createElement("div", { style: S.cw }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(LineChart, { data: tempData }, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: 3 }), /* @__PURE__ */ React.createElement(YAxis, { ...ax }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Line, { type: "monotone", dataKey: "temp", stroke: "#ff6b6b", strokeWidth: 2, dot: false })))))), /* @__PURE__ */ React.createElement("div", { style: S.grid2 }, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, t("th_chart")), /* @__PURE__ */ React.createElement("div", { style: S.cw }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(BarChart, { data: thData }, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: 3 }), /* @__PURE__ */ React.createElement(YAxis, { domain: [0, 100], ...ax }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Bar, { dataKey: "th", radius: [2, 2, 0, 0] }, thData.map((d, i) => /* @__PURE__ */ React.createElement(Cell, { key: i, fill: d.th < 25 ? "rgba(61,220,132,0.75)" : d.th < 55 ? "rgba(245,185,66,0.75)" : "rgba(232,64,64,0.75)" }))))))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, t("pres_chart")), /* @__PURE__ */ React.createElement("div", { style: S.cw }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(LineChart, { data: presData }, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: 3 }), /* @__PURE__ */ React.createElement(YAxis, { ...ax, domain: ["auto", "auto"] }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Line, { type: "monotone", dataKey: "pres", stroke: "#a78bfa", strokeWidth: 2, dot: false })))))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("span", { style: S.sec }, t("hist_chart")), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted } }, apiStatus.historical)), /* @__PURE__ */ React.createElement("div", { style: S.cwL }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(BarChart, { data: histData }, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "label", ...ax }), /* @__PURE__ */ React.createElement(YAxis, { ...ax }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Legend, { wrapperStyle: { fontSize: 10, fontFamily: "monospace", color: C.muted } }), /* @__PURE__ */ React.createElement(Bar, { dataKey: "era5", name: t("era5_label", { u: unitLabel(windUnit) }), fill: "rgba(58,154,217,0.55)", stroke: C.sky, strokeWidth: 1, radius: [3, 3, 0, 0] }), /* @__PURE__ */ React.createElement(Bar, { dataKey: "prog", name: t("prog_label", { u: unitLabel(windUnit) }), fill: "rgba(61,220,132,0.55)", stroke: C.go, strokeWidth: 1, radius: [3, 3, 0, 0] }))))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, borderLeft: `3px solid ${C.caution}`, display: "flex", gap: 12 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 22 } }, "\u{1F321}\uFE0F"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", { style: { color: C.caution, fontSize: 13 } }, t("th_title", { label: thermikLabel(dayData.thInfo) })), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 1.7 } }, thermikDesc(dayData.thInfo), dayData.sb.active && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("br", null), "\u{1F30A} ", /* @__PURE__ */ React.createElement("b", { style: { color: C.sky } }, t("th_breeze_active")), " ", regimeLabel(dayData.regime), " (", regimeOrigin(dayData.regime), ") +", fmtW(dayData.sb.boost, windUnit), " ~", dayData.regime.peakHour, ":00. ", Math.round(dayData.sb.align * 100), "%.")))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, borderLeft: `3px solid ${C.sky}` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("span", { style: S.sec }, t("station_cmp_title")), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted } }, stationCmpStatus === "loading" ? lang === "en" ? "\u23F3 comparing\u2026" : "\u23F3 Abgleich\u2026" : stationCmpStatus === "ok" ? "\u2705 aktiv" : stationCmpStatus === "unavailable" ? "\u25CB keine Station" : "")), stationCmpStatus === "loading" && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: C.dim } }, t("station_cmp_loading")), stationCmpStatus === "unavailable" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, lineHeight: 1.6 } }, lang === "en" ? /* @__PURE__ */ React.createElement(React.Fragment, null, "No station backend available. The confidence score requires the proxy (", /* @__PURE__ */ React.createElement("code", { style: { color: C.caution } }, "proxy-server.js"), ") with a valid Weatherbit API key on your host. Until then, the rating is based solely on model + rider inputs.") : /* @__PURE__ */ React.createElement(React.Fragment, null, "Kein Stations-Backend erreichbar. Der Vertrauens-Score ben\xF6tigt den Proxy (", /* @__PURE__ */ React.createElement("code", { style: { color: C.caution } }, "proxy-server.js"), ") mit g\xFCltigem Weatherbit-API-Key auf deinem Host. Bis dahin basiert die Bewertung allein auf Modell + Rider-Angaben.")), stationCmpStatus === "ok" && stationCmp?.available && (() => {
+  ].map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { ...S.card, marginBottom: 0, padding: "10px 12px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontWeight: 700, fontSize: 19, color: "#fff" } }, s.v, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: C.muted, marginLeft: 3 } }, s.u)), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted, marginTop: 4 } }, s.l)))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, margin: "20px 0 12px" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1, height: 1, background: C.border } }), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 11, color: C.dim, letterSpacing: "0.01em" } }, t("more_details")), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, height: 1, background: C.border } })), /* @__PURE__ */ React.createElement("div", { style: S.grid2 }, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, t("wind_dir_chart")), /* @__PURE__ */ React.createElement("div", { style: S.cw }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(ScatterChart, null, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "idx", type: "number", domain: [0, 23], ...ax, tickFormatter: (v) => `${v}:00`, interval: 5 }), /* @__PURE__ */ React.createElement(YAxis, { dataKey: "dir", domain: [0, 360], ...ax, tickFormatter: (v) => ["N", "NE", "E", "SE", "S", "SW", "W", "NW", "N"][Math.round(v / 45)] || v }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT, formatter: (v) => [`${v}\xB0`, t("tooltip_dir")] }), /* @__PURE__ */ React.createElement(Scatter, { data: dirData, fill: C.caution, shape: /* @__PURE__ */ React.createElement(DirArrow, null) }))))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, t("temp_chart")), /* @__PURE__ */ React.createElement("div", { style: S.cw }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(LineChart, { data: tempData }, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: 3 }), /* @__PURE__ */ React.createElement(YAxis, { ...ax }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Line, { type: "monotone", dataKey: "temp", stroke: "#ff6b6b", strokeWidth: 2, dot: false })))))), /* @__PURE__ */ React.createElement("div", { style: S.grid2 }, /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, t("th_chart")), /* @__PURE__ */ React.createElement("div", { style: S.cw }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(BarChart, { data: thData }, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: 3 }), /* @__PURE__ */ React.createElement(YAxis, { domain: [0, 100], ...ax }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Bar, { dataKey: "th", radius: [2, 2, 0, 0] }, thData.map((d, i) => /* @__PURE__ */ React.createElement(Cell, { key: i, fill: d.th < 25 ? "rgba(61,220,132,0.75)" : d.th < 55 ? "rgba(245,185,66,0.75)" : "rgba(232,64,64,0.75)" }))))))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, t("pres_chart")), /* @__PURE__ */ React.createElement("div", { style: S.cw }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(LineChart, { data: presData }, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "h", ...ax, interval: 3 }), /* @__PURE__ */ React.createElement(YAxis, { ...ax, domain: ["auto", "auto"] }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Line, { type: "monotone", dataKey: "pres", stroke: "#a78bfa", strokeWidth: 2, dot: false })))))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("span", { style: S.sec }, t("hist_chart")), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted } }, apiStatus.historical)), /* @__PURE__ */ React.createElement("div", { style: S.cwL }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(BarChart, { data: histData }, /* @__PURE__ */ React.createElement(CartesianGrid, { ...gr }), /* @__PURE__ */ React.createElement(XAxis, { dataKey: "label", ...ax }), /* @__PURE__ */ React.createElement(YAxis, { ...ax }), /* @__PURE__ */ React.createElement(Tooltip, { ...TT }), /* @__PURE__ */ React.createElement(Legend, { wrapperStyle: { fontSize: 10, fontFamily: "monospace", color: C.muted } }), /* @__PURE__ */ React.createElement(Bar, { dataKey: "era5", name: t("era5_label", { u: unitLabel(windUnit) }), fill: "rgba(58,154,217,0.55)", stroke: C.sky, strokeWidth: 1, radius: [3, 3, 0, 0] }), /* @__PURE__ */ React.createElement(Bar, { dataKey: "prog", name: t("prog_label", { u: unitLabel(windUnit) }), fill: "rgba(61,220,132,0.55)", stroke: C.go, strokeWidth: 1, radius: [3, 3, 0, 0] }))))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, borderLeft: `3px solid ${C.caution}`, display: "flex", gap: 12 } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", { style: { color: C.caution, fontSize: 13 } }, t("th_title", { label: thermikLabel(dayData.thInfo) })), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 1.7 } }, thermikDesc(dayData.thInfo), dayData.sb.active && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("b", { style: { color: C.sky } }, t("th_breeze_active")), " ", regimeLabel(dayData.regime), " (", regimeOrigin(dayData.regime), ") +", fmtW(dayData.sb.boost, windUnit), " ~", dayData.regime.peakHour, ":00. ", Math.round(dayData.sb.align * 100), "%.")))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, borderLeft: `3px solid ${C.sky}` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("span", { style: S.sec }, t("station_cmp_title")), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted } }, stationCmpStatus === "loading" ? lang === "en" ? "comparing\u2026" : "Abgleich\u2026" : stationCmpStatus === "ok" ? "aktiv" : stationCmpStatus === "unavailable" ? "\u25CB keine Station" : "")), stationCmpStatus === "loading" && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: C.dim } }, t("station_cmp_loading")), stationCmpStatus === "unavailable" && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, lineHeight: 1.6 } }, lang === "en" ? /* @__PURE__ */ React.createElement(React.Fragment, null, "No station backend available. The confidence score requires the proxy (", /* @__PURE__ */ React.createElement("code", { style: { color: C.caution } }, "proxy-server.js"), ") with a valid Weatherbit API key on your host. Until then, the rating is based solely on model + rider inputs.") : /* @__PURE__ */ React.createElement(React.Fragment, null, "Kein Stations-Backend erreichbar. Der Vertrauens-Score ben\xF6tigt den Proxy (", /* @__PURE__ */ React.createElement("code", { style: { color: C.caution } }, "proxy-server.js"), ") mit g\xFCltigem Weatherbit-API-Key auf deinem Host. Bis dahin basiert die Bewertung allein auf Modell + Rider-Angaben.")), stationCmpStatus === "ok" && stationCmp?.available && (() => {
     const cc = classifyConfidence(stationCmp.confidence);
     const cur = stationCmp.current;
-    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontWeight: 900, fontSize: 32, color: cc.color, lineHeight: 1 } }, stationCmp.confidence ?? "\u2013", "%"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: cc.color, marginBottom: 4 } }, cc.icon, " ", confidenceLabel(cc)), /* @__PURE__ */ React.createElement("div", { style: { height: 6, background: C.bg, borderRadius: 8, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { height: "100%", width: `${stationCmp.confidence ?? 0}%`, background: cc.color, transition: "width .4s" } })))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 8, marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 } }, t("station_label")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.text } }, "\u{1F4A8} ", cur?.ok && cur.wind != null ? fmtW(cur.wind, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "\u{1F9ED} ", cur?.ok && cur.dir != null ? Math.round(cur.dir) + "\xB0" : "\u2013", " \xB7 \u{1F321} ", cur?.ok && cur.temp != null ? cur.temp.toFixed(0) + "\xB0" : "\u2013"), cur?.station_id && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 8, color: C.dim, marginTop: 4 } }, "ID ", cur.station_id)), /* @__PURE__ */ React.createElement("div", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 } }, t("model_label")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.text } }, "\u{1F4A8} ", stationCmp.modelCurrentWind != null ? fmtW(stationCmp.modelCurrentWind, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "\u{1F9ED} ", stationCmp.modelCurrentDir != null ? Math.round(stationCmp.modelCurrentDir) + "\xB0" : "\u2013")), /* @__PURE__ */ React.createElement("div", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 } }, t("bias_window")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.text } }, t("station_label").split(" ")[0], " ", stationCmp.stationHistMeanWind != null ? fmtW(stationCmp.stationHistMeanWind, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, t("model_label"), " ", stationCmp.modelHistMeanWind != null ? fmtW(stationCmp.modelHistMeanWind, windUnit) : "\u2013"), stationCmp.bias?.ok && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 8, color: C.dim, marginTop: 3 } }, stationCmp.bias.station?.name, " \xB7 ", stationCmp.bias.station?.km, "km \xB7 ", stationCmp.bias.samples, "h \xB7 ", stationCmp.bias.periodStart, "\u2026", stationCmp.bias.periodEnd)), dayData?.ens && (() => {
+    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontWeight: 500, fontSize: 32, color: cc.color, lineHeight: 1 } }, stationCmp.confidence ?? "\u2013", "%"), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: cc.color, marginBottom: 4 } }, cc.icon, " ", confidenceLabel(cc)), /* @__PURE__ */ React.createElement("div", { style: { height: 6, background: C.bg, borderRadius: 8, overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { height: "100%", width: `${stationCmp.confidence ?? 0}%`, background: cc.color, transition: "width .4s" } })))), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 8, marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 4 } }, t("station_label")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.text } }, cur?.ok && cur.wind != null ? fmtW(cur.wind, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, cur?.ok && cur.dir != null ? Math.round(cur.dir) + "\xB0" : "\u2013", " \xB7 ", cur?.ok && cur.temp != null ? cur.temp.toFixed(0) + "\xB0C" : "\u2013"), cur?.station_id && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 8, color: C.dim, marginTop: 4 } }, "ID ", cur.station_id)), /* @__PURE__ */ React.createElement("div", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 4 } }, t("model_label")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.text } }, stationCmp.modelCurrentWind != null ? fmtW(stationCmp.modelCurrentWind, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, stationCmp.modelCurrentDir != null ? Math.round(stationCmp.modelCurrentDir) + "\xB0" : "\u2013")), /* @__PURE__ */ React.createElement("div", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 4 } }, t("bias_window")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.text } }, t("station_label").split(" ")[0], " ", stationCmp.stationHistMeanWind != null ? fmtW(stationCmp.stationHistMeanWind, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, t("model_label"), " ", stationCmp.modelHistMeanWind != null ? fmtW(stationCmp.modelHistMeanWind, windUnit) : "\u2013"), stationCmp.bias?.ok && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 8, color: C.dim, marginTop: 3 } }, stationCmp.bias.station?.name, " \xB7 ", stationCmp.bias.station?.km, "km \xB7 ", stationCmp.bias.samples, "h \xB7 ", stationCmp.bias.periodStart, "\u2026", stationCmp.bias.periodEnd)), dayData?.ens && (() => {
       const ph = Math.min(23, Math.max(0, dayData.regime?.peakHour ?? 14));
       const p10 = dayData.ens.p10[ph], p90 = dayData.ens.p90[ph];
       const n = dayData.ens.nMembers?.[ph] ?? dayData.ens.members?.length ?? null;
-      return /* @__PURE__ */ React.createElement("div", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 } }, t("model_spread")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.text } }, "\u{1F4CA} ", p10 != null && p90 != null ? `${fmtW(p10, windUnit)} \u2013 ${fmtW(p90, windUnit)}` : "\u2013"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, t("p10_p90_around", { h: String(ph).padStart(2, "0") })), n != null && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 8, color: C.dim, marginTop: 4 } }, t("n_member", { n })));
+      return /* @__PURE__ */ React.createElement("div", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "8px 10px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 4 } }, t("model_spread")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.text } }, p10 != null && p90 != null ? `${fmtW(p10, windUnit)} \u2013 ${fmtW(p90, windUnit)}` : "\u2013"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, t("p10_p90_around", { h: String(ph).padStart(2, "0") })), n != null && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 8, color: C.dim, marginTop: 4 } }, t("n_member", { n })));
     })()), stationCmp.notes?.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, stationCmp.notes.map((n, i) => /* @__PURE__ */ React.createElement("span", { key: i, style: { fontFamily: "monospace", fontSize: 10, color: C.muted, background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 4, padding: "3px 8px" } }, n))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.dim, marginTop: 10, lineHeight: 1.5 } }, t("station_cmp_detail", { src: cur?.source || "Weatherbit" })));
   })()), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("span", { style: S.sec }, t("nearby_title", { radius: nearbyRadius ? t("nearby_radius", { r: nearbyRadius }) : "" })), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted } }, nearbyStatus === "loading" ? t("nearby_loading") : nearbyStatus === "live" ? t("nearby_live") : nearbyStatus === "model" ? t("nearby_model") : nearbyStatus === "meta" ? t("nearby_meta") : nearbyStatus === "unavailable" ? t("nearby_unavail") : "")), nearbyStatus === "loading" && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: C.dim } }, t("nearby_searching")), nearbyStatus === "unavailable" && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: C.dim } }, t("nearby_none")), nearbyStations.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 8 } }, nearbyStations.map((st, i) => {
     const dirTxt = st.dir != null ? ["N", "NO", "O", "SO", "S", "SW", "W", "NW"][Math.round(st.dir / 45) % 8] : "\u2013";
@@ -3258,7 +3262,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
         title: st.src === "obs" ? "Echte Stationsmessung (Weatherbit)" : "Modellwind am Stationsstandort (Open-Meteo)"
       },
       st.src === "obs" ? t("nearby_obs") : st.src === "model" ? t("nearby_mod") : ""
-    ), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted } }, st.km, " km"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: C.muted } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.sky } }, "\u{1F4A8} ", st.wind != null ? fmtW(st.wind, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("span", { style: { color: C.signal } }, "\u2B06 ", st.gust != null ? fmtW(st.gust, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("span", null, "\u{1F9ED} ", dirTxt), /* @__PURE__ */ React.createElement("span", null, "\u{1F321} ", st.temp != null ? st.temp.toFixed(0) + "\xB0" : "\u2013")), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 8, color: C.dim, marginTop: 5 } }, st.lat.toFixed(3), "\xB0, ", st.lon.toFixed(3), "\xB0", st.country ? ` \xB7 ${st.country}` : ""));
+    ), /* @__PURE__ */ React.createElement("span", { style: { fontFamily: "monospace", fontSize: 9, color: C.muted } }, st.km, " km"))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: C.muted } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.sky } }, st.wind != null ? fmtW(st.wind, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("span", { style: { color: C.signal } }, "\u2B06 ", st.gust != null ? fmtW(st.gust, windUnit) : "\u2013"), /* @__PURE__ */ React.createElement("span", null, dirTxt), /* @__PURE__ */ React.createElement("span", null, st.temp != null ? st.temp.toFixed(0) + "\xB0" : "\u2013")), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 8, color: C.dim, marginTop: 5 } }, st.lat.toFixed(3), "\xB0, ", st.lon.toFixed(3), "\xB0", st.country ? ` \xB7 ${st.country}` : ""));
   })), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: C.dim, marginTop: 8, lineHeight: 1.5 } }, t("nearby_footer"))), /* @__PURE__ */ React.createElement("div", { style: S.card }, /* @__PURE__ */ React.createElement("div", { style: S.sec }, t("manual_station_title")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 10 } }, /* @__PURE__ */ React.createElement(
     "input",
     {
@@ -3321,13 +3325,13 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     borderRadius: 4,
     padding: "6px 10px",
     marginBottom: 12
-  } }, "\u26A0\uFE0F ", geoError), (() => {
+  } }, geoError), (() => {
     const SAVED_SPOTS = [
       { lat: 45.2271134, lon: 12.3046255, name: "Chioggia", desc: "AROME-HD \xB7 Garb\xECn/Bora" },
       { lat: 48.0619, lon: 11.1207, name: "Ammersee Eching", desc: "GFS \xB7 ICON-D2 \xB7 Thermik/F\xF6hn" },
       { lat: 48.2989, lon: 11.6178, name: "Hollerner See", desc: "GFS \xB7 ICON-D2 \xB7 Thermik" }
     ];
-    return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 10, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" } }, t("loc_spots_section")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, SAVED_SPOTS.map((s, i) => /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted, marginBottom: 6 } }, t("loc_spots_section")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, SAVED_SPOTS.map((s, i) => /* @__PURE__ */ React.createElement(
       "button",
       {
         key: i,
@@ -3338,10 +3342,10 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
         },
         style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 4, color: C.text, textAlign: "left", padding: "8px 12px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }
       },
-      /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", { style: { display: "block", fontSize: 13 } }, "\u{1F4CD} ", s.name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: C.muted, fontFamily: "monospace" } }, s.lat.toFixed(4), "\xB0N ", s.lon.toFixed(4), "\xB0E \xB7 ", s.desc)),
-      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.signal } }, "\u2605")
+      /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", { style: { display: "block", fontSize: 13 } }, s.name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: C.muted, fontFamily: "monospace" } }, s.lat.toFixed(4), "\xB0N ", s.lon.toFixed(4), "\xB0E \xB7 ", s.desc)),
+      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.signal } }, "\xB7")
     ))));
-  })(), recent.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 10, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" } }, t("loc_recent_section")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, recent.map((r, i) => /* @__PURE__ */ React.createElement(
+  })(), recent.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted, marginBottom: 6 } }, t("loc_recent_section")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, recent.map((r, i) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: i,
@@ -3354,7 +3358,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     },
     /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", { style: { display: "block", fontSize: 13 } }, r.name), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: C.muted, fontFamily: "monospace" } }, (+r.lat).toFixed(4), "\xB0N ", (+r.lon).toFixed(4), "\xB0E")),
     /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.sky } }, "\u21B5")
-  )))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, borderTop: `1px solid ${C.border}`, paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" } }, t("loc_add_section")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 10, color: C.muted, display: "block", marginBottom: 4 } }, t("loc_add_label")), /* @__PURE__ */ React.createElement(
+  )))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, borderTop: `1px solid ${C.border}`, paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted } }, t("loc_add_section")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted, display: "block", marginBottom: 4 } }, t("loc_add_label")), /* @__PURE__ */ React.createElement(
     "textarea",
     {
       value: custom.link,
@@ -3366,7 +3370,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       placeholder: "https://www.google.com/maps/@36.9833,21.6667,14z\noder: 36.9833, 21.6667",
       style: { ...S.inp, width: "100%", resize: "vertical", lineHeight: 1.4 }
     }
-  )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 10, color: C.muted, display: "block", marginBottom: 4 } }, t("loc_add_name_label")), /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 11, color: C.muted, display: "block", marginBottom: 4 } }, t("loc_add_name_label")), /* @__PURE__ */ React.createElement(
     "input",
     {
       value: custom.name,
@@ -3377,7 +3381,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
   )), (() => {
     const parsed = parseLocationInput(custom.link);
     if (custom.link && parsed && !parsed.error) return /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.go, fontFamily: "monospace", background: "rgba(61,220,132,0.08)", border: `1px solid ${C.go}`, borderRadius: 4, padding: "6px 10px" } }, t("loc_parsed_ok", { lat: parsed.lat.toFixed(4), lon: parsed.lon.toFixed(4) }));
-    if (custom.link && parsed && parsed.error) return /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.caution, lineHeight: 1.5, background: "rgba(245,185,66,0.08)", border: `1px solid ${C.caution}`, borderRadius: 4, padding: "6px 10px" } }, "\u26A0\uFE0F ", parsed.error);
+    if (custom.link && parsed && parsed.error) return /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.caution, lineHeight: 1.5, background: "rgba(245,185,66,0.08)", border: `1px solid ${C.caution}`, borderRadius: 4, padding: "6px 10px" } }, parsed.error);
     return null;
   })(), linkError && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.stop, fontFamily: "monospace" } }, linkError), /* @__PURE__ */ React.createElement("button", { style: S.btn, onClick: () => {
     const parsed = parseLocationInput(custom.link);
@@ -3396,7 +3400,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     setCustom({ link: "", name: "" });
     setLinkError("");
     setShowLoc(false);
-  } }, t("loc_add_btn")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.dim, lineHeight: 1.5 } }, t("loc_add_hint")))))), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderTop: `1px solid ${C.border}`, padding: "8px 20px calc(14px + env(safe-area-inset-bottom))", textAlign: "center", fontFamily: "monospace", fontSize: 9, color: C.muted, display: "flex", justifyContent: "center", alignItems: "center", gap: 24, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", null, "WindFoil Weather Intelligence v3.48.4"), userEmail && /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, t("auth_logged_as"), ": ", userEmail), /* @__PURE__ */ React.createElement("span", null, "Open-Meteo \xB7 ERA5 ECMWF \xB7 Rider-Input"), /* @__PURE__ */ React.createElement("span", null, t("footer_loc", { name: loc.name })), /* @__PURE__ */ React.createElement("a", { href: "/sardinia.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sardinien"), /* @__PURE__ */ React.createElement("a", { href: "/sizilien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sizilien"), /* @__PURE__ */ React.createElement("a", { href: "/spanien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F1EA}\u{1F1F8} Spanien"), /* @__PURE__ */ React.createElement("a", { href: "/vergleich.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F4CA} Vergleich"), /* @__PURE__ */ React.createElement("a", { href: "/watcher.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F52D} Watcher"), /* @__PURE__ */ React.createElement("a", { href: "/alarm.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F514} Windalarm"), /* @__PURE__ */ React.createElement("a", { href: "/logbuch.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F6F6} Logbuch"), /* @__PURE__ */ React.createElement("a", { href: "/reise.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F9ED} Reiseplaner"), /* @__PURE__ */ React.createElement("a", { href: "/help.html", style: { color: C.sky, textDecoration: "none" } }, t("footer_help")), /* @__PURE__ */ React.createElement("a", { href: "/impressum.html", style: { color: C.sky, textDecoration: "none" } }, "Impressum"), /* @__PURE__ */ React.createElement(
+  } }, t("loc_add_btn")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.dim, lineHeight: 1.5 } }, t("loc_add_hint")))))), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderTop: `1px solid ${C.border}`, padding: "8px 20px calc(14px + env(safe-area-inset-bottom))", textAlign: "center", fontFamily: "monospace", fontSize: 9, color: C.muted, display: "flex", justifyContent: "center", alignItems: "center", gap: 24, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", null, "WindFoil Weather Intelligence v3.48.4"), userEmail && /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, t("auth_logged_as"), ": ", userEmail), /* @__PURE__ */ React.createElement("span", null, "Open-Meteo \xB7 ERA5 ECMWF \xB7 Rider-Input"), /* @__PURE__ */ React.createElement("span", null, t("footer_loc", { name: loc.name })), /* @__PURE__ */ React.createElement("a", { href: "/sardinia.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sardinien"), /* @__PURE__ */ React.createElement("a", { href: "/sizilien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sizilien"), /* @__PURE__ */ React.createElement("a", { href: "/spanien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F1EA}\u{1F1F8} Spanien"), /* @__PURE__ */ React.createElement("a", { href: "/vergleich.html", style: { color: C.sky, textDecoration: "none" } }, "Vergleich"), /* @__PURE__ */ React.createElement("a", { href: "/watcher.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F52D} Watcher"), /* @__PURE__ */ React.createElement("a", { href: "/alarm.html", style: { color: C.sky, textDecoration: "none" } }, "Windalarm"), /* @__PURE__ */ React.createElement("a", { href: "/logbuch.html", style: { color: C.sky, textDecoration: "none" } }, "Logbuch"), /* @__PURE__ */ React.createElement("a", { href: "/reise.html", style: { color: C.sky, textDecoration: "none" } }, "Reiseplaner"), /* @__PURE__ */ React.createElement("a", { href: "/help.html", style: { color: C.sky, textDecoration: "none" } }, t("footer_help")), /* @__PURE__ */ React.createElement("a", { href: "/impressum.html", style: { color: C.sky, textDecoration: "none" } }, "Impressum"), /* @__PURE__ */ React.createElement(
     "button",
     {
       onClick: () => {
@@ -3487,8 +3491,8 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       disabled: adminBusy,
       onClick: () => adminRun("status", "Status")
     },
-    "\u{1F4CA} Status"
-  )), adminBusy && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.caution } }, "\u23F3 l\xE4uft\u2026 (kann bis zu 2 Min dauern)"), adminOut && /* @__PURE__ */ React.createElement("pre", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "10px 12px", fontSize: 11, color: C.text, fontFamily: "monospace", whiteSpace: "pre-wrap", maxHeight: 340, overflow: "auto", margin: 0 } }, adminOut)), adminTab === "users" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted, fontFamily: "monospace" } }, users.length, " Benutzer"), /* @__PURE__ */ React.createElement("button", { style: S.btnG, disabled: adminBusy, onClick: loadUsers }, "\u21BB Aktualisieren")), usersMsg && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: usersMsg.startsWith("\u2713") ? C.go : C.caution } }, usersMsg), users.length === 0 && !adminBusy && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dim } }, "Keine Benutzer gefunden."), users.map((u) => /* @__PURE__ */ React.createElement("div", { key: u.id, style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.text, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 } }, u.name || "\u2014", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: u.disabled ? C.stop : C.go } }, u.disabled ? "\u25CF gesperrt" : "\u25CF aktiv")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis" } }, u.email)), /* @__PURE__ */ React.createElement(
+    "Status"
+  )), adminBusy && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.caution } }, "l\xE4uft\u2026 (kann bis zu 2 Min dauern)"), adminOut && /* @__PURE__ */ React.createElement("pre", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "10px 12px", fontSize: 11, color: C.text, fontFamily: "monospace", whiteSpace: "pre-wrap", maxHeight: 340, overflow: "auto", margin: 0 } }, adminOut)), adminTab === "users" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted, fontFamily: "monospace" } }, users.length, " Benutzer"), /* @__PURE__ */ React.createElement("button", { style: S.btnG, disabled: adminBusy, onClick: loadUsers }, "\u21BB Aktualisieren")), usersMsg && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: usersMsg.startsWith("\u2713") ? C.go : C.caution } }, usersMsg), users.length === 0 && !adminBusy && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dim } }, "Keine Benutzer gefunden."), users.map((u) => /* @__PURE__ */ React.createElement("div", { key: u.id, style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.text, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 } }, u.name || "\u2014", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: u.disabled ? C.stop : C.go } }, u.disabled ? "\u25CF gesperrt" : "\u25CF aktiv")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis" } }, u.email)), /* @__PURE__ */ React.createElement(
     "button",
     {
       disabled: adminBusy,
@@ -3514,7 +3518,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       style: { ...S.btnG, borderColor: C.stop, color: C.stop, opacity: adminBusy ? 0.6 : 1 }
     },
     "L\xF6schen"
-  )))))), adminErr && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.stop, marginTop: 10 } }, "\u26A0\uFE0F ", adminErr)))), /* @__PURE__ */ React.createElement("style", null, `@keyframes spin{to{transform:rotate(360deg)}}`));
+  )))))), adminErr && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.stop, marginTop: 10 } }, adminErr)))), /* @__PURE__ */ React.createElement("style", null, `@keyframes spin{to{transform:rotate(360deg)}}`));
 }
 const boot = document.getElementById("boot");
 if (boot) boot.remove();

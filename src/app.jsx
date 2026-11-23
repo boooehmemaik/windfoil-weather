@@ -16,17 +16,17 @@ const TRANSLATIONS = {
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
     version_label: "Weather Intelligence · v3.48.4",
-    sport_foil: "🏄 Wingfoiling",
-    sport_kite: "🪁 Kitesurfing",
+    sport_foil: "Wingfoiling",
+    sport_kite: "Kitesurfing",
     // Loc bar
-    loc_remember: "★ merken",
-    loc_remembered: "✓ gemerkt",
+    loc_remember: "Merken",
+    loc_remembered: "Gemerkt",
     loc_change: "Ort ändern",
-    loc_feedback: "📣 Feedback",
-    loc_calibrated: "📍 lokal kalibriert · ab {kn} kn",
+    loc_feedback: "Feedback",
+    loc_calibrated: "lokal kalibriert · ab {kn} kn",
     // Rider bar
-    profile_foil: "🏄 Wingfoil-Profil",
-    profile_kite: "🪁 Kite-Profil",
+    profile_foil: "Wingfoil-Profil",
+    profile_kite: "Kite-Profil",
     profile_and_equip: "& Equipment",
     field_weight: "Gewicht (kg)",
     field_wing: "Wing (m²)",
@@ -38,11 +38,11 @@ const TRANSLATIONS = {
     skill_intermediate: "Fortgeschritten",
     skill_advanced: "Fortgeschritten+",
     skill_pro: "Experte",
-    btn_analyse: "ANALYSE STARTEN →",
-    btn_save_profile: "PROFIL SPEICHERN",
-    btn_profile_saved: "✓ GESPEICHERT",
+    btn_analyse: "Analyse starten",
+    btn_save_profile: "Profil speichern",
+    btn_profile_saved: "Gespeichert",
     // Equipment
-    equip_title: "🎒 Mein Equipment",
+    equip_title: "Mein Equipment",
     equip_auto_select: "Automatische Setup-Wahl",
     equip_name: "Name",
     equip_wing: "Wing (m²)",
@@ -57,14 +57,14 @@ const TRANSLATIONS = {
     score_foil: "Wingfoil-Score",
     score_kite: "Kite-Score",
     score_raw_adj: "roh {raw} · justiert",
-    score_best_time: "⏱ Beste Zeit: {from}–{to} Uhr",
+    score_best_time: "Beste Zeit: {from}–{to} Uhr",
     score_auto_rec: "Auto-Empfehlung",
     // Badges
     badge_avg: "Ø {w}",
     badge_max_gust: "Max Böe {w}",
     badge_max_temp: "{t}°C max",
     badge_mos_corr: "MOS-Korrektur {sign}{w} · {n} Tage",
-    badge_mos_blend: "MOS {pct}% / 🌊 Brise {rest}%",
+    badge_mos_blend: "MOS {pct}% / Brise {rest}%",
     badge_seabreeze: "Meeresbrise +{w}",
     // Thermik
     th_none: "Kaum Thermik",
@@ -119,34 +119,34 @@ const TRANSLATIONS = {
     chart_sizes_wind: "Maximal {w} Wind, {g} Böen.",
     foil_window_title: "Wingfoil-Fenster Analyse — Rider-spezifisch + Foil-Score",
     kite_window_title: "Kite-Fenster Analyse — Rider-spezifisch + Kite-Score",
-    foil_window_ref: "🏄 Wing-Windranges",
-    kite_window_ref: "🪁 Crazyfly Kite-Windranges",
+    foil_window_ref: "Wing-Windranges",
+    kite_window_ref: "Crazyfly Kite-Windranges",
     ref_weight_adj: "Herstellerangaben (Referenzgewicht {ref} kg). Die zweite Spalte zeigt dein angepasstes Fenster für {weight} kg · {skill}.",
     ref_weight_adj_kite: "Herstellerangaben (Referenzgewicht ~80 kg). Die zweite Spalte zeigt dein angepasstes Fenster für {weight} kg · {skill}.",
     // Recommendation lines
     // Kite rec
-    kite_rec_too_little: "⚠️ <b>Zu wenig Wind</b> — {w}, Kite braucht ≥{min}",
-    kite_rec_too_little_tip: "💡 Größeren Kite wählen oder auf Wind-Zunahme warten.",
-    kite_rec_optimal: "✅ <b>Optimale Bedingungen</b> — {w} im Fenster ({optMin}–{optMax})",
-    kite_rec_optimal_rider: "🪁 {model} {size}m — ideal für {skill}",
-    kite_rec_overpowered: "⚠️ <b>Overpowered-Zone</b> — {w} an der Obergrenze",
-    kite_rec_overpowered_tip: "💡 Kite zu groß — kleinere Größe oder Bar depower erwägen",
-    kite_rec_too_much: "🚨 <b>Kite zu klein / zu viel Wind</b> — {w} > Max {max}",
-    kite_rec_too_much_tip: "⛔ Session abbrechen oder deutlich kleineren Kite",
-    kite_rec_gust: "💨 <b>Böen-Δ {dw}</b> — Erhöhte Leinenspannung!",
-    kite_rec_window: "<br>📐 <b>Dein Kite-Fenster:</b> Start {min} · Optimal {optMin}–{optMax} · Max {max}",
+    kite_rec_too_little: "<b>Zu wenig Wind</b> — {w}, Kite braucht ≥{min}",
+    kite_rec_too_little_tip: "Größeren Kite wählen oder auf Wind-Zunahme warten.",
+    kite_rec_optimal: "<b>Optimale Bedingungen</b> — {w} im Fenster ({optMin}–{optMax})",
+    kite_rec_optimal_rider: "{model} {size}m — ideal für {skill}",
+    kite_rec_overpowered: "<b>Overpowered-Zone</b> — {w} an der Obergrenze",
+    kite_rec_overpowered_tip: "Kite zu groß — kleinere Größe oder Bar depower erwägen",
+    kite_rec_too_much: "<b>Kite zu klein / zu viel Wind</b> — {w} > Max {max}",
+    kite_rec_too_much_tip: "Session abbrechen oder deutlich kleineren Kite",
+    kite_rec_gust: "<b>Böen-Δ {dw}</b> — Erhöhte Leinenspannung",
+    kite_rec_window: "<br><b>Kite-Fenster:</b> Start {min} · Optimal {optMin}–{optMax} · Max {max}",
     // Station / model comparison
-    station_cmp_title: "🛰 Station ↔ Modell Abgleich → Vertrauens-Score",
+    station_cmp_title: "Station ↔ Modell · Vertrauens-Score",
     station_cmp_loading: "Echte Stationsdaten werden mit dem Modell verglichen…",
     station_cmp_unavail: "Kein Stations-Backend erreichbar. Der Vertrauens-Score benötigt den Proxy ({proxy}) mit gültigem Weatherbit-API-Key auf deinem Host. Bis dahin basiert die Bewertung allein auf Modell + Rider-Angaben.",
     station_cmp_detail: "Großer Unterschied zwischen Station und Modell ⇒ niedriger Vertrauens-Score ⇒ der Foil-Score (heute) wird Richtung neutral gedämpft. Aktuell: {src}. Hist. Bias: Meteostat-Station vs. Open-Meteo-Archiv (gleiches Zeitfenster).",
     p10_p90_around: "p10–p90 um {h}:00",
     n_member: "{n} Member",
     // Nearby stations
-    nearby_title: "📡 Echte Wetterstationen{radius}",
+    nearby_title: "Wetterstationen{radius}",
     nearby_radius: " (Umkreis {r} km)",
-    nearby_loading: "⏳ lädt…",
-    nearby_live: "✅ Messung+Modell",
+    nearby_loading: "lädt…",
+    nearby_live: "Messung + Modell",
     nearby_model: "≈ Modellwind",
     nearby_meta: "○ nur Stationsinfo",
     nearby_unavail: "– keine Stationen",
@@ -156,14 +156,14 @@ const TRANSLATIONS = {
     nearby_mod: "≈ Modell",
     nearby_footer: "Echte Messstationen im Umkreis (Quelle: Meteostat). Windwerte: Standard ist aktueller Modellwind am Stationsstandort (Open-Meteo, ≈ Modell); die nächstgelegenen Stationen zeigen echte Messungen (● Messung, Weatherbit), solange das Tageskontingent reicht.",
     // Manual station
-    manual_station_title: "🔗 Eigene Wetterstation hinzufügen",
+    manual_station_title: "Eigene Wetterstation hinzufügen",
     manual_station_add: "Hinzufügen",
     manual_station_cors: "CORS-eingeschränkt im Browser — Daten bitte direkt auf der Seite prüfen.",
     manual_station_none: "Noch keine eigenen Stationen konfiguriert.",
     // Location modal
     loc_modal_title: "Standort konfigurieren",
     loc_gps_loading: "Standort wird ermittelt…",
-    loc_gps_use: "📍 Meinen aktuellen Standort verwenden",
+    loc_gps_use: "Meinen aktuellen Standort verwenden",
     loc_spots_section: "Spots",
     loc_recent_section: "Zuletzt verwendet",
     loc_add_section: "Ort hinzufügen",
@@ -171,9 +171,9 @@ const TRANSLATIONS = {
     loc_add_name_label: "Ortsname (optional)",
     loc_add_name_placeholder: "z.B. Mein Spot",
     loc_add_btn: "Hinzufügen & wählen",
-    loc_add_hint: "💡 In Google Maps auf den Ort tippen → URL kopieren (Koordinaten stehen nach dem @). Oder direkt \"lat, lon\" eingeben.",
+    loc_add_hint: "In Google Maps auf den Ort tippen → URL kopieren (Koordinaten stehen nach dem @). Oder direkt \"lat, lon\" eingeben.",
     loc_link_error_empty: "Bitte einen Link oder Koordinaten eingeben.",
-    loc_parsed_ok: "✅ Erkannt: {lat}°N, {lon}°E",
+    loc_parsed_ok: "Erkannt: {lat}°N, {lon}°E",
     // Geo errors
     geo_not_supported: "Geolocation wird von diesem Gerät/Browser nicht unterstützt.",
     geo_denied: "Standortzugriff verweigert. Bitte in den Browser-Einstellungen erlauben.",
@@ -244,7 +244,7 @@ const TRANSLATIONS = {
     fb_err_server: "Server nicht erreichbar.",
     // History view
     hist_title: "History & MOS-Performance",
-    hist_close: "✕ Schließen",
+    hist_close: "Schließen",
     hist_busy: "Lade Daten…",
     hist_err: "Fehler beim Laden.",
     hist_obs_title: "Beobachteter Wind — letzte {days} Tage",
@@ -264,13 +264,13 @@ const TRANSLATIONS = {
     hist_bias_legend_raw: "Roher Bias",
     hist_ml_pairs: "ml_samples lead=0: {n} Paare für diese Station im Zeitfenster",
     hist_ml_missing: "(Neural MOS benötigt ≥60 — noch {n} fehlend)",
-    hist_ml_ok: "✓ genug für Neural MOS",
+    hist_ml_ok: "genug für Neural MOS",
     hist_hour_local: "Stunde (lokal)",
     // Footer
-    footer_donate: "♥ Spenden",
+    footer_donate: "Spenden",
     footer_support_title: "App unterstützen",
     footer_loc: "Standort: {name}",
-    footer_help: "❓ Hilfe",
+    footer_help: "Hilfe",
     // Chart tooltip labels
     tooltip_forecast: "Forecast",
     tooltip_observed: "Beobachtet",
@@ -279,7 +279,7 @@ const TRANSLATIONS = {
     tooltip_pres: "Luftdruck",
     tooltip_th: "Thermik-Index",
     // Model source badge
-    source_label: "📡 Quelle:",
+    source_label: "Quelle:",
     neural_mos: "Neural-MOS",
     mos_tier_none: "Rohprognose – kein Stationsmodell",
     mos_tier_provisional: "Stationsmodell vorläufig (wenig Daten)",
@@ -313,7 +313,7 @@ const TRANSLATIONS = {
     kite_model_label: "Kite Modell",
     kite_size_label: "Kite Größe",
     // Foil score card info
-    foil_info_meltemi: "🌊 Meltemi-Wahrscheinlichkeit: {pct}%",
+    foil_info_meltemi: "Meltemi-Wahrscheinlichkeit: {pct}%",
     foil_info_neural: " (Neural)",
     // Foil window ref table
     ref_manufacturer: "Hersteller",
@@ -331,17 +331,17 @@ const TRANSLATIONS = {
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
     version_label: "Weather Intelligence · v3.48.4",
-    sport_foil: "🏄 Wingfoiling",
-    sport_kite: "🪁 Kitesurfing",
+    sport_foil: "Wingfoiling",
+    sport_kite: "Kitesurfing",
     // Loc bar
-    loc_remember: "★ save",
-    loc_remembered: "✓ saved",
+    loc_remember: "Save",
+    loc_remembered: "Saved",
     loc_change: "Change location",
-    loc_feedback: "📣 Feedback",
-    loc_calibrated: "📍 locally calibrated · from {kn} kn",
+    loc_feedback: "Feedback",
+    loc_calibrated: "locally calibrated · from {kn} kn",
     // Rider bar
-    profile_foil: "🏄 Wingfoil Profile",
-    profile_kite: "🪁 Kite Profile",
+    profile_foil: "Wingfoil Profile",
+    profile_kite: "Kite Profile",
     profile_and_equip: "& Equipment",
     field_weight: "Weight (kg)",
     field_wing: "Wing (m²)",
@@ -353,11 +353,11 @@ const TRANSLATIONS = {
     skill_intermediate: "Intermediate",
     skill_advanced: "Advanced",
     skill_pro: "Pro",
-    btn_analyse: "RUN ANALYSIS →",
-    btn_save_profile: "SAVE PROFILE",
-    btn_profile_saved: "✓ SAVED",
+    btn_analyse: "Run analysis",
+    btn_save_profile: "Save profile",
+    btn_profile_saved: "Saved",
     // Equipment
-    equip_title: "🎒 My Equipment",
+    equip_title: "My Equipment",
     equip_auto_select: "Auto setup selection",
     equip_name: "Name",
     equip_wing: "Wing (m²)",
@@ -372,14 +372,14 @@ const TRANSLATIONS = {
     score_foil: "Wingfoil Score",
     score_kite: "Kite Score",
     score_raw_adj: "raw {raw} · adjusted",
-    score_best_time: "⏱ Best window: {from}–{to}",
+    score_best_time: "Best window: {from}–{to}",
     score_auto_rec: "Auto recommendation",
     // Badges
     badge_avg: "Avg {w}",
     badge_max_gust: "Max gust {w}",
     badge_max_temp: "{t}°C max",
     badge_mos_corr: "MOS correction {sign}{w} · {n} days",
-    badge_mos_blend: "MOS {pct}% / 🌊 Breeze {rest}%",
+    badge_mos_blend: "MOS {pct}% / Breeze {rest}%",
     badge_seabreeze: "Sea breeze +{w}",
     // Thermik
     th_none: "Minimal thermals",
@@ -434,34 +434,34 @@ const TRANSLATIONS = {
     chart_sizes_wind: "Peak {w} wind, {g} gusts.",
     foil_window_title: "Wingfoil window analysis — rider-specific + foil score",
     kite_window_title: "Kite window analysis — rider-specific + kite score",
-    foil_window_ref: "🏄 Wing wind ranges",
-    kite_window_ref: "🪁 Crazyfly kite wind ranges",
+    foil_window_ref: "Wing wind ranges",
+    kite_window_ref: "Crazyfly kite wind ranges",
     ref_weight_adj: "Manufacturer specs (reference weight {ref} kg). Second column shows your adjusted window for {weight} kg · {skill}.",
     ref_weight_adj_kite: "Manufacturer specs (reference weight ~80 kg). Second column shows your adjusted window for {weight} kg · {skill}.",
     // Recommendation lines
     // Kite rec
-    kite_rec_too_little: "⚠️ <b>Too little wind</b> — {w}, kite needs ≥{min}",
-    kite_rec_too_little_tip: "💡 Choose a larger kite or wait for more wind.",
-    kite_rec_optimal: "✅ <b>Optimal conditions</b> — {w} in window ({optMin}–{optMax})",
-    kite_rec_optimal_rider: "🪁 {model} {size}m — ideal for {skill}",
-    kite_rec_overpowered: "⚠️ <b>Overpowered zone</b> — {w} at upper limit",
-    kite_rec_overpowered_tip: "💡 Kite too large — consider smaller size or bar depower",
-    kite_rec_too_much: "🚨 <b>Kite too small / too much wind</b> — {w} > max {max}",
-    kite_rec_too_much_tip: "⛔ Abort session or use a significantly smaller kite",
-    kite_rec_gust: "💨 <b>Gust-Δ {dw}</b> — Increased line tension!",
-    kite_rec_window: "<br>📐 <b>Your kite window:</b> Start {min} · Optimal {optMin}–{optMax} · Max {max}",
+    kite_rec_too_little: "<b>Too little wind</b> — {w}, kite needs ≥{min}",
+    kite_rec_too_little_tip: "Choose a larger kite or wait for more wind.",
+    kite_rec_optimal: "<b>Optimal conditions</b> — {w} in window ({optMin}–{optMax})",
+    kite_rec_optimal_rider: "{model} {size}m — ideal for {skill}",
+    kite_rec_overpowered: "<b>Overpowered zone</b> — {w} at upper limit",
+    kite_rec_overpowered_tip: "Kite too large — consider smaller size or bar depower",
+    kite_rec_too_much: "<b>Kite too small / too much wind</b> — {w} > max {max}",
+    kite_rec_too_much_tip: "Abort session or use a significantly smaller kite",
+    kite_rec_gust: "<b>Gust-Δ {dw}</b> — Increased line tension",
+    kite_rec_window: "<br><b>Kite window:</b> Start {min} · Optimal {optMin}–{optMax} · Max {max}",
     // Station / model comparison
-    station_cmp_title: "🛰 Station ↔ Model comparison → confidence score",
+    station_cmp_title: "Station ↔ Model · Confidence score",
     station_cmp_loading: "Comparing real station data with model…",
     station_cmp_unavail: "No station backend available. The confidence score requires the proxy ({proxy}) with a valid Weatherbit API key on your host. Until then, the rating is based solely on model + rider inputs.",
     station_cmp_detail: "Large difference between station and model ⇒ low confidence score ⇒ foil score (today) is pulled toward neutral. Source: {src}. Historical bias: Meteostat station vs. Open-Meteo archive (same time window).",
     p10_p90_around: "p10–p90 at {h}:00",
     n_member: "{n} members",
     // Nearby stations
-    nearby_title: "📡 Real weather stations{radius}",
+    nearby_title: "Weather stations{radius}",
     nearby_radius: " ({r} km radius)",
-    nearby_loading: "⏳ loading…",
-    nearby_live: "✅ Observation+Model",
+    nearby_loading: "loading…",
+    nearby_live: "Observation + Model",
     nearby_model: "≈ Model wind",
     nearby_meta: "○ station info only",
     nearby_unavail: "– no stations",
@@ -471,14 +471,14 @@ const TRANSLATIONS = {
     nearby_mod: "≈ Model",
     nearby_footer: "Real weather stations nearby (source: Meteostat). Wind values: default is current model wind at station location (Open-Meteo, ≈ model); the nearest stations show real observations (● Obs, Weatherbit) while the daily quota lasts.",
     // Manual station
-    manual_station_title: "🔗 Add your own weather station",
+    manual_station_title: "Add your own weather station",
     manual_station_add: "Add",
     manual_station_cors: "CORS-restricted in the browser — please check data directly on the site.",
     manual_station_none: "No custom stations configured yet.",
     // Location modal
     loc_modal_title: "Configure location",
     loc_gps_loading: "Locating…",
-    loc_gps_use: "📍 Use my current location",
+    loc_gps_use: "Use my current location",
     loc_spots_section: "Spots",
     loc_recent_section: "Recently used",
     loc_add_section: "Add location",
@@ -486,9 +486,9 @@ const TRANSLATIONS = {
     loc_add_name_label: "Place name (optional)",
     loc_add_name_placeholder: "e.g. My spot",
     loc_add_btn: "Add & select",
-    loc_add_hint: "💡 In Google Maps, tap the location → copy URL (coordinates follow the @). Or enter \"lat, lon\" directly.",
+    loc_add_hint: "In Google Maps, tap the location → copy URL (coordinates follow the @). Or enter \"lat, lon\" directly.",
     loc_link_error_empty: "Please enter a link or coordinates.",
-    loc_parsed_ok: "✅ Detected: {lat}°N, {lon}°E",
+    loc_parsed_ok: "Detected: {lat}°N, {lon}°E",
     // Geo errors
     geo_not_supported: "Geolocation is not supported by this device/browser.",
     geo_denied: "Location access denied. Please allow it in browser settings.",
@@ -559,7 +559,7 @@ const TRANSLATIONS = {
     fb_err_server: "Server unreachable.",
     // History view
     hist_title: "History & MOS performance",
-    hist_close: "✕ Close",
+    hist_close: "Close",
     hist_busy: "Loading data…",
     hist_err: "Error loading data.",
     hist_obs_title: "Observed wind — last {days} days",
@@ -579,13 +579,13 @@ const TRANSLATIONS = {
     hist_bias_legend_raw: "Raw bias",
     hist_ml_pairs: "ml_samples lead=0: {n} pairs for this station in the time window",
     hist_ml_missing: "(Neural MOS needs ≥60 — {n} more needed)",
-    hist_ml_ok: "✓ enough for Neural MOS",
+    hist_ml_ok: "enough for Neural MOS",
     hist_hour_local: "Hour (local)",
     // Footer
-    footer_donate: "♥ Donate",
+    footer_donate: "Donate",
     footer_support_title: "Support the app",
     footer_loc: "Location: {name}",
-    footer_help: "❓ Help",
+    footer_help: "Help",
     // Chart tooltip labels
     tooltip_forecast: "Forecast",
     tooltip_observed: "Observed",
@@ -594,7 +594,7 @@ const TRANSLATIONS = {
     tooltip_pres: "Pressure",
     tooltip_th: "Thermal index",
     // Model source badge
-    source_label: "📡 Source:",
+    source_label: "Source:",
     neural_mos: "Neural-MOS",
     mos_tier_none: "Raw forecast – no station model",
     mos_tier_provisional: "Station model provisional (limited data)",
@@ -628,7 +628,7 @@ const TRANSLATIONS = {
     kite_model_label: "Kite model",
     kite_size_label: "Kite size",
     // Foil score card info
-    foil_info_meltemi: "🌊 Meltemi probability: {pct}%",
+    foil_info_meltemi: "Meltemi probability: {pct}%",
     foil_info_neural: " (Neural)",
     // Foil window ref table
     ref_manufacturer: "Manufacturer",
@@ -1541,10 +1541,10 @@ function computeThermik(h, idx, regime) {
 }
 
 function classifyThermik(max) {
-  if(max<10) return{icon:"😴",labelKey:"th_none",descKey:"th_none_desc",color:C.go};
-  if(max<30) return{icon:"🌤",labelKey:"th_light",descKey:"th_light_desc",color:C.caution};
-  if(max<60) return{icon:"⛅",labelKey:"th_moderate",descKey:"th_moderate_desc",color:C.caution};
-  return{icon:"⛈",labelKey:"th_strong",descKey:"th_strong_desc",color:C.stop};
+  if(max<10) return{icon:"",labelKey:"th_none",descKey:"th_none_desc",color:C.go};
+  if(max<30) return{icon:"",labelKey:"th_light",descKey:"th_light_desc",color:C.caution};
+  if(max<60) return{icon:"",labelKey:"th_moderate",descKey:"th_moderate_desc",color:C.caution};
+  return{icon:"",labelKey:"th_strong",descKey:"th_strong_desc",color:C.stop};
 }
 // Resolve translated label/desc from classifyThermik result
 function thermikLabel(info) { return t(info.labelKey); }
@@ -2026,14 +2026,14 @@ function AuthGate({children}){
 
   if(!sess)return(
     <div style={{minHeight:'100dvh',display:'grid',placeItems:'center',boxSizing:'border-box',
-        background:`radial-gradient(120% 90% at 50% -10%,${C.surface},${C.bg})`,padding:'max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom))'}}>
+        background:C.bg,padding:'max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom))'}}>
       <div style={{width:'100%',maxWidth:380,background:CA.deep,
           border:`1px solid ${CA.line}`,borderRadius:18,padding:26,
           boxShadow:cardShadow}}>
         {/* Header row: branding + theme toggle */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
-          <div style={{fontSize:11,letterSpacing:'.2em',textTransform:'uppercase',
-            color:CA.lift,fontWeight:700}}>WindFoil</div>
+          <div style={{fontSize:13,letterSpacing:'.05em',
+            color:CA.lift,fontWeight:600}}>WindFoil</div>
           <button onClick={toggleAuthTheme}
             title={agTheme==='light'?'Dark Mode':'Light Mode'}
             style={{background:'transparent',border:`1px solid ${C.border2}`,color:C.muted,
@@ -2042,7 +2042,7 @@ function AuthGate({children}){
             {agTheme==='light'?'☾':'☀'}
           </button>
         </div>
-        <h1 style={{fontSize:21,fontWeight:700,color:CA.foam,margin:'0 0 4px'}}>
+        <h1 style={{fontSize:21,fontWeight:600,color:CA.foam,margin:'0 0 4px'}}>
           {mode==='signup'?t('auth_title_signup'):t('auth_title_signin')}</h1>
         <p style={{fontSize:13,color:CA.haze,margin:'0 0 20px'}}>
           {mode==='signup'?t('auth_sub_signup'):t('auth_sub_signin')}</p>
@@ -2147,9 +2147,9 @@ function AuthGate({children}){
             {href:'/skandinavien.html',label:'Skandinavien'},
             {href:'/vergleich.html',   label:'Vergleich'},
             {href:'/watcher.html',     label:'Watcher'},
-            {href:'/alarm.html',       label:'🔔 Windalarm'},
-            {href:'/logbuch.html',     label:'🛶 Logbuch'},
-            {href:'/reise.html',       label:'🧭 Reiseplaner'},
+            {href:'/alarm.html',       label:'Windalarm'},
+            {href:'/logbuch.html',     label:'Logbuch'},
+            {href:'/reise.html',       label:'Reiseplaner'},
           ].map(({href,label})=>(
             <a key={href} href={href}
               style={{padding:'6px 10px',borderRadius:8,cursor:'pointer',flexShrink:0,
@@ -2300,7 +2300,7 @@ function FeedbackModal({ loc, forecast, gear, onClose, onCalibrated }) {
       <div ref={dialogRef} style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:20,width:"100%",maxWidth:480,maxHeight:"100%",overflow:"auto",color:C.text}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
           <div>
-            <div style={{fontFamily:"monospace",fontSize:10,color:C.signal,textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700}}>{t('fb_modal_label')}</div>
+            <div style={{fontFamily:"monospace",fontSize:12,color:C.signal,fontWeight:600}}>{t('fb_modal_label')}</div>
             <strong id="fb-modal-title" style={{fontSize:14}}>{loc.name}</strong>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -2445,7 +2445,7 @@ function App() {
   const [historical,setHist]   = useState(null);
   const [loading,setLoading]   = useState(true);
   const [loadMsg,setLoadMsg]   = useState(()=>t("loading_connect"));
-  const [apiStatus,setApiStatus]= useState({forecast:"⏳",historical:"⏳"});
+  const [apiStatus,setApiStatus]= useState({forecast:"…",historical:"…"});
   const [activeDay,setActiveDay]= useState(0);
   const [measured,setMeasured] = useState(null); // real station feed for the active day (null = none)
   const [live,setLive] = useState(null); // current-only real station snapshot (null = none)
@@ -2653,7 +2653,7 @@ function App() {
 
   const loadData = useCallback(async(l) => {
     setLoading(true);
-    setApiStatus({forecast:"⏳",historical:"⏳"});
+    setApiStatus({forecast:"…",historical:"…"});
     setLoadMsg(t("loading_forecast"));
 
     // Fetch forecast independently – fallback to demo
@@ -2679,10 +2679,10 @@ function App() {
       const ml = MODEL_LABELS[fc.__model];
       const ensTag = fc.__ens ? ` (${fc.__ens.members.length})` : "";
       const boostTag = fc.__pelerBoost ? " +Pelèr" : fc.__meltemBoost ? ` +${fc.__meltemBoost}` : "";
-      setApiStatus(s=>({...s,forecast:(ml ? `✅ ${ml}${ensTag}` : "✅ Live")+boostTag}));
+      setApiStatus(s=>({...s,forecast:(ml ? `${ml}${ensTag}` : "Live")+boostTag}));
       setLoadMsg(t("loading_era5"));
     } catch(e) {
-      setApiStatus(s=>({...s,forecast:"⚠️ Demo"}));
+      setApiStatus(s=>({...s,forecast:"Demo"}));
       fc = buildDemoForecast(l.lat, l.lon);
       setLoadMsg(t("loading_demo_fc"));
     }
@@ -2692,9 +2692,9 @@ function App() {
     let hist = null;
     try {
       hist = await tryFetchHistorical(l.lat, l.lon);
-      setApiStatus(s=>({...s,historical:"✅ Live"}));
+      setApiStatus(s=>({...s,historical:"Live"}));
     } catch(e) {
-      setApiStatus(s=>({...s,historical:"⚠️ Demo"}));
+      setApiStatus(s=>({...s,historical:"Demo"}));
       hist = buildDemoHistorical(l.lat, l.lon);
     }
     setHist(hist);
@@ -3190,15 +3190,15 @@ function App() {
     hdr:{background:C.headerBg,borderBottom:`1px solid ${C.border}`,padding:"10px 16px",backdropFilter:"blur(20px)",display:"flex",flexDirection:"column",gap:4,position:"sticky",top:"calc(env(safe-area-inset-top) + 48px)",zIndex:100},
     hdrRow1:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8},
     hdrRow2:{display:"flex",alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap",gap:6},
-    locBar:{background:C.panel,borderBottom:`2px solid ${C.sky}`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8},
-    riderBar:{background:C.panel,borderBottom:`1px solid ${C.border}`,borderTop:`2px solid ${C.signal}`,padding:"14px 20px"},
+    locBar:{background:C.panel,borderBottom:`1px solid ${C.border}`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8},
+    riderBar:{background:C.panel,borderBottom:`1px solid ${C.border}`,borderTop:`1px solid ${C.border}`,padding:"14px 20px"},
     main:{padding:"14px clamp(10px,3vw,18px) calc(40px + env(safe-area-inset-bottom))",maxWidth:1200,margin:"0 auto"},
     card:{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:14,padding:"16px 20px",marginBottom:12,boxShadow:"0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2)"},
-    sec:{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted,marginBottom:8},
+    sec:{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:11,color:C.muted,letterSpacing:"0.01em",marginBottom:8},
     btn:{background:C.signal,color:"#fff",border:"none",borderRadius:10,fontWeight:700,fontSize:14,padding:"10px 20px",cursor:"pointer"},
     btnG:{background:"transparent",border:`1px solid ${C.border2}`,color:C.muted,borderRadius:8,fontSize:13,padding:"8px 14px",cursor:"pointer"},
     inp:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:8,padding:"8px 12px",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:12,outline:"none"},
-    fl:{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4},
+    fl:{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:11,color:C.muted,letterSpacing:"0",display:"block",marginBottom:4},
     fi:{background:C.bg,border:`1px solid ${C.border2}`,color:C.text,borderRadius:8,padding:"0 10px",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:14,outline:"none",height:44,width:"100%",boxSizing:"border-box"},
     grid2:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:14,marginBottom:12},
     grid6:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:12},
@@ -3218,8 +3218,8 @@ function App() {
               <path d="M5 16h6.6a2.3 2.3 0 1 0-2.3-2.3" stroke={C.muted} strokeWidth="2.4" strokeLinecap="round"/>
             </svg>
             <div>
-              <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontWeight:900,fontSize:15,letterSpacing:"0.15em",color:C.text}}>WINDFOIL</div>
-              <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:10,color:C.muted,letterSpacing:"0.1em"}}>{t('version_label')}</div>
+              <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontWeight:600,fontSize:15,letterSpacing:"0.06em",color:C.text}}>WindFoil</div>
+              <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:10,color:C.muted}}>{t('version_label')}</div>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -3271,7 +3271,7 @@ function App() {
       {/* LOC BAR */}
       <div style={S.locBar}>
         <div style={{display:"flex",alignItems:"center",gap:10,fontSize:15}}>
-          <span style={{fontSize:20}}>📍</span>
+          
           <b style={{color:"#fff",fontSize:16,letterSpacing:"0.02em"}}>{loc.name}</b>
           <span style={{fontFamily:"monospace",fontSize:11,color:C.sky}}>{loc.lat.toFixed(4)}°N, {loc.lon.toFixed(4)}°E</span>
           {spotCal && spotCal.rolling!=null && (
@@ -3296,7 +3296,7 @@ function App() {
 
       {/* RIDER BAR */}
       <div style={S.riderBar}>
-        <div style={{fontFamily:"monospace",fontSize:11,textTransform:"uppercase",letterSpacing:"0.12em",color:C.signal,marginBottom:12,fontWeight:700}}>{sport==="kite"?t('profile_kite'):t('profile_foil')} &amp; {t('profile_and_equip')}</div>
+        <div style={{fontFamily:"monospace",fontSize:12,color:C.signal,marginBottom:12,fontWeight:600}}>{sport==="kite"?t('profile_kite'):t('profile_foil')} &amp; {t('profile_and_equip')}</div>
 
         {/* Rider fields — unified grid */}
         {sport==="foil" && <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:10,marginBottom:10}}>
@@ -3328,13 +3328,13 @@ function App() {
         {/* ── KITE-MODUS ── */}
         {sport==="kite" && <div style={{display:"flex",flexWrap:"wrap",gap:12,marginBottom:10}}>
           <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>{t('field_weight')}</label>
+            <label style={{fontFamily:"monospace",fontSize:11,color:C.muted}}>{t('field_weight')}</label>
             <input type="number" value={kiteRi.weight} step={1} min={40} max={150}
               onChange={e=>setKiteRi(r=>({...r,weight:parseFloat(e.target.value)}))}
               style={{...S.inp,width:100,fontSize:13}} />
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>{t('kite_model_label')}</label>
+            <label style={{fontFamily:"monospace",fontSize:11,color:C.muted}}>{t('kite_model_label')}</label>
             <select value={kiteRi.kiteModel}
               onChange={e=>{
                 const model=e.target.value;
@@ -3346,7 +3346,7 @@ function App() {
             </select>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>{t('kite_size_label')}</label>
+            <label style={{fontFamily:"monospace",fontSize:11,color:C.muted}}>{t('kite_size_label')}</label>
             <select value={kiteRi.kiteSize}
               onChange={e=>setKiteRi(r=>({...r,kiteSize:parseInt(e.target.value)}))}
               style={{...S.inp,width:300,fontSize:13}}>
@@ -3357,7 +3357,7 @@ function App() {
             </select>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase"}}>{t('field_skill')}</label>
+            <label style={{fontFamily:"monospace",fontSize:11,color:C.muted}}>{t('field_skill')}</label>
             <select value={kiteRi.skill} onChange={e=>setKiteRi(r=>({...r,skill:e.target.value}))}
               style={{...S.inp,width:140,fontSize:13}}>
               {["beginner","intermediate","advanced","pro"].map(s=><option key={s} value={s}>{t(`skill_${s}`)}</option>)}
@@ -3378,7 +3378,7 @@ function App() {
         {/* EQUIPMENT MANAGER */}
         <div style={{paddingTop:12,borderTop:`1px solid ${C.border}`}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <span style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase",letterSpacing:"0.1em",color:C.muted}}>{t('equip_title')}</span>
+            <span style={{fontFamily:"monospace",fontSize:12,color:C.muted}}>{t('equip_title')}</span>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:useGear?C.go:C.muted,cursor:"pointer"}}>
               <input type="checkbox" checked={useGear} onChange={e=>{setUseGear(e.target.checked); savePref("wf_usegear",e.target.checked); setActiveDay(0);}} />
               {t('equip_auto_select')}
@@ -3451,25 +3451,25 @@ function App() {
             {/* BADGES ROW */}
             <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:12}}>
               {[
-                {icon:"💨",label:t('badge_avg',{w:fmtW(dayData.avgW,windUnit)}),c:dayData.avgW>=dayData.win.optMin&&dayData.avgW<=dayData.win.optMax?C.go:dayData.avgW<dayData.win.minWind?C.stop:C.caution},
-                {icon:"⬆",label:t('badge_max_gust',{w:fmtW(dayData.maxG,windUnit)}),c:dayData.maxG>dayData.win.maxWind?C.stop:C.caution},
-                {icon:"🌡",label:t('badge_max_temp',{t:dayData.maxT.toFixed(0)}),c:C.sky},
+                {icon:"",label:t('badge_avg',{w:fmtW(dayData.avgW,windUnit)}),c:dayData.avgW>=dayData.win.optMin&&dayData.avgW<=dayData.win.optMax?C.go:dayData.avgW<dayData.win.minWind?C.stop:C.caution},
+                {icon:"",label:t('badge_max_gust',{w:fmtW(dayData.maxG,windUnit)}),c:dayData.maxG>dayData.win.maxWind?C.stop:C.caution},
+                {icon:"",label:t('badge_max_temp',{t:dayData.maxT.toFixed(0)}),c:C.sky},
                 {icon:dayData.thInfo.icon,label:thermikLabel(dayData.thInfo),c:dayData.thInfo.color},
                 ...(()=>{ // Correction badge: shows WHERE the thermal boost comes from.
                   const tc=dayData.thermal;
                   if(tc && tc.source==="mos"){
                     const sign = tc.addMs<0 ? "−" : "+";
-                    return [{icon:"🎯",label:t('badge_mos_corr',{sign,w:fmtW(Math.abs(tc.addMs),windUnit),n:tc.n}),c:C.signal}];
+                    return [{icon:"",label:t('badge_mos_corr',{sign,w:fmtW(Math.abs(tc.addMs),windUnit),n:tc.n}),c:C.signal}];
                   }
                   if(tc && tc.source==="blend"){
                     const pct=Math.round(tc.mosWeight*100);
-                    return [{icon:"🎯",label:t('badge_mos_blend',{pct,rest:100-pct}),c:C.signal}];
+                    return [{icon:"",label:t('badge_mos_blend',{pct,rest:100-pct}),c:C.signal}];
                   }
-                  return dayData.sb.active?[{icon:"🌊",label:t('badge_seabreeze',{w:fmtW(dayData.sb.boost,windUnit)}),c:C.sky}]:[];
+                  return dayData.sb.active?[{icon:"",label:t('badge_seabreeze',{w:fmtW(dayData.sb.boost,windUnit)}),c:C.sky}]:[];
                 })(),
               ].map((b,i)=>(
                 <div key={i} style={{border:`1px solid ${b.c}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:b.c,display:"flex",alignItems:"center",gap:6,background:C.surface}}>
-                  {b.icon} {b.label}
+                  {b.label}
                 </div>
               ))}
             </div>
@@ -3481,7 +3481,6 @@ function App() {
                 const tabConf=(d===0 && stationCmp?.available)?stationCmp.confidence:null;
                 const sc=tabConf!=null?applyConfidence(rawSc,tabConf).score:rawSc;
                 const active=d===activeDay;
-                const icon=sc>=75?"✅":sc>=45?"⚠️":"❌";
                 const uncertain=d>=4;
                 return(
                   <button key={d} onClick={()=>setActiveDay(d)} style={{
@@ -3489,9 +3488,9 @@ function App() {
                     color:active?"#fff":C.muted, borderRadius:8, padding:"8px 14px", cursor:"pointer",
                     display:"flex", flexDirection:"column", alignItems:"center", gap:2, minWidth:90,
                     opacity:uncertain?0.72:1 }}>
-                    <span style={{fontSize:14}}>{icon}</span>
-                    <span style={{fontFamily:"monospace",fontSize:9,textTransform:"uppercase"}}>{name}</span>
-                    <span style={{fontFamily:"monospace",fontWeight:900,fontSize:18,color:active?"#fff":sc2col(sc)}}>{sc}</span>
+                    
+                    <span style={{fontFamily:"monospace",fontSize:10}}>{name}</span>
+                    <span style={{fontFamily:"monospace",fontWeight:600,fontSize:18,color:active?"#fff":sc2col(sc)}}>{sc}</span>
                     {uncertain&&<span style={{fontSize:7,color:active?"rgba(255,255,255,.6)":C.caution,fontFamily:"monospace",letterSpacing:"0.05em"}}>{t('day_uncertain')}</span>}
                   </button>
                 );
@@ -3505,10 +3504,10 @@ function App() {
               const cc = classifyConfidence(conf);
               const scoreColor = sc2col(adj.score);
               return (
-                <section aria-labelledby="score-card-title" style={{...S.card,marginBottom:12,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",borderLeft:`3px solid ${scoreColor}`,background:`linear-gradient(90deg,${scoreColor}12 0%,${C.panel} 40%)`}}>
+                <section aria-labelledby="score-card-title" style={{...S.card,marginBottom:12,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",borderLeft:`3px solid ${scoreColor}`}}>
                   <div style={{textAlign:"center",minWidth:100}}>
-                    <div style={{fontFamily:"monospace",fontWeight:900,fontSize:56,color:scoreColor,lineHeight:1}}>{adj.score}</div>
-                    <h2 id="score-card-title" style={{fontFamily:"monospace",fontSize:11,fontWeight:400,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",margin:"4px 0 0"}}>{sport==="kite"?t('score_kite'):t('score_foil')}</h2>
+                    <div style={{fontFamily:"monospace",fontWeight:500,fontSize:56,color:scoreColor,lineHeight:1}}>{adj.score}</div>
+                    <h2 id="score-card-title" style={{fontFamily:"monospace",fontSize:11,fontWeight:400,color:C.muted,margin:"4px 0 0"}}>{sport==="kite"?t('score_kite'):t('score_foil')}</h2>
                     {adj.adjusted && <div style={{fontSize:9,color:C.caution,marginTop:3}}>{t('score_raw_adj',{raw:dayData.dayScore})}</div>}
                   </div>
                   <div style={{flex:1,minWidth:160}}>
@@ -3528,9 +3527,8 @@ function App() {
                       </div>
                     )}
                     {dayData.pickedGear ? (
-                      <div style={{display:"inline-flex",alignItems:"center",gap:8,flexWrap:"wrap",background:`${C.go}1e`,border:`1px solid ${C.go}`,borderRadius:8,padding:"7px 12px"}}>
-                        <span style={{fontSize:16}}>🎒</span>
-                        <span style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em"}}>{t('score_auto_rec')}</span>
+                      <div style={{display:"inline-flex",alignItems:"center",gap:8,flexWrap:"wrap",background:C.surface,border:`1px solid ${C.border2}`,borderRadius:8,padding:"7px 12px"}}>
+                        <span style={{fontFamily:"monospace",fontSize:11,color:C.muted}}>{t('score_auto_rec')}</span>
                         <b style={{fontSize:15,color:C.go,fontFamily:"monospace"}}>{dayData.pickedGear.name||`${dayData.pickedGear.wing} m²`}</b>
                         <span style={{fontSize:11,color:C.muted}}>· {dayData.pickedGear.wing} m² · {rider.weight} kg</span>
                       </div>
@@ -3594,7 +3592,7 @@ function App() {
               </div>}
               {live && live.wind!=null && <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",margin:"2px 0 8px",padding:"6px 10px",borderRadius:8,background:"rgba(61,220,132,0.08)",border:`1px solid ${C.go}44`,fontSize:11}}>
                 <span style={{display:"inline-flex",alignItems:"center",gap:5,color:C.go,fontWeight:600,whiteSpace:"nowrap"}}>
-                  <span style={{width:7,height:7,borderRadius:"50%",background:live.sensorOk?C.go:C.stop,boxShadow:`0 0 6px ${live.sensorOk?C.go:C.stop}`}} />
+                  <span style={{width:7,height:7,borderRadius:"50%",background:live.sensorOk?C.go:C.stop}} />
                   {t('live_now_label')}
                 </span>
                 <span style={{color:C.text,fontFamily:"monospace"}}>
@@ -3738,7 +3736,7 @@ function App() {
               ].map((s,i)=>(
                 <div key={i} style={{...S.card,marginBottom:0,padding:"10px 12px"}}>
                   <div style={{fontFamily:"monospace",fontWeight:700,fontSize:19,color:"#fff"}}>{s.v}<span style={{fontSize:10,color:C.muted,marginLeft:3}}>{s.u}</span></div>
-                  <div style={{fontFamily:"monospace",fontSize:9,color:C.muted,textTransform:"uppercase",marginTop:2}}>{s.l}</div>
+                  <div style={{fontFamily:"monospace",fontSize:11,color:C.muted,marginTop:4}}>{s.l}</div>
                 </div>
               ))}
             </div>
@@ -3746,7 +3744,7 @@ function App() {
             {/* DETAILS DIVIDER */}
             <div style={{display:"flex",alignItems:"center",gap:10,margin:"20px 0 12px"}}>
               <div style={{flex:1,height:1,background:C.border}} />
-              <span style={{fontFamily:"monospace",fontSize:9,letterSpacing:"0.14em",color:C.dim,textTransform:"uppercase"}}>{t('more_details')}</span>
+              <span style={{fontFamily:"monospace",fontSize:11,color:C.dim,letterSpacing:"0.01em"}}>{t('more_details')}</span>
               <div style={{flex:1,height:1,background:C.border}} />
             </div>
             {/* GRID 2: Direction + Temp */}
@@ -3833,12 +3831,12 @@ function App() {
 
             {/* THERMIK BOX */}
             <div style={{...S.card,borderLeft:`3px solid ${C.caution}`,display:"flex",gap:12}}>
-              <span style={{fontSize:22}}>🌡️</span>
+              
               <div>
                 <strong style={{color:C.caution,fontSize:13}}>{t('th_title',{label:thermikLabel(dayData.thInfo)})}</strong>
                 <p style={{fontSize:12,color:C.muted,marginTop:4,lineHeight:1.7}}>
                   {thermikDesc(dayData.thInfo)}
-                  {dayData.sb.active&&<><br/><br/>🌊 <b style={{color:C.sky}}>{t('th_breeze_active')}</b> {regimeLabel(dayData.regime)} ({regimeOrigin(dayData.regime)}) +{fmtW(dayData.sb.boost,windUnit)} ~{dayData.regime.peakHour}:00. {Math.round(dayData.sb.align*100)}%.</>}
+                  {dayData.sb.active&&<><br/><br/><b style={{color:C.sky}}>{t('th_breeze_active')}</b> {regimeLabel(dayData.regime)} ({regimeOrigin(dayData.regime)}) +{fmtW(dayData.sb.boost,windUnit)} ~{dayData.regime.peakHour}:00. {Math.round(dayData.sb.align*100)}%.</>}
                 </p>
               </div>
             </div>
@@ -3848,7 +3846,7 @@ function App() {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
                 <span style={S.sec}>{t('station_cmp_title')}</span>
                 <span style={{fontFamily:"monospace",fontSize:9,color:C.muted}}>
-                  {stationCmpStatus==="loading"?(lang==="en"?"⏳ comparing…":"⏳ Abgleich…"):stationCmpStatus==="ok"?"✅ aktiv":stationCmpStatus==="unavailable"?"○ keine Station":""}
+                  {stationCmpStatus==="loading"?(lang==="en"?"comparing…":"Abgleich…"):stationCmpStatus==="ok"?"aktiv":stationCmpStatus==="unavailable"?"○ keine Station":""}
                 </span>
               </div>
 
@@ -3871,7 +3869,7 @@ function App() {
                   <div>
                     {/* Confidence bar */}
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                      <span style={{fontFamily:"monospace",fontWeight:900,fontSize:32,color:cc.color,lineHeight:1}}>{stationCmp.confidence ?? "–"}%</span>
+                      <span style={{fontFamily:"monospace",fontWeight:500,fontSize:32,color:cc.color,lineHeight:1}}>{stationCmp.confidence ?? "–"}%</span>
                       <div style={{flex:1}}>
                         <div style={{fontSize:12,color:cc.color,marginBottom:4}}>{cc.icon} {confidenceLabel(cc)}</div>
                         <div style={{height:6,background:C.bg,borderRadius:8,overflow:"hidden"}}>
@@ -3883,18 +3881,18 @@ function App() {
                     {/* Side-by-side comparison */}
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginBottom:10}}>
                       <div style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px"}}>
-                        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",marginBottom:4}}>{t('station_label')}</div>
-                        <div style={{fontSize:12,color:C.text}}>💨 {cur?.ok && cur.wind!=null?fmtW(cur.wind,windUnit):"–"}</div>
-                        <div style={{fontSize:11,color:C.muted}}>🧭 {cur?.ok && cur.dir!=null?Math.round(cur.dir)+"°":"–"} · 🌡 {cur?.ok && cur.temp!=null?cur.temp.toFixed(0)+"°":"–"}</div>
+                        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>{t('station_label')}</div>
+                        <div style={{fontSize:12,color:C.text}}>{cur?.ok && cur.wind!=null?fmtW(cur.wind,windUnit):"–"}</div>
+                        <div style={{fontSize:11,color:C.muted}}>{cur?.ok && cur.dir!=null?Math.round(cur.dir)+"°":"–"} · {cur?.ok && cur.temp!=null?cur.temp.toFixed(0)+"°C":"–"}</div>
                         {cur?.station_id && <div style={{fontFamily:"monospace",fontSize:8,color:C.dim,marginTop:4}}>ID {cur.station_id}</div>}
                       </div>
                       <div style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px"}}>
-                        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",marginBottom:4}}>{t('model_label')}</div>
-                        <div style={{fontSize:12,color:C.text}}>💨 {stationCmp.modelCurrentWind!=null?fmtW(stationCmp.modelCurrentWind,windUnit):"–"}</div>
-                        <div style={{fontSize:11,color:C.muted}}>🧭 {stationCmp.modelCurrentDir!=null?Math.round(stationCmp.modelCurrentDir)+"°":"–"}</div>
+                        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>{t('model_label')}</div>
+                        <div style={{fontSize:12,color:C.text}}>{stationCmp.modelCurrentWind!=null?fmtW(stationCmp.modelCurrentWind,windUnit):"–"}</div>
+                        <div style={{fontSize:11,color:C.muted}}>{stationCmp.modelCurrentDir!=null?Math.round(stationCmp.modelCurrentDir)+"°":"–"}</div>
                       </div>
                       <div style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px"}}>
-                        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",marginBottom:4}}>{t('bias_window')}</div>
+                        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>{t('bias_window')}</div>
                         <div style={{fontSize:11,color:C.text}}>{t('station_label').split(' ')[0]} {stationCmp.stationHistMeanWind!=null?fmtW(stationCmp.stationHistMeanWind,windUnit):"–"}</div>
                         <div style={{fontSize:11,color:C.muted}}>{t('model_label')} {stationCmp.modelHistMeanWind!=null?fmtW(stationCmp.modelHistMeanWind,windUnit):"–"}</div>
                         {stationCmp.bias?.ok && (
@@ -3910,8 +3908,8 @@ function App() {
                         const n = dayData.ens.nMembers?.[ph] ?? dayData.ens.members?.length ?? null;
                         return (
                           <div style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"8px 10px"}}>
-                            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",marginBottom:4}}>{t('model_spread')}</div>
-                            <div style={{fontSize:12,color:C.text}}>📊 {p10!=null&&p90!=null?`${fmtW(p10,windUnit)} – ${fmtW(p90,windUnit)}`:"–"}</div>
+                            <div style={{fontSize:11,color:C.muted,marginBottom:4}}>{t('model_spread')}</div>
+                            <div style={{fontSize:12,color:C.text}}>{p10!=null&&p90!=null?`${fmtW(p10,windUnit)} – ${fmtW(p90,windUnit)}`:"–"}</div>
                             <div style={{fontSize:11,color:C.muted}}>{t('p10_p90_around',{h:String(ph).padStart(2,"0")})}</div>
                             {n!=null && <div style={{fontFamily:"monospace",fontSize:8,color:C.dim,marginTop:4}}>{t('n_member',{n})}</div>}
                           </div>
@@ -3967,10 +3965,10 @@ function App() {
                           </span>
                         </div>
                         <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:C.muted}}>
-                          <span style={{color:C.sky}}>💨 {st.wind!=null?fmtW(st.wind,windUnit):"–"}</span>
+                          <span style={{color:C.sky}}>{st.wind!=null?fmtW(st.wind,windUnit):"–"}</span>
                           <span style={{color:C.signal}}>⬆ {st.gust!=null?fmtW(st.gust,windUnit):"–"}</span>
-                          <span>🧭 {dirTxt}</span>
-                          <span>🌡 {st.temp!=null?st.temp.toFixed(0)+"°":"–"}</span>
+                          <span>{dirTxt}</span>
+                          <span>{st.temp!=null?st.temp.toFixed(0)+"°":"–"}</span>
                         </div>
                         <div style={{fontFamily:"monospace",fontSize:8,color:C.dim,marginTop:5}}>
                           {st.lat.toFixed(3)}°, {st.lon.toFixed(3)}°{st.country?` · ${st.country}`:""}
@@ -4040,7 +4038,7 @@ function App() {
               {geoError && (
                 <div style={{fontSize:11,color:C.caution,lineHeight:1.5,background:"rgba(245,185,66,0.08)",
                   border:`1px solid ${C.caution}`,borderRadius:4,padding:"6px 10px",marginBottom:12}}>
-                  ⚠️ {geoError}
+                  {geoError}
                 </div>
               )}
               {/* Gespeicherte Spots */}
@@ -4052,16 +4050,16 @@ function App() {
                 ];
                 return(
                   <div style={{marginBottom:14}}>
-                    <div style={{fontFamily:"monospace",fontSize:10,color:C.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>{t('loc_spots_section')}</div>
+                    <div style={{fontFamily:"monospace",fontSize:11,color:C.muted,marginBottom:6}}>{t('loc_spots_section')}</div>
                     <div style={{display:"flex",flexDirection:"column",gap:6}}>
                       {SAVED_SPOTS.map((s,i)=>(
                         <button key={i} onClick={()=>{ setLoc(s); pushRecent(s,{active:true}); setShowLoc(false); }}
                           style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:4,color:C.text,textAlign:"left",padding:"8px 12px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                           <span>
-                            <b style={{display:"block",fontSize:13}}>📍 {s.name}</b>
+                            <b style={{display:"block",fontSize:13}}>{s.name}</b>
                             <span style={{fontSize:10,color:C.muted,fontFamily:"monospace"}}>{s.lat.toFixed(4)}°N {s.lon.toFixed(4)}°E · {s.desc}</span>
                           </span>
-                          <span style={{fontSize:12,color:C.signal}}>★</span>
+                          <span style={{fontSize:12,color:C.signal}}>·</span>
                         </button>
                       ))}
                     </div>
@@ -4070,7 +4068,7 @@ function App() {
               })()}
               {recent.length>0&&(
                 <div style={{marginBottom:14}}>
-                  <div style={{fontFamily:"monospace",fontSize:10,color:C.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>{t('loc_recent_section')}</div>
+                  <div style={{fontFamily:"monospace",fontSize:11,color:C.muted,marginBottom:6}}>{t('loc_recent_section')}</div>
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
                     {recent.map((r,i)=>(
                       <button key={i} onClick={()=>{ setLoc(r); pushRecent(r,{active:true}); setShowLoc(false); }}
@@ -4087,16 +4085,16 @@ function App() {
               )}
               {/* Ort hinzufügen (Google-Maps-Link oder Koordinaten) */}
               <div style={{marginTop:14,borderTop:`1px solid ${C.border}`,paddingTop:14,display:"flex",flexDirection:"column",gap:10}}>
-                <div style={{fontFamily:"monospace",fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em"}}>{t('loc_add_section')}</div>
+                <div style={{fontFamily:"monospace",fontSize:11,color:C.muted}}>{t('loc_add_section')}</div>
                 <div>
-                  <label style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"block",marginBottom:4}}>{t('loc_add_label')}</label>
+                  <label style={{fontFamily:"monospace",fontSize:11,color:C.muted,display:"block",marginBottom:4}}>{t('loc_add_label')}</label>
                   <textarea value={custom.link} rows={3}
                     onChange={e=>{setCustom(c=>({...c,link:e.target.value}));setLinkError("");}}
                     placeholder="https://www.google.com/maps/@36.9833,21.6667,14z&#10;oder: 36.9833, 21.6667"
                     style={{...S.inp,width:"100%",resize:"vertical",lineHeight:1.4}} />
                 </div>
                 <div>
-                  <label style={{fontFamily:"monospace",fontSize:10,color:C.muted,display:"block",marginBottom:4}}>{t('loc_add_name_label')}</label>
+                  <label style={{fontFamily:"monospace",fontSize:11,color:C.muted,display:"block",marginBottom:4}}>{t('loc_add_name_label')}</label>
                   <input value={custom.name} onChange={e=>setCustom(c=>({...c,name:e.target.value}))}
                     placeholder={parsePlaceName(custom.link)||t('loc_add_name_placeholder')}
                     style={{...S.inp,width:"100%"}} />
@@ -4105,7 +4103,7 @@ function App() {
                   if(custom.link&&parsed&&!parsed.error) return (
                     <div style={{fontSize:11,color:C.go,fontFamily:"monospace",background:"rgba(61,220,132,0.08)",border:`1px solid ${C.go}`,borderRadius:4,padding:"6px 10px"}}>{t('loc_parsed_ok',{lat:parsed.lat.toFixed(4),lon:parsed.lon.toFixed(4)})}</div>);
                   if(custom.link&&parsed&&parsed.error) return (
-                    <div style={{fontSize:11,color:C.caution,lineHeight:1.5,background:"rgba(245,185,66,0.08)",border:`1px solid ${C.caution}`,borderRadius:4,padding:"6px 10px"}}>⚠️ {parsed.error}</div>);
+                    <div style={{fontSize:11,color:C.caution,lineHeight:1.5,background:"rgba(245,185,66,0.08)",border:`1px solid ${C.caution}`,borderRadius:4,padding:"6px 10px"}}>{parsed.error}</div>);
                   return null; })()}
                 {linkError && (<div style={{fontSize:11,color:C.stop,fontFamily:"monospace"}}>{linkError}</div>)}
                 <button style={S.btn} onClick={()=>{
@@ -4131,11 +4129,11 @@ function App() {
         <a href="/sardinia.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sardinien</a>
         <a href="/sizilien.html" style={{color:C.sky,textDecoration:"none"}}>🏝 Sizilien</a>
         <a href="/spanien.html" style={{color:C.sky,textDecoration:"none"}}>🇪🇸 Spanien</a>
-        <a href="/vergleich.html" style={{color:C.sky,textDecoration:"none"}}>📊 Vergleich</a>
+        <a href="/vergleich.html" style={{color:C.sky,textDecoration:"none"}}>Vergleich</a>
         <a href="/watcher.html" style={{color:C.sky,textDecoration:"none"}}>🔭 Watcher</a>
-        <a href="/alarm.html" style={{color:C.sky,textDecoration:"none"}}>🔔 Windalarm</a>
-        <a href="/logbuch.html" style={{color:C.sky,textDecoration:"none"}}>🛶 Logbuch</a>
-        <a href="/reise.html" style={{color:C.sky,textDecoration:"none"}}>🧭 Reiseplaner</a>
+        <a href="/alarm.html" style={{color:C.sky,textDecoration:"none"}}>Windalarm</a>
+        <a href="/logbuch.html" style={{color:C.sky,textDecoration:"none"}}>Logbuch</a>
+        <a href="/reise.html" style={{color:C.sky,textDecoration:"none"}}>Reiseplaner</a>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>{t('footer_help')}</a>
         <a href="/impressum.html" style={{color:C.sky,textDecoration:"none"}}>Impressum</a>
         <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
@@ -4184,9 +4182,9 @@ function App() {
                     <button style={{...S.btn,background:"transparent",border:`1px solid ${C.sky}`,color:C.sky,opacity:adminBusy?0.6:1}} disabled={adminBusy}
                       onClick={()=>adminRun("restart-proxy","Proxy-Neustart")}>♻ Proxy neu starten</button>
                     <button style={{...S.btn,background:"transparent",border:`1px solid ${C.muted}`,color:C.muted,opacity:adminBusy?0.6:1}} disabled={adminBusy}
-                      onClick={()=>adminRun("status","Status")}>📊 Status</button>
+                      onClick={()=>adminRun("status","Status")}>Status</button>
                   </div>
-                  {adminBusy && <div style={{fontSize:11,color:C.caution}}>⏳ läuft… (kann bis zu 2 Min dauern)</div>}
+                  {adminBusy && <div style={{fontSize:11,color:C.caution}}>läuft… (kann bis zu 2 Min dauern)</div>}
                   {adminOut && (
                     <pre style={{background:C.bg,border:`1px solid ${C.border2}`,borderRadius:6,padding:"10px 12px",fontSize:11,color:C.text,fontFamily:"monospace",whiteSpace:"pre-wrap",maxHeight:340,overflow:"auto",margin:0}}>{adminOut}</pre>
                   )}
@@ -4230,7 +4228,7 @@ function App() {
                 </div>
               )}
 
-              {adminErr && <div style={{fontSize:11,color:C.stop,marginTop:10}}>⚠️ {adminErr}</div>}
+              {adminErr && <div style={{fontSize:11,color:C.stop,marginTop:10}}>{adminErr}</div>}
             </div>
           </div>
         </div>
