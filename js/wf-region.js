@@ -472,8 +472,9 @@
     return m;
   }
 
-  function updateMarker(marker, spot, ds, isBest, sst) {
+  function updateMarker(marker, spot, ds, isBest, sst, dl) {
     const col = scoreColor(ds.score);
+    const dayStr = dl || 'Heute';
     marker.setIcon(L.divIcon({
       className: '',
       html: `<div style="position:relative;width:90px;height:64px;pointer-events:none">
@@ -486,7 +487,7 @@
     marker.bindPopup(`
       <b>${spot.emoji} ${spot.name}</b>${isBest ? ' ⭐' : ''}<br>
       <span style="color:${col};font-size:13px;font-weight:700">Score ${ds.score}</span>
-      <span style="color:#5a7a96;font-size:10px"> (Heute 9–18 Uhr)</span><br>
+      <span style="color:#5a7a96;font-size:10px"> (${dayStr} 9–18 Uhr)</span><br>
       <span style="font-size:11px">Ø <b>${ds.avgWindKn.toFixed(1)} kn</b> · ${windArrowSvg(ds.avgDir, '#3a9ad9', 14)} <b>${compass(ds.avgDir)}</b></span><br>
       ${sst != null ? `<span style="font-size:11px">🌊 <b style="color:${sstColor(sst)}">${sst.toFixed(1)}°C</b> SST</span><br>` : ''}
       <span style="font-family:monospace;font-size:9px;color:#5a7a96">${coord(spot.lat, spot.lon, 4)} · ${spot.desc}</span>
@@ -504,6 +505,65 @@
     if (grid) grid.innerHTML = `<div class="loading">⚠ ${err.message}</div>`;
     const loading = document.getElementById('rec-loading');
     if (loading) loading.textContent = '⚠ Ranking nicht verfügbar';
+  }
+
+  let _dayCtx = null;
+  let activeDay = 0;
+
+  function buildDayPicker(fc) {
+    if (typeof document === 'undefined' || typeof document.createElement !== 'function') return;
+    const existing = document.getElementById('wf-day-picker');
+    if (existing && typeof existing.remove === 'function') existing.remove();
+    const bar = document.createElement('div');
+    bar.id = 'wf-day-picker';
+    bar.setAttribute('role', 'group');
+    bar.setAttribute('aria-label', 'Forecast-Tag wählen');
+    bar.className = 'wf-day-picker';
+    [0, 1, 2].forEach(i => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'day-tab wf-day-btn';
+      btn.setAttribute('aria-pressed', String(i === activeDay));
+      btn.textContent = dayLabel(fc, i);
+      btn.onclick = function () { applyDay(i); };
+      bar.appendChild(btn);
+    });
+    const mapEl = document.getElementById('map');
+    if (mapEl && typeof mapEl.insertAdjacentElement === 'function') mapEl.insertAdjacentElement('beforebegin', bar);
+  }
+
+  function applyDay(dayIdx) {
+    if (!_dayCtx) return;
+    activeDay = dayIdx;
+    const { SPOTS, results, win, sstData, bestId, markers, particles, ranking, anyFc } = _dayCtx;
+    const dl = dayLabel(anyFc, dayIdx);
+
+    SPOTS.forEach(spot => {
+      if (!results[spot.id]) return;
+      updateMarker(markers[spot.id], spot, dayStats(results[spot.id], dayIdx, spot, win),
+                   spot.id === bestId, sstData ? sstData[spot.id] : null, dl);
+    });
+
+    if (particles) {
+      particles.setSpots(SPOTS.filter(s => results[s.id]).map(s => {
+        const ds = dayStats(results[s.id], dayIdx, s, win);
+        return { lat: s.lat, lon: s.lon, dir: ds.avgDir, speedKn: ds.avgWindKn };
+      }));
+    }
+
+    const winner = ranking[0];
+    document.getElementById('winner-why').innerHTML = `
+    ${scoreEmoji(winner.avg)} Bester 3-Tage-Ø Score ·
+    Ø ${winner.winds[dayIdx].toFixed(1)} kn ${dl} ·
+    ${compass(winner.dirs[dayIdx])} Hauptrichtung ·
+    ${winner.spot.shoreNote}`;
+
+    SPOTS.forEach(spot => switchDay(spot.id, dayIdx));
+
+    if (typeof document.querySelectorAll === 'function') {
+      document.querySelectorAll('.wf-day-btn').forEach((b, i) =>
+        b.setAttribute('aria-pressed', String(i === dayIdx)));
+    }
   }
 
   async function init(key) {
@@ -549,28 +609,15 @@
     const bestId = ranking[0].spot.id;
     const winner = ranking[0];
     document.getElementById('winner-name').textContent = `${winner.spot.emoji} ${winner.spot.name} — Score ${winner.avg}`;
-    document.getElementById('winner-why').innerHTML = `
-    ${scoreEmoji(winner.avg)} Bester 3-Tage-Ø Score ·
-    Ø ${winner.winds[0].toFixed(1)} kn heute ·
-    ${compass(winner.dirs[0])} Hauptrichtung ·
-    ${winner.spot.shoreNote}`;
 
-    SPOTS.forEach(spot => {
-      if (!results[spot.id]) return;
-      updateMarker(markers[spot.id], spot, dayStats(results[spot.id], 0, spot, win),
-                   spot.id === bestId, sstData ? sstData[spot.id] : null);
-      if (spot.id === bestId) markers[spot.id].openPopup();
-    });
+    const particles = typeof WindParticles !== 'undefined' ? new WindParticles(map) : null;
+    const anyFc = results[SPOTS.find(s => results[s.id]).id];
+    activeDay = 0;
+    _dayCtx = { SPOTS, results, win, sstData, bestId, markers, particles, ranking, anyFc };
 
-    if (typeof WindParticles !== 'undefined') {
-      const particleSpots = SPOTS
-        .filter(s => results[s.id])
-        .map(s => {
-          const ds = dayStats(results[s.id], 0, s, win);
-          return { lat: s.lat, lon: s.lon, dir: ds.avgDir, speedKn: ds.avgWindKn };
-        });
-      new WindParticles(map).setSpots(particleSpots);
-    }
+    buildDayPicker(anyFc);
+    applyDay(0);
+    if (bestId && markers[bestId]) markers[bestId].openPopup();
 
     grid.innerHTML = SPOTS.map(spot => buildCard(spot, results, bestId, ctx)).join('');
 
@@ -591,6 +638,6 @@
     loadForecasts, loadSst, loadHistory,
     dayStats, dayLabel, rankSpots, windArrowSvg, rankClass, rankLabel, RANK_LABELS,
     buildCard, buildRankingRows, buildHistCard,
-    switchDay, tickClock, placeholderMarker, updateMarker, init,
+    switchDay, applyDay, tickClock, placeholderMarker, updateMarker, init,
   };
 });
