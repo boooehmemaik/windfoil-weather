@@ -11,7 +11,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo\u2026",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence \xB7 v3.48.4",
+    version_label: "Weather Intelligence \xB7 v3.49.0",
     sport_foil: "Wingfoiling",
     sport_kite: "Kitesurfing",
     // Loc bar
@@ -326,7 +326,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo\u2026",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence \xB7 v3.48.4",
+    version_label: "Weather Intelligence \xB7 v3.49.0",
     sport_foil: "Wingfoiling",
     sport_kite: "Kitesurfing",
     // Loc bar
