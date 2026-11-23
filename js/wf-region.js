@@ -545,57 +545,55 @@
   let activeDay = 0;
   let activeHour = null;
 
-  function buildDayPicker(fc) {
+  function buildPickerRow(fc) {
     if (typeof document === 'undefined' || typeof document.createElement !== 'function') return;
-    const existing = document.getElementById('wf-day-picker');
-    if (existing && typeof existing.remove === 'function') existing.remove();
-    const bar = document.createElement('div');
-    bar.id = 'wf-day-picker';
-    bar.setAttribute('role', 'group');
-    bar.setAttribute('aria-label', 'Forecast-Tag wählen');
-    bar.className = 'wf-day-picker';
+    ['wf-picker-row', 'wf-day-picker', 'wf-time-picker'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && typeof el.remove === 'function') el.remove();
+    });
+    const row = document.createElement('div');
+    row.id = 'wf-picker-row';
+    row.className = 'wf-picker-row';
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', 'Tag und Tageszeit wählen');
+
     [0, 1, 2].forEach(i => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'day-tab wf-day-btn';
+      btn.className = 'wf-pick-btn wf-day-btn';
       btn.setAttribute('aria-pressed', String(i === activeDay));
       btn.textContent = dayLabel(fc, i);
       btn.onclick = function () { applyDay(i); };
-      bar.appendChild(btn);
+      row.appendChild(btn);
     });
-    const mapEl = document.getElementById('map');
-    if (mapEl && typeof mapEl.insertAdjacentElement === 'function') mapEl.insertAdjacentElement('beforebegin', bar);
-  }
 
-  function buildTimePicker() {
-    if (typeof document === 'undefined' || typeof document.createElement !== 'function') return;
-    const existing = document.getElementById('wf-time-picker');
-    if (existing && typeof existing.remove === 'function') existing.remove();
-    const bar = document.createElement('div');
-    bar.id = 'wf-time-picker';
-    bar.setAttribute('role', 'group');
-    bar.setAttribute('aria-label', 'Tageszeit wählen');
-    bar.className = 'wf-time-picker';
+    const sep = document.createElement('div');
+    sep.className = 'wf-picker-sep';
+    sep.setAttribute('aria-hidden', 'true');
+    row.appendChild(sep);
+
     const allBtn = document.createElement('button');
     allBtn.type = 'button';
-    allBtn.className = 'wf-time-btn';
+    allBtn.className = 'wf-pick-btn wf-time-btn';
     allBtn.setAttribute('aria-pressed', String(activeHour === null));
     allBtn.textContent = 'Ø';
     allBtn.title = '9–18 Uhr Tages-Ø';
     allBtn.onclick = function () { applyHour(null); };
-    bar.appendChild(allBtn);
+    row.appendChild(allBtn);
+
     TIME_SLOTS.forEach(h => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'wf-time-btn';
+      btn.className = 'wf-pick-btn wf-time-btn';
       btn.setAttribute('aria-pressed', String(activeHour === h));
       btn.textContent = `${h}h`;
       btn.title = hourLabel(h);
       btn.onclick = function () { applyHour(h); };
-      bar.appendChild(btn);
+      row.appendChild(btn);
     });
+
     const mapEl = document.getElementById('map');
-    if (mapEl && typeof mapEl.insertAdjacentElement === 'function') mapEl.insertAdjacentElement('beforebegin', bar);
+    if (mapEl && typeof mapEl.insertAdjacentElement === 'function') mapEl.insertAdjacentElement('beforebegin', row);
   }
 
   function applyView(updateCards) {
@@ -699,8 +697,7 @@
     activeHour = null;
     _dayCtx = { SPOTS, results, win, sstData, bestId, markers, particles, ranking, anyFc };
 
-    buildDayPicker(anyFc);
-    buildTimePicker();
+    buildPickerRow(anyFc);
     applyView(true);
     if (bestId && markers[bestId]) markers[bestId].openPopup();
 

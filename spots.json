@@ -497,6 +497,160 @@
         "Schweden",
         "Finnland"
       ]
+    },
+    "lefkada": {
+      "title": "Lefkada",
+      "emoji": "🏝",
+      "page": "/lefkada.html",
+      "center": [
+        38.72,
+        20.63
+      ],
+      "zoom": 10,
+      "model": null,
+      "sst": true,
+      "vergleichRegions": [
+        "Lefkada"
+      ],
+      "spots": [
+        {
+          "id": "l_vassiliki",
+          "name": "Vassiliki",
+          "emoji": "⛵",
+          "desc": "Thermik-Wind · Südbucht",
+          "lat": 38.629,
+          "lon": 20.604,
+          "shoreNote": "Weltberühmter Thermik-Spot, SW nachmittags",
+          "color": "#f07820",
+          "offshoreDir": 0,
+          "vergleichRegion": "Lefkada"
+        },
+        {
+          "id": "l_agios_ioannis",
+          "name": "Agios Ioannis",
+          "emoji": "🌊",
+          "desc": "NW-Küste · Ionisches Meer",
+          "lat": 38.726,
+          "lon": 20.553,
+          "shoreNote": "Offene Küste, NW/W-Wind",
+          "color": "#3a9ad9",
+          "offshoreDir": 90,
+          "vergleichRegion": "Lefkada"
+        },
+        {
+          "id": "l_kathisma",
+          "name": "Kathisma Beach",
+          "emoji": "🏖",
+          "desc": "Westküste · Sandstrand",
+          "lat": 38.676,
+          "lon": 20.553,
+          "shoreNote": "Langer Strand, NW-Thermik",
+          "color": "#3ddc84",
+          "offshoreDir": 90,
+          "vergleichRegion": "Lefkada"
+        },
+        {
+          "id": "l_nydri",
+          "name": "Nydri",
+          "emoji": "⚓",
+          "desc": "Ostküste · geschützte Bucht",
+          "lat": 38.72,
+          "lon": 20.699,
+          "shoreNote": "Ruhige Bucht, Anfänger geeignet",
+          "color": "#5a7a96",
+          "offshoreDir": 270,
+          "vergleichRegion": "Lefkada"
+        },
+        {
+          "id": "l_kanal",
+          "name": "Lefkada Kanal",
+          "emoji": "🗺",
+          "desc": "Nordkanal · Lagune",
+          "lat": 38.834,
+          "lon": 20.706,
+          "shoreNote": "Kanalwind, NW-Einfluss",
+          "color": "#e84040",
+          "offshoreDir": 180,
+          "vergleichRegion": "Lefkada"
+        }
+      ]
+    },
+    "peloponnes": {
+      "title": "Peloponnes",
+      "emoji": "⛵",
+      "page": "/peloponnes.html",
+      "center": [
+        37.1,
+        22.0
+      ],
+      "zoom": 7,
+      "model": null,
+      "sst": true,
+      "vergleichRegions": [
+        "Peloponnes"
+      ],
+      "spots": [
+        {
+          "id": "p_methoni",
+          "name": "Methoni",
+          "emoji": "🏰",
+          "desc": "SW-Ecke · offenes Mittelmeer",
+          "lat": 36.819,
+          "lon": 21.706,
+          "shoreNote": "SW-Exposition, starke Meltemi-Winde",
+          "color": "#f07820",
+          "offshoreDir": 45,
+          "vergleichRegion": "Peloponnes"
+        },
+        {
+          "id": "p_voidokilia",
+          "name": "Voidokilia",
+          "emoji": "🌙",
+          "desc": "Sichelbucht · Lagune von Pylos",
+          "lat": 37.007,
+          "lon": 21.661,
+          "shoreNote": "Naturschutz-Bucht, Thermik nachmittags",
+          "color": "#3ddc84",
+          "offshoreDir": 135,
+          "vergleichRegion": "Peloponnes"
+        },
+        {
+          "id": "p_kalamata",
+          "name": "Kalamata",
+          "emoji": "🌊",
+          "desc": "Messenischer Golf · Mani-Nordende",
+          "lat": 37.038,
+          "lon": 22.115,
+          "shoreNote": "Nachm. NW-Thermik, geschützt",
+          "color": "#3a9ad9",
+          "offshoreDir": 0,
+          "vergleichRegion": "Peloponnes"
+        },
+        {
+          "id": "p_nafplio",
+          "name": "Nafplio",
+          "emoji": "⚓",
+          "desc": "Argolischer Golf · Nordspitze",
+          "lat": 37.568,
+          "lon": 22.803,
+          "shoreNote": "Zuverlässige Thermik, halbgeschützt",
+          "color": "#e84040",
+          "offshoreDir": 0,
+          "vergleichRegion": "Peloponnes"
+        },
+        {
+          "id": "p_githio",
+          "name": "Githio",
+          "emoji": "🧭",
+          "desc": "Lakonischer Golf · Mani-Eingang",
+          "lat": 36.762,
+          "lon": 22.567,
+          "shoreNote": "SE-Wind, offene Küste",
+          "color": "#f5c842",
+          "offshoreDir": 270,
+          "vergleichRegion": "Peloponnes"
+        }
+      ]
     }
   },
   "unpagedSpots": [

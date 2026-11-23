@@ -79,26 +79,18 @@ a:hover{text-decoration:underline}
 .camper-badge{background:rgba(45,90,61,.85);border:1px solid #4a9d6a;color:#6de8c0;
   font-size:10px;font-weight:700;border-radius:8px;padding:3px 8px;white-space:nowrap;cursor:default}
 
-/* ── Global day picker (above map) ── */
-.wf-day-picker{display:flex;margin-bottom:8px;border:1px solid #1e2d3d;border-radius:8px;overflow:hidden}
-.wf-day-btn{flex:1;padding:9px 4px;text-align:center;font-size:12px;font-family:inherit;
-  color:#5a7a96;background:transparent;border:none;border-right:1px solid #1e2d3d;
-  cursor:pointer;transition:background .15s,color .15s}
-.wf-day-btn:last-child{border-right:none}
-.wf-day-btn[aria-pressed="true"]{background:#151d28;color:#d8e4f0}
-.wf-day-btn:hover{background:#111820;color:#a0bed8}
-.wf-day-btn:focus-visible{outline:2px solid #f07820;outline-offset:-2px}
-
-/* ── Time picker (above map, 2h slots) ── */
-.wf-time-picker{display:flex;margin-bottom:8px;border:1px solid #1e2d3d;border-radius:8px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.wf-time-picker::-webkit-scrollbar{display:none}
-.wf-time-btn{flex:0 0 auto;padding:9px 8px;min-width:36px;text-align:center;font-size:11px;font-family:inherit;
+/* ── Kombinierter Tag + Tageszeit Picker (eine Zeile, scrollbar) ── */
+.wf-picker-row{display:flex;align-items:stretch;margin-bottom:8px;border:1px solid #1e2d3d;border-radius:8px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.wf-picker-row::-webkit-scrollbar{display:none}
+.wf-pick-btn{flex:0 0 auto;padding:9px 8px;min-width:40px;text-align:center;font-size:11px;font-family:inherit;
   color:#5a7a96;background:transparent;border:none;border-right:1px solid #1e2d3d;
   cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
-.wf-time-btn:last-child{border-right:none}
-.wf-time-btn[aria-pressed="true"]{background:#151d28;color:#d8e4f0}
-.wf-time-btn:hover{background:#111820;color:#a0bed8}
-.wf-time-btn:focus-visible{outline:2px solid #f07820;outline-offset:-2px}
+.wf-pick-btn:last-child{border-right:none}
+.wf-pick-btn[aria-pressed="true"]{background:#151d28;color:#d8e4f0}
+.wf-pick-btn:hover{background:#111820;color:#a0bed8}
+.wf-pick-btn:focus-visible{outline:2px solid #f07820;outline-offset:-2px}
+.wf-day-btn{min-width:64px;font-size:12px}
+.wf-picker-sep{width:1px;background:#2a3d50;flex-shrink:0;align-self:stretch}
 
 /* ── Day tabs inside card ── */
 .day-tabs{display:flex;border-bottom:1px solid #1e2d3d}
