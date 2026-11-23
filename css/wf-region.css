@@ -89,6 +89,17 @@ a:hover{text-decoration:underline}
 .wf-day-btn:hover{background:#111820;color:#a0bed8}
 .wf-day-btn:focus-visible{outline:2px solid #f07820;outline-offset:-2px}
 
+/* ── Time picker (above map, 2h slots) ── */
+.wf-time-picker{display:flex;margin-bottom:8px;border:1px solid #1e2d3d;border-radius:8px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.wf-time-picker::-webkit-scrollbar{display:none}
+.wf-time-btn{flex:0 0 auto;padding:9px 8px;min-width:36px;text-align:center;font-size:11px;font-family:inherit;
+  color:#5a7a96;background:transparent;border:none;border-right:1px solid #1e2d3d;
+  cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+.wf-time-btn:last-child{border-right:none}
+.wf-time-btn[aria-pressed="true"]{background:#151d28;color:#d8e4f0}
+.wf-time-btn:hover{background:#111820;color:#a0bed8}
+.wf-time-btn:focus-visible{outline:2px solid #f07820;outline-offset:-2px}
+
 /* ── Day tabs inside card ── */
 .day-tabs{display:flex;border-bottom:1px solid #1e2d3d}
 .day-tab{flex:1;padding:8px 4px;text-align:center;font-size:10px;
