@@ -648,7 +648,7 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.48.4
+// WindFoil Weather Intelligence v3.49.0
 // Changelog v3.48.4: PWA Safe-Area-Inset Header-Fix fuer iPhone-Notch
 // Changelog v3.48.1: Adresse im Impressum eingetragen
 // Changelog v3.47.0: Impressum + Datenschutz, toten profile-Router entfernt (src/profile.routes.mjs + recalibratePlaningThreshold)
@@ -4122,7 +4122,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.48.4</span>
+        <span>WindFoil Weather Intelligence v3.49.0</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
