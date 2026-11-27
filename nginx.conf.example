@@ -22,7 +22,7 @@ server {
 
     # --- Static frontend ---
     # Put app-react.html (renamed to index.html) + assets here:
-    root /var/www/windfoil;
+    root /var/www/windfoil-public;
     index index.html;
 
     location / {

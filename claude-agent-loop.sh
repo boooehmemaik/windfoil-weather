@@ -15,6 +15,7 @@ PROMPT="Du bist ein autonomer Wartungs-Agent für das WindFoil-Projekt (/var/www
 
 Aufgaben dieser Iteration:
 1. Prüfe ob windfoil-proxy und nginx aktiv sind (systemctl is-active).
+   WICHTIG: nginx-Root ist absichtlich /var/www/windfoil-public – nginx-Konfiguration NICHT ändern. Nach Frontend-Änderungen immer: bash scripts/publish-public.sh
 2. Scanne /var/log/windfoil/ auf ERROR-Zeilen der letzten 60 Minuten.
 3. Prüfe ob die SQLite-DB /var/www/windfoil/data/windfoil.db erreichbar ist.
 4. Wenn du Probleme findest, behebe sie und erstelle einen kurzen Bericht.

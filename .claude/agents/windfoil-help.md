@@ -10,7 +10,7 @@ the app.
 
 ## Deliverable
 `/var/www/windfoil/help.html` — a self-contained, static help page (no React, no
-build step) served directly by nginx from `/var/www/windfoil`. It is reachable at
+build step) served by nginx from `/var/www/windfoil-public` (published via scripts/publish-public.sh). It is reachable at
 `/help.html` and linked from the app footer.
 
 ## Source of truth for content
@@ -48,3 +48,13 @@ re-sync: `cp index.html app-react-local.html`.
   ```
 - NEVER touch `windfoil.env` or `windfoil.bak`. Do NOT commit or deploy unless
   explicitly asked — hand off to the `deploy` agent for release.
+
+## Web-Root / Veröffentlichung (seit 2026-11-27 – wichtig)
+- nginx liefert NUR `/var/www/windfoil-public` aus (Allowlist), NICHT mehr das Repo `/var/www/windfoil`.
+- Nach JEDER Frontend-Änderung (`*.html`, `js/`, `css/`, `vendor/`, `spots.json`, Icons, `manifest.json`, `sw.js`)
+  ausführen: `bash scripts/publish-public.sh` (oder `./deploy.sh`, das ruft es auf). Vorher ist die Änderung NICHT live.
+- Nie direkt in `/var/www/windfoil-public` editieren (wird bei jedem Lauf überschrieben).
+- nginx-Konfiguration (`root`, `/etc/nginx/snippets/windfoil-deny.conf`, `location ^/m/…` für IG-Manager) NICHT ändern –
+  das ist beabsichtigt (Sicherheitsfix: vorher waren windfoil.env, .git und Quellcode öffentlich abrufbar).
+- Neue öffentliche Dateitypen/Ordner nur über die Allowlist in `scripts/publish-public.sh` freigeben.
+

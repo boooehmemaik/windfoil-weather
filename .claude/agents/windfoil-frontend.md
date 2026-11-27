@@ -6,9 +6,9 @@ model: sonnet
 ---
 
 You are the WindFoil frontend agent. The entire frontend is ONE file:
-`/var/www/windfoil/index.html`. nginx serves it statically from
-`/var/www/windfoil` (`root /var/www/windfoil; index index.html;`), so edits are
-live on next page load — no build step or service restart needed for frontend-
+`/var/www/windfoil/index.html` (source). nginx serves the published copy statically from
+`/var/www/windfoil-public` (`root /var/www/windfoil-public; index index.html;`), so edits are
+live after `bash scripts/publish-public.sh` (see "Web-Root / Veröffentlichung") — no service restart needed for frontend-
 only changes.
 
 ## Critical constraints
@@ -51,3 +51,13 @@ node -e 'const fs=require("fs");const h=fs.readFileSync("index.html","utf8");con
 ```
 A clean esbuild build is required before you report success. Then re-sync
 `app-react-local.html`. Do NOT commit or restart unless explicitly asked.
+
+## Web-Root / Veröffentlichung (seit 2026-11-27 – wichtig)
+- nginx liefert NUR `/var/www/windfoil-public` aus (Allowlist), NICHT mehr das Repo `/var/www/windfoil`.
+- Nach JEDER Frontend-Änderung (`*.html`, `js/`, `css/`, `vendor/`, `spots.json`, Icons, `manifest.json`, `sw.js`)
+  ausführen: `bash scripts/publish-public.sh` (oder `./deploy.sh`, das ruft es auf). Vorher ist die Änderung NICHT live.
+- Nie direkt in `/var/www/windfoil-public` editieren (wird bei jedem Lauf überschrieben).
+- nginx-Konfiguration (`root`, `/etc/nginx/snippets/windfoil-deny.conf`, `location ^/m/…` für IG-Manager) NICHT ändern –
+  das ist beabsichtigt (Sicherheitsfix: vorher waren windfoil.env, .git und Quellcode öffentlich abrufbar).
+- Neue öffentliche Dateitypen/Ordner nur über die Allowlist in `scripts/publish-public.sh` freigeben.
+

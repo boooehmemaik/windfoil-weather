@@ -87,13 +87,13 @@ if [ -f src/app.jsx ]; then
   npx esbuild src/app.jsx --bundle=false --loader:.jsx=jsx --outfile=js/app.js
 fi
 
-# 4b2) Sync ?v= cache-busting query strings in index.html to current app version.
-#      Ohne diesen Schritt liefert nginx das alte app.js aus dem Browser-Cache, wenn
-#      die Datei mit max-age=immutable ausgeliefert wurde.
-if APP_VER=$(grep -oP 'v\K[0-9]+\.[0-9]+\.[0-9]+' js/app.js | head -1) && [ -n "$APP_VER" ]; then
-  sed -i "s|?v=[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*|?v=${APP_VER}|g" index.html sardinia.html sizilien.html spanien.html skandinavien.html
-  log "Cache-busting: index.html + region pages → ?v=${APP_VER}"
-fi
+# 4b2) Cache-Busting (?v=) passiert jetzt in scripts/publish-public.sh – nur in der
+#      veröffentlichten Kopie, damit das Repo sauber bleibt (git pull --ff-only).
+
+# 4b3) Öffentliche Dateien nach /var/www/windfoil-public veröffentlichen (nginx-Web-Root).
+#      Nur Allowlist (HTML, js/, css/, vendor/, Icons, manifest, sw.js, spots.json).
+log "Publishing public frontend files"
+bash scripts/publish-public.sh
 
 # 4c) Ensure daily backup cron exists (once-per-server, idempotent).
 CRON_JOB="0 3 * * * cd $(pwd) && bash scripts/backup-db.sh daily >> /var/log/windfoil-backup.log 2>&1"

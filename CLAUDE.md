@@ -31,3 +31,13 @@ Die 283 Agenten aus `agency-agents/` liegen in `~/.claude/agents/` und sind bei 
 - Barrierefreiheit → `Accessibility Auditor`
 - Texte/Docs → `Technical Writer`
 - Frontend-Edits an `index.html`/`src/app.jsx` laufen weiterhin über `windfoil-frontend`, Deploys über `deploy`
+
+## Web-Root / Veröffentlichung (seit 2026-11-27 – wichtig)
+- nginx liefert NUR `/var/www/windfoil-public` aus (Allowlist), NICHT mehr das Repo `/var/www/windfoil`.
+- Nach JEDER Frontend-Änderung (`*.html`, `js/`, `css/`, `vendor/`, `spots.json`, Icons, `manifest.json`, `sw.js`)
+  ausführen: `bash scripts/publish-public.sh` (oder `./deploy.sh`, das ruft es auf). Vorher ist die Änderung NICHT live.
+- Nie direkt in `/var/www/windfoil-public` editieren (wird bei jedem Lauf überschrieben).
+- nginx-Konfiguration (`root`, `/etc/nginx/snippets/windfoil-deny.conf`, `location ^/m/…` für IG-Manager) NICHT ändern –
+  das ist beabsichtigt (Sicherheitsfix: vorher waren windfoil.env, .git und Quellcode öffentlich abrufbar).
+- Neue öffentliche Dateitypen/Ordner nur über die Allowlist in `scripts/publish-public.sh` freigeben.
+
