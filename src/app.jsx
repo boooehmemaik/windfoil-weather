@@ -15,7 +15,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo…",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence · v3.49.4",
+    version_label: "Weather Intelligence · v3.50.0",
     sport_foil: "Wingfoiling",
     sport_kite: "Kitesurfing",
     // Loc bar
@@ -330,7 +330,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo…",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence · v3.49.4",
+    version_label: "Weather Intelligence · v3.50.0",
     sport_foil: "Wingfoiling",
     sport_kite: "Kitesurfing",
     // Loc bar
@@ -648,7 +648,8 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// WindFoil Weather Intelligence v3.49.4
+// Changelog v3.50.0: feat(admin): Admin-Rolle pro Nutzer — Admins öffnen den Admin-Bereich über ihr Profil ohne Passwort (ADMIN_EMAILS = Owner), Admin-Schalter in der Benutzerverwaltung
+// WindFoil Weather Intelligence v3.50.0
 // Changelog v3.48.4: PWA Safe-Area-Inset Header-Fix fuer iPhone-Notch
 // Changelog v3.48.1: Adresse im Impressum eingetragen
 // Changelog v3.47.0: Impressum + Datenschutz, toten profile-Router entfernt (src/profile.routes.mjs + recalibratePlaningThreshold)
@@ -2569,13 +2570,15 @@ function App() {
   const [users,setUsers]             = useState([]);
   const [usersMsg,setUsersMsg]       = useState("");
   const [pwInputs,setPwInputs]       = useState({}); // userId -> new password draft
+  const [adminViaSession,setAdminViaSession] = useState(false);
+  const [adminChecking,setAdminChecking]     = useState(false);
 
   useEffect(()=>{
     const t=setInterval(()=>setClock(new Date().toLocaleTimeString("de-DE")),1000);
     return()=>clearInterval(t);
   },[]);
   useEffect(()=>{
-    const load=()=>fetch("/api/stats/active-users").then(r=>r.json()).then(d=>setActiveUsers(d.activeUsers)).catch(()=>{});
+    const load=()=>fetch("/api/stats/active-users",{headers:{"X-WF-Admin":"1"}}).then(r=>r.json()).then(d=>setActiveUsers(d.activeUsers)).catch(()=>{});
     load();
     const t=setInterval(load,60000);
     return()=>clearInterval(t);
@@ -3106,10 +3109,28 @@ function App() {
     } catch(e) { setAdminErr("Server nicht erreichbar (läuft der Proxy?)."); }
     setAdminBusy(false);
   }
+  function adminHeaders() {
+    return adminToken ? { "X-WF-Admin": "1", "X-Admin-Token": adminToken } : { "X-WF-Admin": "1" };
+  }
+  // Signed-in admins skip the password; everyone else sees the password form.
+  async function openAdmin() {
+    setAdminOpen(true); setAdminErr(""); setAdminOut(""); setAdminTab("actions"); setUsersMsg("");
+    if (adminAuthed) return;
+    setAdminChecking(true);
+    try {
+      const d = await (await fetch("/api/admin/me", { credentials:"include" })).json();
+      if (d.ok && d.admin) { setAdminViaSession(true); setAdminAuthed(true); }
+    } catch(e) { /* fall back to password form */ }
+    setAdminChecking(false);
+  }
+  function closeAdmin() {
+    setAdminOpen(false); setAdminAuthed(false); setAdminViaSession(false); setAdminToken(""); setAdminPw("");
+    setAdminOut(""); setAdminErr(""); setAdminTab("actions"); setUsers([]); setUsersMsg(""); setPwInputs({});
+  }
   async function adminRun(path, label) {
     setAdminBusy(true); setAdminOut(`▶ ${label}…`); setAdminErr("");
     try {
-      const r = await fetch(`/api/admin/${path}`, { headers: { "X-Admin-Token": adminToken } });
+      const r = await fetch(`/api/admin/${path}`, { headers: adminHeaders() });
       const d = await r.json();
       setAdminOut((d.output || JSON.stringify(d)).trim());
       if (!d.ok) setAdminErr("Aktion meldete einen Fehler (siehe Ausgabe).");
@@ -3118,7 +3139,7 @@ function App() {
   }
   // ── Admin: user management ──────────────────────────────────────────────────
   async function adminApi(path, opts={}) {
-    const headers = { "X-Admin-Token": adminToken, ...(opts.headers||{}) };
+    const headers = { ...adminHeaders(), ...(opts.headers||{}) };
     if (opts.body) headers["Content-Type"] = "application/json";
     const r = await fetch(`/api/admin/${path}`, { ...opts, headers });
     return r.json();
@@ -3137,6 +3158,15 @@ function App() {
       const d = await adminApi("users/set-disabled",
         { method:"POST", body: JSON.stringify({ id:u.id, disabled: !u.disabled }) });
       if (d.ok) await loadUsers(); else { setUsersMsg(d.error || "Fehler."); setAdminBusy(false); }
+    } catch(e) { setUsersMsg("Server nicht erreichbar."); setAdminBusy(false); }
+  }
+  async function toggleAdminRole(u) {
+    setUsersMsg(""); setAdminBusy(true);
+    try {
+      const d = await adminApi("users/set-admin",
+        { method:"POST", body: JSON.stringify({ id:u.id, admin: !u.isAdmin }) });
+      if (d.ok) { setUsersMsg(`✓ ${u.email} ist ${d.admin?"jetzt Admin":"kein Admin mehr"}.`); await loadUsers(); }
+      else { setUsersMsg(d.error || "Fehler."); setAdminBusy(false); }
     } catch(e) { setUsersMsg("Server nicht erreichbar."); setAdminBusy(false); }
   }
   async function resetUserPw(u) {
@@ -4124,7 +4154,7 @@ function App() {
       )}
 
       <div style={{background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 20px calc(14px + env(safe-area-inset-bottom))",textAlign:"center",fontFamily:"monospace",fontSize:9,color:C.muted,display:"flex",justifyContent:"center",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-        <span>WindFoil Weather Intelligence v3.49.4</span>
+        <span>WindFoil Weather Intelligence v3.50.0</span>
         {userEmail && <span style={{color:C.muted}}>{t('auth_logged_as')}: {userEmail}</span>}
         <span>Open-Meteo · ERA5 ECMWF · Rider-Input</span>
         <span>{t('footer_loc',{name:loc.name})}</span>
@@ -4140,23 +4170,25 @@ function App() {
         <a href="/reise.html" style={{color:C.sky,textDecoration:"none"}}>Reiseplaner</a>
         <a href="/help.html" style={{color:C.sky,textDecoration:"none"}}>{t('footer_help')}</a>
         <a href="/impressum.html" style={{color:C.sky,textDecoration:"none"}}>Impressum</a>
-        <button onClick={()=>{setAdminOpen(true);setAdminErr("");setAdminOut("");setAdminTab("actions");setUsersMsg("");}}
+        <button onClick={openAdmin}
           title="Admin"
           style={{background:"none",border:"none",color:C.dim,cursor:"pointer",fontSize:12,padding:0}}>⚙</button>
       </div>
 
       {/* ADMIN MODAL */}
       {adminOpen && (
-        <div role="dialog" aria-modal="true" aria-labelledby="admin-modal-title" onKeyDown={e=>{ if(e.key==='Escape') {setAdminOpen(false);setAdminAuthed(false);setAdminToken("");setAdminPw("");setAdminOut("");setAdminErr("");setAdminTab("actions");setUsers([]);setUsersMsg("");setPwInputs({});} }} style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box"}}>
+        <div role="dialog" aria-modal="true" aria-labelledby="admin-modal-title" onKeyDown={e=>{ if(e.key==='Escape') closeAdmin(); }} style={{position:"fixed",top:0,left:0,right:0,height:"100dvh",background:"rgba(0,0,0,.85)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16,paddingBottom:"max(16px, env(safe-area-inset-bottom))",boxSizing:"border-box"}}>
           <div style={{background:C.panel,border:`1px solid ${C.border2}`,borderRadius:20,width:"100%",maxWidth:560,maxHeight:"100%",overflow:"auto"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",borderBottom:`1px solid ${C.border}`}}>
               <strong id="admin-modal-title" style={{fontFamily:"monospace",fontSize:14}}>⚙ Admin</strong>
-              <button onClick={()=>{setAdminOpen(false);setAdminAuthed(false);setAdminToken("");setAdminPw("");setAdminOut("");setAdminErr("");setAdminTab("actions");setUsers([]);setUsersMsg("");setPwInputs({});}}
+              <button onClick={closeAdmin} aria-label="Admin schließen"
                 style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer"}}>✕</button>
             </div>
             <div style={{padding:16}}>
 
-              {!adminAuthed ? (
+              {adminChecking ? (
+                <div style={{fontSize:12,color:C.muted}}>Prüfe Berechtigung…</div>
+              ) : !adminAuthed ? (
                 <div style={{display:"flex",flexDirection:"column",gap:10}}>
                   <label style={{fontFamily:"monospace",fontSize:10,color:C.muted}}>Admin-Passwort</label>
                   <input type="password" value={adminPw} autoFocus
@@ -4172,6 +4204,7 @@ function App() {
                 </div>
               ) : (
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {adminViaSession && <div style={{fontSize:10,color:C.go,fontFamily:"monospace"}}>✓ Freigeschaltet über dein Profil</div>}
                   <div style={{display:"flex",gap:6}}>
                     {[["actions","Aktionen"],["users","Benutzer"]].map(([t,l])=>(
                       <button key={t} onClick={()=>{ setAdminTab(t); if(t==="users") loadUsers(); }}
@@ -4209,20 +4242,30 @@ function App() {
                               <div style={{fontSize:13,color:C.text,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
                                 {u.name||"—"}
                                 <span style={{fontSize:10,color:u.disabled?C.stop:C.go}}>{u.disabled?"● gesperrt":"● aktiv"}</span>
+                                {u.isAdmin && <span style={{fontSize:10,color:C.sky,border:`1px solid ${C.sky}`,borderRadius:4,padding:"0 5px"}}>{u.owner?"Owner":"Admin"}</span>}
+                                {u.isSelf && <span style={{fontSize:10,color:C.dim}}>(du)</span>}
                               </div>
                               <div style={{fontSize:11,color:C.muted,fontFamily:"monospace",overflow:"hidden",textOverflow:"ellipsis"}}>{u.email}</div>
                             </div>
-                            <button disabled={adminBusy} onClick={()=>toggleUser(u)}
+                            <div style={{display:"flex",gap:6}}>
+                            <button disabled={adminBusy||u.owner||(u.isSelf&&u.isAdmin)} onClick={()=>toggleAdminRole(u)}
+                              aria-pressed={!!u.isAdmin}
+                              title={u.owner?"Owner-Konto (ADMIN_EMAILS) – immer Admin":u.isSelf?"Eigene Admin-Rechte können nicht entzogen werden":""}
+                              style={{...S.btnG,borderColor:u.isAdmin?C.sky:C.border2,color:u.isAdmin?C.sky:C.muted,opacity:(adminBusy||u.owner||(u.isSelf&&u.isAdmin))?0.5:1}}>
+                              {u.isAdmin?"✓ Admin":"Admin machen"}
+                            </button>
+                            <button disabled={adminBusy||((u.owner||u.isSelf)&&!u.disabled)} onClick={()=>toggleUser(u)}
                               style={{...S.btnG,borderColor:u.disabled?C.go:C.stop,color:u.disabled?C.go:C.stop,opacity:adminBusy?0.6:1}}>
                               {u.disabled?"Freischalten":"Sperren"}
                             </button>
+                            </div>
                           </div>
                           <div style={{display:"flex",gap:6}}>
                             <input type="text" autoComplete="off" placeholder="Neues Passwort (min. 10)"
                               value={pwInputs[u.id]||""} onChange={e=>setPwInputs(p=>({...p,[u.id]:e.target.value}))}
                               style={{...S.inp,flex:1,fontSize:12}} />
                             <button disabled={adminBusy} style={S.btnG} onClick={()=>resetUserPw(u)}>PW setzen</button>
-                            <button disabled={adminBusy} onClick={()=>deleteUser(u)}
+                            <button disabled={adminBusy||u.owner||u.isSelf} onClick={()=>deleteUser(u)}
                               style={{...S.btnG,borderColor:C.stop,color:C.stop,opacity:adminBusy?0.6:1}}>Löschen</button>
                           </div>
                         </div>
