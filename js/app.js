@@ -11,7 +11,7 @@ const TRANSLATIONS = {
     loading_connect: "Verbinde mit Open-Meteo\u2026",
     loading_demo_hint: "Bei Verbindungsproblemen werden Demo-Daten geladen",
     // Header
-    version_label: "Weather Intelligence \xB7 v3.49.4",
+    version_label: "Weather Intelligence \xB7 v3.50.0",
     sport_foil: "Wingfoiling",
     sport_kite: "Kitesurfing",
     // Loc bar
@@ -326,7 +326,7 @@ const TRANSLATIONS = {
     loading_connect: "Connecting to Open-Meteo\u2026",
     loading_demo_hint: "Demo data will be used if connection fails",
     // Header
-    version_label: "Weather Intelligence \xB7 v3.49.4",
+    version_label: "Weather Intelligence \xB7 v3.50.0",
     sport_foil: "Wingfoiling",
     sport_kite: "Kitesurfing",
     // Loc bar
@@ -2351,15 +2351,25 @@ function App() {
   const [users, setUsers] = useState([]);
   const [usersMsg, setUsersMsg] = useState("");
   const [pwInputs, setPwInputs] = useState({});
+  const [adminViaSession, setAdminViaSession] = useState(false);
+  const [adminChecking, setAdminChecking] = useState(false);
   useEffect(() => {
     const t2 = setInterval(() => setClock((/* @__PURE__ */ new Date()).toLocaleTimeString("de-DE")), 1e3);
     return () => clearInterval(t2);
   }, []);
   useEffect(() => {
-    const load = () => fetch("/api/stats/active-users").then((r) => r.json()).then((d) => setActiveUsers(d.activeUsers)).catch(() => {
+    const load = () => fetch("/api/stats/active-users", { headers: { "X-WF-Admin": "1" } }).then((r) => {
+      if (!r.ok) {
+        clearInterval(t2);
+        return null;
+      }
+      return r.json();
+    }).then((d) => {
+      if (d) setActiveUsers(d.activeUsers);
+    }).catch(() => {
     });
-    load();
     const t2 = setInterval(load, 6e4);
+    load();
     return () => clearInterval(t2);
   }, []);
   async function fetchNearbyStations(lat, lon) {
@@ -2810,12 +2820,46 @@ function App() {
     }
     setAdminBusy(false);
   }
+  function adminHeaders() {
+    return adminToken ? { "X-WF-Admin": "1", "X-Admin-Token": adminToken } : { "X-WF-Admin": "1" };
+  }
+  async function openAdmin() {
+    setAdminOpen(true);
+    setAdminErr("");
+    setAdminOut("");
+    setAdminTab("actions");
+    setUsersMsg("");
+    if (adminAuthed) return;
+    setAdminChecking(true);
+    try {
+      const d = await (await fetch("/api/admin/me", { credentials: "include" })).json();
+      if (d.ok && d.admin) {
+        setAdminViaSession(true);
+        setAdminAuthed(true);
+      }
+    } catch (e) {
+    }
+    setAdminChecking(false);
+  }
+  function closeAdmin() {
+    setAdminOpen(false);
+    setAdminAuthed(false);
+    setAdminViaSession(false);
+    setAdminToken("");
+    setAdminPw("");
+    setAdminOut("");
+    setAdminErr("");
+    setAdminTab("actions");
+    setUsers([]);
+    setUsersMsg("");
+    setPwInputs({});
+  }
   async function adminRun(path, label) {
     setAdminBusy(true);
     setAdminOut(`\u25B6 ${label}\u2026`);
     setAdminErr("");
     try {
-      const r = await fetch(`/api/admin/${path}`, { headers: { "X-Admin-Token": adminToken } });
+      const r = await fetch(`/api/admin/${path}`, { headers: adminHeaders() });
       const d = await r.json();
       setAdminOut((d.output || JSON.stringify(d)).trim());
       if (!d.ok) setAdminErr("Aktion meldete einen Fehler (siehe Ausgabe).");
@@ -2826,7 +2870,7 @@ function App() {
     setAdminBusy(false);
   }
   async function adminApi(path, opts = {}) {
-    const headers = { "X-Admin-Token": adminToken, ...opts.headers || {} };
+    const headers = { ...adminHeaders(), ...opts.headers || {} };
     if (opts.body) headers["Content-Type"] = "application/json";
     const r = await fetch(`/api/admin/${path}`, { ...opts, headers });
     return r.json();
@@ -2853,6 +2897,26 @@ function App() {
       );
       if (d.ok) await loadUsers();
       else {
+        setUsersMsg(d.error || "Fehler.");
+        setAdminBusy(false);
+      }
+    } catch (e) {
+      setUsersMsg("Server nicht erreichbar.");
+      setAdminBusy(false);
+    }
+  }
+  async function toggleAdminRole(u) {
+    setUsersMsg("");
+    setAdminBusy(true);
+    try {
+      const d = await adminApi(
+        "users/set-admin",
+        { method: "POST", body: JSON.stringify({ id: u.id, admin: !u.isAdmin }) }
+      );
+      if (d.ok) {
+        setUsersMsg(`\u2713 ${u.email} ist ${d.admin ? "jetzt Admin" : "kein Admin mehr"}.`);
+        await loadUsers();
+      } else {
         setUsersMsg(d.error || "Fehler.");
         setAdminBusy(false);
       }
@@ -3402,52 +3466,25 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
     setCustom({ link: "", name: "" });
     setLinkError("");
     setShowLoc(false);
-  } }, t("loc_add_btn")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.dim, lineHeight: 1.5 } }, t("loc_add_hint")))))), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderTop: `1px solid ${C.border}`, padding: "8px 20px calc(14px + env(safe-area-inset-bottom))", textAlign: "center", fontFamily: "monospace", fontSize: 9, color: C.muted, display: "flex", justifyContent: "center", alignItems: "center", gap: 24, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", null, "WindFoil Weather Intelligence v3.49.4"), userEmail && /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, t("auth_logged_as"), ": ", userEmail), /* @__PURE__ */ React.createElement("span", null, "Open-Meteo \xB7 ERA5 ECMWF \xB7 Rider-Input"), /* @__PURE__ */ React.createElement("span", null, t("footer_loc", { name: loc.name })), /* @__PURE__ */ React.createElement("a", { href: "/sardinia.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sardinien"), /* @__PURE__ */ React.createElement("a", { href: "/sizilien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sizilien"), /* @__PURE__ */ React.createElement("a", { href: "/spanien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F1EA}\u{1F1F8} Spanien"), /* @__PURE__ */ React.createElement("a", { href: "/lefkada.html", style: { color: C.sky, textDecoration: "none" } }, "Lefkada"), /* @__PURE__ */ React.createElement("a", { href: "/peloponnes.html", style: { color: C.sky, textDecoration: "none" } }, "Peloponnes"), /* @__PURE__ */ React.createElement("a", { href: "/vergleich.html", style: { color: C.sky, textDecoration: "none" } }, "Vergleich"), /* @__PURE__ */ React.createElement("a", { href: "/watcher.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F52D} Watcher"), /* @__PURE__ */ React.createElement("a", { href: "/alarm.html", style: { color: C.sky, textDecoration: "none" } }, "Windalarm"), /* @__PURE__ */ React.createElement("a", { href: "/logbuch.html", style: { color: C.sky, textDecoration: "none" } }, "Logbuch"), /* @__PURE__ */ React.createElement("a", { href: "/reise.html", style: { color: C.sky, textDecoration: "none" } }, "Reiseplaner"), /* @__PURE__ */ React.createElement("a", { href: "/help.html", style: { color: C.sky, textDecoration: "none" } }, t("footer_help")), /* @__PURE__ */ React.createElement("a", { href: "/impressum.html", style: { color: C.sky, textDecoration: "none" } }, "Impressum"), /* @__PURE__ */ React.createElement(
+  } }, t("loc_add_btn")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.dim, lineHeight: 1.5 } }, t("loc_add_hint")))))), /* @__PURE__ */ React.createElement("div", { style: { background: C.surface, borderTop: `1px solid ${C.border}`, padding: "8px 20px calc(14px + env(safe-area-inset-bottom))", textAlign: "center", fontFamily: "monospace", fontSize: 9, color: C.muted, display: "flex", justifyContent: "center", alignItems: "center", gap: 24, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("span", null, "WindFoil Weather Intelligence v3.50.0"), userEmail && /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, t("auth_logged_as"), ": ", userEmail), /* @__PURE__ */ React.createElement("span", null, "Open-Meteo \xB7 ERA5 ECMWF \xB7 Rider-Input"), /* @__PURE__ */ React.createElement("span", null, t("footer_loc", { name: loc.name })), /* @__PURE__ */ React.createElement("a", { href: "/sardinia.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sardinien"), /* @__PURE__ */ React.createElement("a", { href: "/sizilien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F3DD} Sizilien"), /* @__PURE__ */ React.createElement("a", { href: "/spanien.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F1EA}\u{1F1F8} Spanien"), /* @__PURE__ */ React.createElement("a", { href: "/lefkada.html", style: { color: C.sky, textDecoration: "none" } }, "Lefkada"), /* @__PURE__ */ React.createElement("a", { href: "/peloponnes.html", style: { color: C.sky, textDecoration: "none" } }, "Peloponnes"), /* @__PURE__ */ React.createElement("a", { href: "/vergleich.html", style: { color: C.sky, textDecoration: "none" } }, "Vergleich"), /* @__PURE__ */ React.createElement("a", { href: "/watcher.html", style: { color: C.sky, textDecoration: "none" } }, "\u{1F52D} Watcher"), /* @__PURE__ */ React.createElement("a", { href: "/alarm.html", style: { color: C.sky, textDecoration: "none" } }, "Windalarm"), /* @__PURE__ */ React.createElement("a", { href: "/logbuch.html", style: { color: C.sky, textDecoration: "none" } }, "Logbuch"), /* @__PURE__ */ React.createElement("a", { href: "/reise.html", style: { color: C.sky, textDecoration: "none" } }, "Reiseplaner"), /* @__PURE__ */ React.createElement("a", { href: "/help.html", style: { color: C.sky, textDecoration: "none" } }, t("footer_help")), /* @__PURE__ */ React.createElement("a", { href: "/impressum.html", style: { color: C.sky, textDecoration: "none" } }, "Impressum"), /* @__PURE__ */ React.createElement(
     "button",
     {
-      onClick: () => {
-        setAdminOpen(true);
-        setAdminErr("");
-        setAdminOut("");
-        setAdminTab("actions");
-        setUsersMsg("");
-      },
+      onClick: openAdmin,
       title: "Admin",
       style: { background: "none", border: "none", color: C.dim, cursor: "pointer", fontSize: 12, padding: 0 }
     },
     "\u2699"
   )), adminOpen && /* @__PURE__ */ React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-labelledby": "admin-modal-title", onKeyDown: (e) => {
-    if (e.key === "Escape") {
-      setAdminOpen(false);
-      setAdminAuthed(false);
-      setAdminToken("");
-      setAdminPw("");
-      setAdminOut("");
-      setAdminErr("");
-      setAdminTab("actions");
-      setUsers([]);
-      setUsersMsg("");
-      setPwInputs({});
-    }
+    if (e.key === "Escape") closeAdmin();
   }, style: { position: "fixed", top: 0, left: 0, right: 0, height: "100dvh", background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, paddingBottom: "max(16px, env(safe-area-inset-bottom))", boxSizing: "border-box" } }, /* @__PURE__ */ React.createElement("div", { style: { background: C.panel, border: `1px solid ${C.border2}`, borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "100%", overflow: "auto" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: `1px solid ${C.border}` } }, /* @__PURE__ */ React.createElement("strong", { id: "admin-modal-title", style: { fontFamily: "monospace", fontSize: 14 } }, "\u2699 Admin"), /* @__PURE__ */ React.createElement(
     "button",
     {
-      onClick: () => {
-        setAdminOpen(false);
-        setAdminAuthed(false);
-        setAdminToken("");
-        setAdminPw("");
-        setAdminOut("");
-        setAdminErr("");
-        setAdminTab("actions");
-        setUsers([]);
-        setUsersMsg("");
-        setPwInputs({});
-      },
+      onClick: closeAdmin,
+      "aria-label": "Admin schlie\xDFen",
       style: { background: "none", border: "none", color: C.muted, fontSize: 16, cursor: "pointer" }
     },
     "\u2715"
-  )), /* @__PURE__ */ React.createElement("div", { style: { padding: 16 } }, !adminAuthed ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 10, color: C.muted } }, "Admin-Passwort"), /* @__PURE__ */ React.createElement(
+  )), /* @__PURE__ */ React.createElement("div", { style: { padding: 16 } }, adminChecking ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "Pr\xFCfe Berechtigung\u2026") : !adminAuthed ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("label", { style: { fontFamily: "monospace", fontSize: 10, color: C.muted } }, "Admin-Passwort"), /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "password",
@@ -3459,7 +3496,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       },
       style: { ...S.inp, width: "100%", fontSize: 14 }
     }
-  ), /* @__PURE__ */ React.createElement("button", { style: { ...S.btn, opacity: adminBusy ? 0.6 : 1 }, disabled: adminBusy, onClick: adminLogin }, adminBusy ? "Pr\xFCfe\u2026" : "Anmelden"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 9, color: C.dim, lineHeight: 1.5 } }, "Das Passwort wird serverseitig gepr\xFCft (windfoil.env). Es wird nicht im Browser gespeichert.")) : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, [["actions", "Aktionen"], ["users", "Benutzer"]].map(([t2, l]) => /* @__PURE__ */ React.createElement(
+  ), /* @__PURE__ */ React.createElement("button", { style: { ...S.btn, opacity: adminBusy ? 0.6 : 1 }, disabled: adminBusy, onClick: adminLogin }, adminBusy ? "Pr\xFCfe\u2026" : "Anmelden"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 9, color: C.dim, lineHeight: 1.5 } }, "Das Passwort wird serverseitig gepr\xFCft (windfoil.env). Es wird nicht im Browser gespeichert.")) : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, adminViaSession && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10, color: C.go, fontFamily: "monospace" } }, "\u2713 Freigeschaltet \xFCber dein Profil"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, [["actions", "Aktionen"], ["users", "Benutzer"]].map(([t2, l]) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: t2,
@@ -3494,15 +3531,25 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
       onClick: () => adminRun("status", "Status")
     },
     "Status"
-  )), adminBusy && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.caution } }, "l\xE4uft\u2026 (kann bis zu 2 Min dauern)"), adminOut && /* @__PURE__ */ React.createElement("pre", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "10px 12px", fontSize: 11, color: C.text, fontFamily: "monospace", whiteSpace: "pre-wrap", maxHeight: 340, overflow: "auto", margin: 0 } }, adminOut)), adminTab === "users" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted, fontFamily: "monospace" } }, users.length, " Benutzer"), /* @__PURE__ */ React.createElement("button", { style: S.btnG, disabled: adminBusy, onClick: loadUsers }, "\u21BB Aktualisieren")), usersMsg && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: usersMsg.startsWith("\u2713") ? C.go : C.caution } }, usersMsg), users.length === 0 && !adminBusy && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dim } }, "Keine Benutzer gefunden."), users.map((u) => /* @__PURE__ */ React.createElement("div", { key: u.id, style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.text, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 } }, u.name || "\u2014", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: u.disabled ? C.stop : C.go } }, u.disabled ? "\u25CF gesperrt" : "\u25CF aktiv")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis" } }, u.email)), /* @__PURE__ */ React.createElement(
+  )), adminBusy && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.caution } }, "l\xE4uft\u2026 (kann bis zu 2 Min dauern)"), adminOut && /* @__PURE__ */ React.createElement("pre", { style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "10px 12px", fontSize: 11, color: C.text, fontFamily: "monospace", whiteSpace: "pre-wrap", maxHeight: 340, overflow: "auto", margin: 0 } }, adminOut)), adminTab === "users" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted, fontFamily: "monospace" } }, users.length, " Benutzer"), /* @__PURE__ */ React.createElement("button", { style: S.btnG, disabled: adminBusy, onClick: loadUsers }, "\u21BB Aktualisieren")), usersMsg && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: usersMsg.startsWith("\u2713") ? C.go : C.caution } }, usersMsg), users.length === 0 && !adminBusy && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.dim } }, "Keine Benutzer gefunden."), users.map((u) => /* @__PURE__ */ React.createElement("div", { key: u.id, style: { background: C.bg, border: `1px solid ${C.border2}`, borderRadius: 6, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.text, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 } }, u.name || "\u2014", /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: u.disabled ? C.stop : C.go } }, u.disabled ? "\u25CF gesperrt" : "\u25CF aktiv"), u.isAdmin && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: C.sky, border: `1px solid ${C.sky}`, borderRadius: 4, padding: "0 5px" } }, u.owner ? "Owner" : "Admin"), u.isSelf && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: C.dim } }, "(du)")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis" } }, u.email)), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement(
     "button",
     {
-      disabled: adminBusy,
+      disabled: adminBusy || u.owner || u.isSelf && u.isAdmin,
+      onClick: () => toggleAdminRole(u),
+      "aria-pressed": !!u.isAdmin,
+      title: u.owner ? "Owner-Konto (ADMIN_EMAILS) \u2013 immer Admin" : u.isSelf ? "Eigene Admin-Rechte k\xF6nnen nicht entzogen werden" : "",
+      style: { ...S.btnG, borderColor: u.isAdmin ? C.sky : C.border2, color: u.isAdmin ? C.sky : C.muted, opacity: adminBusy || u.owner || u.isSelf && u.isAdmin ? 0.5 : 1 }
+    },
+    u.isAdmin ? "\u2713 Admin" : "Admin machen"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      disabled: adminBusy || (u.owner || u.isSelf) && !u.disabled,
       onClick: () => toggleUser(u),
       style: { ...S.btnG, borderColor: u.disabled ? C.go : C.stop, color: u.disabled ? C.go : C.stop, opacity: adminBusy ? 0.6 : 1 }
     },
     u.disabled ? "Freischalten" : "Sperren"
-  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement(
+  ))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement(
     "input",
     {
       type: "text",
@@ -3515,7 +3562,7 @@ Alle Daten (Spots, Equipment, Sessions, Profil, Einstellungen) werden unwiderruf
   ), /* @__PURE__ */ React.createElement("button", { disabled: adminBusy, style: S.btnG, onClick: () => resetUserPw(u) }, "PW setzen"), /* @__PURE__ */ React.createElement(
     "button",
     {
-      disabled: adminBusy,
+      disabled: adminBusy || u.owner || u.isSelf,
       onClick: () => deleteUser(u),
       style: { ...S.btnG, borderColor: C.stop, color: C.stop, opacity: adminBusy ? 0.6 : 1 }
     },

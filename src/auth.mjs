@@ -1,6 +1,6 @@
 // ============================================================================
 // WindFoil — Better Auth configuration
-// File version: 1.0.1 (ESM .mjs)  |  App target: v3.8.1
+// File version: 1.1.0 (ESM .mjs)  |  App target: v3.50.0
 // ----------------------------------------------------------------------------
 // Install:  npm i better-auth better-sqlite3
 // Better Auth OWNS its tables (user, session, account, verification) and creates
@@ -66,6 +66,9 @@ authDb.pragma('foreign_keys = ON');
 // `user` table. Added defensively so it exists for both the sign-in hook below
 // and the admin user-management endpoints. No-op once the column is present.
 try { authDb.exec('ALTER TABLE user ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0'); }
+catch { /* column already exists */ }
+// Admin role flag, managed via /api/admin/users/set-admin.
+try { authDb.exec('ALTER TABLE user ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0'); }
 catch { /* column already exists */ }
 
 export const auth = betterAuth({

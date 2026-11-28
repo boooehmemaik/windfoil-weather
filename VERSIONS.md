@@ -1,5 +1,16 @@
 # WindFoil — Version History
 
+## v3.50.0 (2026-11-28)
+**FEAT(admin): Admin-Rolle pro Nutzer, Freischaltung über das eingeloggte Profil**
+- Neue Spalte `user.is_admin`; Owner-Konten über `ADMIN_EMAILS` in `windfoil.env` sind immer Admin
+- Admins öffnen Admin-Dialog (App) und `admin.html` ohne Admin-Passwort, sobald sie in der App eingeloggt sind; alle anderen sehen weiter die Passwortabfrage
+- Benutzerverwaltung: Schalter „Admin“ je Nutzer (`POST /api/admin/users/set-admin`), Badges Owner/Admin/(du)
+- Schutz: Owner können nicht herabgestuft, gesperrt oder gelöscht werden; das eigene Konto ebenso wenig
+- Sicherheit: Session-Admin braucht zusätzlich den Header `X-WF-Admin: 1` (CSRF-Schutz); `GET /api/admin/me` zählt nicht als Fehlversuch
+- `admin.html` v1.2.0: Sperren/Freischalten und Passwort setzen schickten `userId` statt `id` (funktionierte nie) — behoben; Namen/E-Mails werden escaped (XSS)
+- FIX: `/api/stats/active-users` zählt Ablehnungen nicht mehr als Admin-Fehlversuch (die App fragt das minütlich ab und sperrte so den Passwort-Login für normale Nutzer); die App fragt bei 401/403 nicht weiter nach
+- Dateiversionen: `proxy-server.js` v2.9.1, `src/auth.mjs` v1.1.0, `admin.html` v1.2.0
+
 ## v3.46.1 (2026-11-19)
 **CHORE(logs): obs-poller-Erfolgszeilen entfernt, Backfill meldet Rate-Limit-Abbruch**
 - obs-poller: keine Pro-Lauf-Zeilen mehr für „polling N live…“, `wind=… gust=…` (Live und Measured) und „pruned N obs older than 14d“; Skip-/Fehlerzeilen und die 90d-Prune-Zeilen bleiben

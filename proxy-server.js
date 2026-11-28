@@ -1,4 +1,4 @@
-// proxy-server.js v2.8.0
+// proxy-server.js v2.9.1
 // WindFoil Weather System — Secure backend proxy for real station data
 //
 // WHY THIS EXISTS
@@ -68,6 +68,13 @@ const KEY = process.env.WEATHERBIT_KEY;
 // the token. Without ADMIN_TOKEN set, all admin endpoints are disabled (403).
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ""; // frontend gate, checked server-side
+// Owner accounts: always admin, cannot be demoted, disabled or deleted via UI.
+const ADMIN_EMAILS = new Set(String(process.env.ADMIN_EMAILS || "")
+  .split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
+// Session-based admin access additionally needs this header. Browsers cannot
+// send custom headers cross-site without a CORS preflight, so a forged link or
+// form cannot trigger admin actions with the cookie alone (CSRF guard).
+const ADMIN_SESSION_HEADER = "x-wf-admin";
 const APP_DIR = process.env.APP_DIR || "/var/www/windfoil";
 const DEPLOY_SCRIPT = APP_DIR + "/deploy.sh";
 
@@ -87,14 +94,59 @@ function getAdminDb() {
     // Mirror the column auth.mjs adds, so this handle works even if it connects first.
     try { adminDb.exec("ALTER TABLE user ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0"); }
     catch (e) { /* column already exists */ }
+    try { adminDb.exec("ALTER TABLE user ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0"); }
+    catch (e) { /* column already exists */ }
   }
   return adminDb;
+}
+
+function isOwnerEmail(email) {
+  return ADMIN_EMAILS.has(String(email || "").toLowerCase());
+}
+
+function findAdminUser(userId) {
+  const row = getAdminDb().prepare(
+    "SELECT id, email, COALESCE(is_admin,0) AS is_admin, COALESCE(disabled,0) AS disabled FROM user WHERE id = ?"
+  ).get(userId);
+  if (!row || row.disabled) return null;
+  return row.is_admin || isOwnerEmail(row.email) ? row : null;
+}
+
+// Resolves the Better Auth session for admin routes: req.sessionUser is the
+// signed-in user, req.adminUser is set only if that user holds the admin role.
+async function resolveSessionAdmin(req, _res, next) {
+  try {
+    const { auth } = await import("./src/auth.mjs");
+    const { fromNodeHeaders } = await import("better-auth/node");
+    const s = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+    if (s?.user) {
+      req.sessionUser = s.user;
+      req.adminUser = findAdminUser(s.user.id);
+    }
+  } catch (e) { /* no session -> token/password path only */ }
+  next();
 }
 
 // Brute-force protection: lock after too many bad attempts
 const adminFails = new Map(); // ip -> { count, until }
 const MAX_FAILS = 5;
 const LOCK_MS = 15 * 60 * 1000; // 15 min
+
+function isSessionAdmin(req) {
+  return !!req.adminUser && req.headers[ADMIN_SESSION_HEADER] === "1";
+}
+
+// Constant-time comparison: pad to equal length so timingSafeEqual always runs
+// (a.length !== b.length short-circuit would otherwise leak token length via timing)
+function isValidAdminToken(token) {
+  if (!ADMIN_TOKEN) return false;
+  const a = Buffer.from(String(token || ""));
+  const b = Buffer.from(ADMIN_TOKEN);
+  const len = Math.max(a.length, b.length, 32);
+  const pa = Buffer.alloc(len); a.copy(pa);
+  const pb = Buffer.alloc(len); b.copy(pb);
+  return crypto.timingSafeEqual(pa, pb) && a.length === b.length;
+}
 
 function adminGuard(req, res) {
   const ip = req.ip || req.socket.remoteAddress || "unknown";
@@ -104,20 +156,12 @@ function adminGuard(req, res) {
     res.status(429).json({ ok: false, error: "Zu viele Fehlversuche. Bitte später erneut." });
     return null;
   }
-  const token = req.headers["x-admin-token"] || "";
+  if (isSessionAdmin(req)) return ip;
   if (!ADMIN_TOKEN) {
     res.status(403).json({ ok: false, error: "Admin-Funktionen serverseitig nicht aktiviert (ADMIN_TOKEN fehlt)." });
     return null;
   }
-  // Constant-time comparison: pad to equal length so timingSafeEqual always runs
-  // (a.length !== b.length short-circuit would otherwise leak token length via timing)
-  const a = Buffer.from(String(token));
-  const b = Buffer.from(ADMIN_TOKEN);
-  const len = Math.max(a.length, b.length, 32);
-  const pa = Buffer.alloc(len); a.copy(pa);
-  const pb = Buffer.alloc(len); b.copy(pb);
-  const valid = crypto.timingSafeEqual(pa, pb) && a.length === b.length;
-  if (!valid) {
+  if (!isValidAdminToken(req.headers["x-admin-token"])) {
     const f = adminFails.get(ip) || { count: 0, until: 0 };
     f.count += 1;
     if (f.count >= MAX_FAILS) { f.until = now + LOCK_MS; f.count = 0; }
@@ -294,6 +338,7 @@ app.use(cors({
 // mountWindfoil installs selective json() (skips /api/auth so Better Auth can
 // read the raw body), the auth handler, and all /api/* domain routes.
 await mountWindfoil(app);
+app.use(["/api/admin", "/api/stats"], resolveSessionAdmin);
 
 // ── Simple in-memory cache to protect your quota ──────────────────────────────
 const cache = new Map();
@@ -954,8 +999,12 @@ app.get("/api/station/obs-history", async (req, res, next) => {
 });
 
 // Count of users with at least one unexpired Better-Auth session.
+// Polled by every open app, so a refusal must NOT count as a failed admin
+// attempt — otherwise regular users lock the password login for their IP.
 app.get("/api/stats/active-users", (req, res) => {
-  if (!adminGuard(req, res)) return;
+  if (!isSessionAdmin(req) && !isValidAdminToken(req.headers["x-admin-token"])) {
+    return res.status(403).json({ ok: false, error: "Nur für Admins." });
+  }
   try {
     const row = getAdminDb().prepare(
       "SELECT COUNT(DISTINCT userId) AS n FROM session WHERE expiresAt > ?"
@@ -1034,6 +1083,19 @@ app.get("/api/admin/status", (req, res) => {
   });
 });
 
+// Session role check. Never counts as a failed attempt, so regular users
+// opening the admin dialog cannot lock out the password login for their IP.
+app.get("/api/admin/me", (req, res) => {
+  const u = req.sessionUser;
+  res.json({
+    ok: true,
+    signedIn: !!u,
+    admin: !!req.adminUser,
+    owner: !!u && isOwnerEmail(u.email),
+    email: u ? u.email : null,
+  });
+});
+
 // Lightweight check the frontend uses to confirm admin is enabled + token valid
 app.get("/api/admin/check", (req, res) => {
   if (!adminGuard(req, res)) return;
@@ -1047,10 +1109,49 @@ app.get("/api/admin/users", (req, res) => {
   try {
     const db = getAdminDb();
     const users = db.prepare(
-      "SELECT id, email, name, emailVerified, createdAt, COALESCE(disabled,0) AS disabled " +
-      "FROM user ORDER BY createdAt"
-    ).all();
+      "SELECT id, email, name, emailVerified, createdAt, COALESCE(disabled,0) AS disabled, " +
+      "COALESCE(is_admin,0) AS isAdmin FROM user ORDER BY createdAt"
+    ).all().map(u => {
+      const owner = isOwnerEmail(u.email);
+      return { ...u, owner, isAdmin: owner || !!u.isAdmin, isSelf: !!req.sessionUser && req.sessionUser.id === u.id };
+    });
     res.json({ ok: true, users });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Owners and the acting admin themselves are protected from lockout actions.
+function protectedTarget(req, res, id, action) {
+  const u = getAdminDb().prepare("SELECT email FROM user WHERE id = ?").get(id);
+  if (!u) { res.status(404).json({ ok: false, error: "User nicht gefunden." }); return null; }
+  if (isOwnerEmail(u.email)) {
+    res.status(409).json({ ok: false, error: `Owner-Konto (ADMIN_EMAILS) kann nicht ${action} werden.` });
+    return null;
+  }
+  if (req.adminUser && req.adminUser.id === id) {
+    res.status(409).json({ ok: false, error: `Das eigene Konto kann nicht ${action} werden.` });
+    return null;
+  }
+  return u;
+}
+
+// Grant or revoke the admin role. Admins open the admin area via their
+// signed-in profile without the admin password.
+app.post("/api/admin/users/set-admin", (req, res) => {
+  if (!adminGuard(req, res)) return;
+  const id = req.body && req.body.id;
+  const admin = req.body && req.body.admin ? 1 : 0;
+  if (!id) return res.status(400).json({ ok: false, error: "User-ID fehlt." });
+  try {
+    if (!admin && !protectedTarget(req, res, id, "herabgestuft")) return;
+    const db = getAdminDb();
+    if (!db.prepare("SELECT 1 FROM user WHERE id = ?").get(id)) {
+      return res.status(404).json({ ok: false, error: "User nicht gefunden." });
+    }
+    db.prepare("UPDATE user SET is_admin = ?, updatedAt = ? WHERE id = ?")
+      .run(admin, new Date().toISOString(), id);
+    res.json({ ok: true, id, admin });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
@@ -1065,6 +1166,7 @@ app.post("/api/admin/users/set-disabled", (req, res) => {
   if (!id) return res.status(400).json({ ok: false, error: "User-ID fehlt." });
   try {
     const db = getAdminDb();
+    if (disabled && !protectedTarget(req, res, id, "gesperrt")) return;
     if (!db.prepare("SELECT 1 FROM user WHERE id = ?").get(id)) {
       return res.status(404).json({ ok: false, error: "User nicht gefunden." });
     }
@@ -1117,8 +1219,8 @@ app.post("/api/admin/users/delete", (req, res) => {
   if (!id) return res.status(400).json({ ok: false, error: "User-ID fehlt." });
   try {
     const db = getAdminDb();
-    const u = db.prepare("SELECT email FROM user WHERE id = ?").get(id);
-    if (!u) return res.status(404).json({ ok: false, error: "User nicht gefunden." });
+    const u = protectedTarget(req, res, id, "gelöscht");
+    if (!u) return;
     const tx = db.transaction((uid) => {
       db.prepare("DELETE FROM sessions WHERE user_id = ?").run(uid); // clears RESTRICT on spots
       db.prepare("DELETE FROM user WHERE id = ?").run(uid);          // cascades the rest

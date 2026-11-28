@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- admin.html v1.1.0 -->
+<!-- admin.html v1.2.0 -->
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -66,6 +66,10 @@
   .badge{display:inline-block;padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700}
   .badge-ok{background:#0d2e18;color:#4cde80}
   .badge-disabled{background:#2e1a0a;color:#e08844}
+  .badge-admin{background:#0d2238;color:#3a9ad9;margin-left:4px}
+  .btn-sm{padding:6px 10px;font-size:11px;min-height:32px;margin-left:4px}
+  .btn-sm:first-child{margin-left:0}
+  #session-note{font-size:11px;color:#4cde80;margin-bottom:14px;display:none}
   .refresh-note{font-size:10px;color:#3a4a5a;margin-top:6px}
   /* ML-Panel */
   .ml-progress{height:8px;background:#060f18;border:1px solid #1e3045;border-radius:6px;overflow:hidden;margin:4px 0 14px}
@@ -92,6 +96,7 @@
     <input type="password" id="pw" placeholder="Admin-Passwort" autocomplete="current-password">
   </div>
   <div id="login-err">Falsches Passwort oder Server nicht erreichbar.</div>
+  <p style="font-size:11px;color:#5a7a96;margin-bottom:12px;line-height:1.5">Als Admin in der App eingeloggt? Dann öffnet sich diese Seite ohne Passwort.</p>
   <button class="btn btn-primary" onclick="doLogin()" style="width:100%">Einloggen</button>
 </div>
 
@@ -101,6 +106,7 @@
     <h1>🛠 WindFoil Admin</h1>
     <button class="btn btn-neutral" onclick="logout()">Logout</button>
   </div>
+  <div id="session-note">✓ Freigeschaltet über dein App-Profil</div>
 
   <!-- Claude Code -->
   <div class="card full" style="border-color:#1a3a5a;margin-bottom:16px">
@@ -150,8 +156,8 @@
     <h2>👥 Benutzer</h2>
     <div class="tbl-wrap">
       <table id="users-table">
-        <thead><tr><th>Name</th><th>E-Mail</th><th>Registriert</th><th>Status</th><th>Aktionen</th></tr></thead>
-        <tbody id="users-body"><tr><td colspan="5" style="color:#3a4a5a;text-align:center;padding:16px">Lade…</td></tr></tbody>
+        <thead><tr><th>Name</th><th>E-Mail</th><th>Registriert</th><th>Status</th><th>Admin</th><th>Aktionen</th></tr></thead>
+        <tbody id="users-body"><tr><td colspan="6" style="color:#3a4a5a;text-align:center;padding:16px">Lade…</td></tr></tbody>
       </table>
     </div>
     <div class="flash" id="users-flash"></div>
@@ -194,12 +200,19 @@
 <script>
 const API = '/api/admin';
 let TOKEN = '';
+let VIA_SESSION = false;
+
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
 
 function saveToken(t) { TOKEN = t; try { sessionStorage.setItem('wf_admin_token', t); } catch(_){} }
 function loadToken() { try { return sessionStorage.getItem('wf_admin_token') || ''; } catch(_){ return ''; } }
 
 async function api(path, method = 'GET', body = null) {
-  const opts = { method, headers: { 'x-admin-token': TOKEN, 'Content-Type': 'application/json' } };
+  const headers = { 'x-wf-admin': '1', 'Content-Type': 'application/json' };
+  if (TOKEN) headers['x-admin-token'] = TOKEN;
+  const opts = { method, headers, credentials: 'same-origin' };
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(API + path, opts);
   if (r.status === 401 || r.status === 403) { logout(); throw new Error('Unauthorized'); }
@@ -235,6 +248,7 @@ document.getElementById('pw').addEventListener('keydown', e => { if (e.key === '
 
 function logout() {
   TOKEN = '';
+  VIA_SESSION = false;
   mlStopPolling();
   try { sessionStorage.removeItem('wf_admin_token'); } catch(_){}
   document.getElementById('app').style.display = 'none';
@@ -245,6 +259,7 @@ function logout() {
 async function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  document.getElementById('session-note').style.display = VIA_SESSION ? 'block' : 'none';
   loadClaudeStatus();
   loadServices();
   loadUsers();
@@ -334,39 +349,65 @@ async function loadUsers() {
     const d = await api('/users');
     const tbody = document.getElementById('users-body');
     if (!d.users || !d.users.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="color:#3a4a5a;text-align:center;padding:16px">Keine Benutzer</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="color:#3a4a5a;text-align:center;padding:16px">Keine Benutzer</td></tr>';
       return;
     }
-    tbody.innerHTML = d.users.map(u => `
+    tbody.innerHTML = d.users.map(renderUserRow).join('');
+  } catch(e) {
+    document.getElementById('users-body').innerHTML = `<tr><td colspan="6" style="color:#e05555">Fehler: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+function renderUserRow(u) {
+  const id = esc(u.id);
+  const roleLocked = u.owner || (u.isSelf && u.isAdmin);
+  const roleTitle = u.owner ? 'Owner-Konto (ADMIN_EMAILS) – immer Admin'
+    : u.isSelf && u.isAdmin ? 'Eigene Admin-Rechte können nicht entzogen werden' : '';
+  return `
       <tr>
-        <td>${u.name || '—'}</td>
-        <td style="font-family:monospace;font-size:11px">${u.email}</td>
+        <td>${esc(u.name) || '—'}${u.isSelf ? ' <span style="color:#5a7a96;font-size:10px">(du)</span>' : ''}</td>
+        <td style="font-family:monospace;font-size:11px">${esc(u.email)}</td>
         <td style="color:#5a7a96;font-size:11px">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('de-DE') : '—'}</td>
         <td><span class="badge ${u.disabled ? 'badge-disabled' : 'badge-ok'}">${u.disabled ? 'Gesperrt' : 'Aktiv'}</span></td>
-        <td class="actions">
-          <button class="btn btn-neutral" style="padding:6px 10px;font-size:11px;min-height:32px" onclick="toggleUser('${u.id}',${u.disabled ? 0 : 1})">${u.disabled ? 'Freischalten' : 'Sperren'}</button>
-          <button class="btn btn-neutral" style="padding:6px 10px;font-size:11px;min-height:32px;margin-left:4px" onclick="resetPw('${u.id}','${u.email}')">PW reset</button>
+        <td>
+          <label title="${esc(roleTitle)}" style="display:inline-flex;align-items:center;gap:6px;cursor:${roleLocked ? 'default' : 'pointer'}">
+            <input type="checkbox" ${u.isAdmin ? 'checked' : ''} ${roleLocked ? 'disabled' : ''}
+              aria-label="Admin-Rechte für ${esc(u.email)}" data-id="${id}" onchange="setAdmin(this.dataset.id, this.checked)">
+            ${u.owner ? '<span class="badge badge-admin">Owner</span>' : u.isAdmin ? '<span class="badge badge-admin">Admin</span>' : ''}
+          </label>
         </td>
-      </tr>`).join('');
-  } catch(e) {
-    document.getElementById('users-body').innerHTML = `<tr><td colspan="5" style="color:#e05555">Fehler: ${e.message}</td></tr>`;
-  }
+        <td class="actions">
+          <button class="btn btn-neutral btn-sm" data-id="${id}" data-disabled="${u.disabled ? 0 : 1}"
+            ${(u.owner || u.isSelf) && !u.disabled ? 'disabled title="Owner bzw. eigenes Konto kann nicht gesperrt werden"' : ''}
+            onclick="toggleUser(this.dataset.id, this.dataset.disabled === '1')">${u.disabled ? 'Freischalten' : 'Sperren'}</button>
+          <button class="btn btn-neutral btn-sm" data-id="${id}" data-email="${esc(u.email)}"
+            onclick="resetPw(this.dataset.id, this.dataset.email)">PW setzen</button>
+        </td>
+      </tr>`;
+}
+
+async function setAdmin(id, admin) {
+  try {
+    const d = await api('/users/set-admin', 'POST', { id, admin });
+    flash('users-flash', d.ok ? (admin ? 'Admin-Rechte vergeben' : 'Admin-Rechte entzogen') : (d.error || 'Fehler'), !d.ok);
+  } catch(e) { flash('users-flash', e.message, true); }
+  loadUsers();
 }
 
 async function toggleUser(id, disabled) {
   try {
-    const d = await api('/users/set-disabled', 'POST', { userId: id, disabled });
-    flash('users-flash', d.message || 'Gespeichert', !d.ok);
+    const d = await api('/users/set-disabled', 'POST', { id, disabled });
+    flash('users-flash', d.ok ? (disabled ? 'Gesperrt' : 'Freigeschaltet') : (d.error || 'Fehler'), !d.ok);
     loadUsers();
   } catch(e) { flash('users-flash', e.message, true); }
 }
 
 async function resetPw(id, email) {
-  if (!confirm(`Passwort für ${email} zurücksetzen?`)) return;
+  const password = prompt(`Neues Passwort für ${email} (mindestens 10 Zeichen):`);
+  if (password === null) return;
   try {
-    const d = await api('/users/reset-password', 'POST', { userId: id });
-    if (d.ok && d.newPassword) alert(`Neues Passwort für ${email}:\n\n${d.newPassword}`);
-    else flash('users-flash', d.message || 'Fehler', !d.ok);
+    const d = await api('/users/reset-password', 'POST', { id, password });
+    flash('users-flash', d.ok ? `Passwort für ${email} gesetzt` : (d.error || 'Fehler'), !d.ok);
   } catch(e) { flash('users-flash', e.message, true); }
 }
 
@@ -581,7 +622,12 @@ function mlReportTrainResult(job) {
 }
 
 // ── Auto-login if token in session ───────────────────────────────────────────
+// ── Auto-login: signed-in admin profile first, then stored token ─────────────
 (async () => {
+  try {
+    const me = await (await fetch(API + '/me', { credentials: 'same-origin' })).json();
+    if (me.ok && me.admin) { VIA_SESSION = true; showApp(); return; }
+  } catch(_) {}
   const t = loadToken();
   if (!t) return;
   TOKEN = t;
