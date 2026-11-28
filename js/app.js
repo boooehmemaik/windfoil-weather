@@ -2358,10 +2358,18 @@ function App() {
     return () => clearInterval(t2);
   }, []);
   useEffect(() => {
-    const load = () => fetch("/api/stats/active-users", { headers: { "X-WF-Admin": "1" } }).then((r) => r.json()).then((d) => setActiveUsers(d.activeUsers)).catch(() => {
+    const load = () => fetch("/api/stats/active-users", { headers: { "X-WF-Admin": "1" } }).then((r) => {
+      if (!r.ok) {
+        clearInterval(t2);
+        return null;
+      }
+      return r.json();
+    }).then((d) => {
+      if (d) setActiveUsers(d.activeUsers);
+    }).catch(() => {
     });
-    load();
     const t2 = setInterval(load, 6e4);
+    load();
     return () => clearInterval(t2);
   }, []);
   async function fetchNearbyStations(lat, lon) {

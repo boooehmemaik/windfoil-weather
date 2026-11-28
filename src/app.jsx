@@ -648,7 +648,7 @@ function t(key, vars={}) {
 const COMPASS16 = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 const compass = (deg) => deg==null ? "" : COMPASS16[Math.round(((deg%360)+360)%360/22.5)%16];
 
-// Changelog v3.50.0: feat(admin): Admin-Rolle pro Nutzer — Admins öffnen den Admin-Bereich über ihr Profil ohne Passwort (ADMIN_EMAILS = Owner), Admin-Schalter in der Benutzerverwaltung
+// Changelog v3.50.0: feat(admin): Admin-Rolle pro Nutzer — Admins öffnen den Admin-Bereich über ihr Profil ohne Passwort (ADMIN_EMAILS = Owner), Admin-Schalter in der Benutzerverwaltung; active-users-Abfrage sperrt Nicht-Admins nicht mehr aus
 // WindFoil Weather Intelligence v3.50.0
 // Changelog v3.48.4: PWA Safe-Area-Inset Header-Fix fuer iPhone-Notch
 // Changelog v3.48.1: Adresse im Impressum eingetragen
@@ -2578,9 +2578,9 @@ function App() {
     return()=>clearInterval(t);
   },[]);
   useEffect(()=>{
-    const load=()=>fetch("/api/stats/active-users",{headers:{"X-WF-Admin":"1"}}).then(r=>r.json()).then(d=>setActiveUsers(d.activeUsers)).catch(()=>{});
-    load();
+    const load=()=>fetch("/api/stats/active-users",{headers:{"X-WF-Admin":"1"}}).then(r=>{if(!r.ok){clearInterval(t);return null;}return r.json();}).then(d=>{if(d)setActiveUsers(d.activeUsers);}).catch(()=>{});
     const t=setInterval(load,60000);
+    load();
     return()=>clearInterval(t);
   },[]);
 

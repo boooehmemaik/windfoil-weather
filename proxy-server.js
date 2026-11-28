@@ -1,4 +1,4 @@
-// proxy-server.js v2.9.0
+// proxy-server.js v2.9.1
 // WindFoil Weather System — Secure backend proxy for real station data
 //
 // WHY THIS EXISTS
@@ -132,6 +132,22 @@ const adminFails = new Map(); // ip -> { count, until }
 const MAX_FAILS = 5;
 const LOCK_MS = 15 * 60 * 1000; // 15 min
 
+function isSessionAdmin(req) {
+  return !!req.adminUser && req.headers[ADMIN_SESSION_HEADER] === "1";
+}
+
+// Constant-time comparison: pad to equal length so timingSafeEqual always runs
+// (a.length !== b.length short-circuit would otherwise leak token length via timing)
+function isValidAdminToken(token) {
+  if (!ADMIN_TOKEN) return false;
+  const a = Buffer.from(String(token || ""));
+  const b = Buffer.from(ADMIN_TOKEN);
+  const len = Math.max(a.length, b.length, 32);
+  const pa = Buffer.alloc(len); a.copy(pa);
+  const pb = Buffer.alloc(len); b.copy(pb);
+  return crypto.timingSafeEqual(pa, pb) && a.length === b.length;
+}
+
 function adminGuard(req, res) {
   const ip = req.ip || req.socket.remoteAddress || "unknown";
   const now = Date.now();
@@ -140,21 +156,12 @@ function adminGuard(req, res) {
     res.status(429).json({ ok: false, error: "Zu viele Fehlversuche. Bitte später erneut." });
     return null;
   }
-  if (req.adminUser && req.headers[ADMIN_SESSION_HEADER] === "1") return ip;
-  const token = req.headers["x-admin-token"] || "";
+  if (isSessionAdmin(req)) return ip;
   if (!ADMIN_TOKEN) {
     res.status(403).json({ ok: false, error: "Admin-Funktionen serverseitig nicht aktiviert (ADMIN_TOKEN fehlt)." });
     return null;
   }
-  // Constant-time comparison: pad to equal length so timingSafeEqual always runs
-  // (a.length !== b.length short-circuit would otherwise leak token length via timing)
-  const a = Buffer.from(String(token));
-  const b = Buffer.from(ADMIN_TOKEN);
-  const len = Math.max(a.length, b.length, 32);
-  const pa = Buffer.alloc(len); a.copy(pa);
-  const pb = Buffer.alloc(len); b.copy(pb);
-  const valid = crypto.timingSafeEqual(pa, pb) && a.length === b.length;
-  if (!valid) {
+  if (!isValidAdminToken(req.headers["x-admin-token"])) {
     const f = adminFails.get(ip) || { count: 0, until: 0 };
     f.count += 1;
     if (f.count >= MAX_FAILS) { f.until = now + LOCK_MS; f.count = 0; }
@@ -992,8 +999,12 @@ app.get("/api/station/obs-history", async (req, res, next) => {
 });
 
 // Count of users with at least one unexpired Better-Auth session.
+// Polled by every open app, so a refusal must NOT count as a failed admin
+// attempt — otherwise regular users lock the password login for their IP.
 app.get("/api/stats/active-users", (req, res) => {
-  if (!adminGuard(req, res)) return;
+  if (!isSessionAdmin(req) && !isValidAdminToken(req.headers["x-admin-token"])) {
+    return res.status(403).json({ ok: false, error: "Nur für Admins." });
+  }
   try {
     const row = getAdminDb().prepare(
       "SELECT COUNT(DISTINCT userId) AS n FROM session WHERE expiresAt > ?"
